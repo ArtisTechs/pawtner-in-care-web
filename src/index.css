@@ -1,0 +1,146 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: 'Franxurter';
+  src: url('./assets/fonts/Franxurter-w11D9.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('./assets/fonts/SourceSansPro-Regular.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('./assets/fonts/SourceSansPro-Semibold.otf') format('opentype');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('./assets/fonts/SourceSansPro-Black.otf') format('opentype');
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+:root {
+  --color-brand-blue-700: #1d5eae;
+  --color-brand-blue-600: #1f62b4;
+  --color-brand-blue-500: #2e73b6;
+  --color-brand-blue-400: #3e90e5;
+  --color-brand-blue-300: #4f9de5;
+  --color-brand-blue-200: #66a4e7;
+  --color-brand-blue-100: #98c1ee;
+  --color-brand-blue-soft: rgba(75, 155, 238, 0.42);
+  --color-brand-focus-ring: rgba(61, 135, 220, 0.15);
+
+  --color-surface-primary: #ffffff;
+  --color-surface-input: #f2f5fa;
+
+  --color-border-subtle: #dbe2ee;
+  --color-text-heading: #1d222d;
+  --color-text-body: #555d69;
+  --color-text-label: #373e49;
+  --color-text-muted: #7d8592;
+  --color-text-placeholder: #a4abb6;
+  --color-feedback-error: #d84040;
+  --color-feedback-success: #2d8a48;
+
+  --color-shadow-strong: rgba(24, 72, 136, 0.18);
+  --color-shadow-soft: rgba(24, 72, 136, 0.1);
+
+  --font-family-heading-1: 'Franxurter', 'Trebuchet MS', sans-serif;
+  --font-family-heading-2: 'Source Sans Pro', 'Segoe UI', sans-serif;
+  --font-family-heading-3: 'Source Sans Pro', 'Segoe UI', sans-serif;
+  --font-family-body: 'Source Sans Pro', 'Segoe UI', sans-serif;
+
+  --font-size-heading-1: 48px;
+  --font-size-heading-2: 32px;
+  --font-size-heading-3: 20px;
+  --font-size-body-1: 16px;
+  --font-size-body-2: 14px;
+  --font-size-body-3: 8px;
+
+  --font-weight-heading-1: 400;
+  --font-weight-heading-2: 600;
+  --font-weight-heading-3: 900;
+  --font-weight-body-regular: 400;
+  --font-weight-body-semibold: 600;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-1);
+  font-weight: var(--font-weight-body-regular);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.type-heading-1 {
+  font-family: var(--font-family-heading-1);
+  font-size: var(--font-size-heading-1);
+  font-weight: var(--font-weight-heading-1);
+  line-height: 1.05;
+}
+
+.type-heading-2 {
+  font-family: var(--font-family-heading-2);
+  font-size: var(--font-size-heading-2);
+  font-weight: var(--font-weight-heading-2);
+  line-height: 1.15;
+}
+
+.type-heading-3 {
+  font-family: var(--font-family-heading-3);
+  font-size: var(--font-size-heading-3);
+  font-weight: var(--font-weight-heading-3);
+  line-height: 1.2;
+}
+
+.type-body-1 {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-1);
+  font-weight: var(--font-weight-body-regular);
+  line-height: 1.4;
+}
+
+.type-body-2 {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-regular);
+  line-height: 1.4;
+}
+
+.type-body-2-semibold {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-semibold);
+  line-height: 1.4;
+}
+
+.type-body-3 {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-3);
+  font-weight: var(--font-weight-body-regular);
+  line-height: 1.35;
+}

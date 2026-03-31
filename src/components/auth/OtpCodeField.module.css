@@ -1,0 +1,58 @@
+.fieldGroup + .fieldGroup {
+  margin-top: 18px;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.fieldLabel {
+  color: var(--color-text-label);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-semibold);
+  line-height: 1.4;
+}
+
+.inputRow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.digitInput {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-surface-input);
+  border-radius: 7px;
+  font-family: var(--font-family-body);
+  font-size: 18px;
+  font-weight: var(--font-weight-body-semibold);
+  color: var(--color-text-heading);
+  text-align: center;
+  outline: none;
+}
+
+.digitInput:focus {
+  border-color: var(--color-brand-blue-200);
+  box-shadow: 0 0 0 3px var(--color-brand-focus-ring);
+}
+
+.digitInput:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .inputRow {
+    gap: 6px;
+  }
+
+  .digitInput {
+    height: 42px;
+  }
+}

@@ -1,0 +1,104 @@
+.fieldGroup + .fieldGroup {
+  margin-top: 18px;
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.fieldLabel {
+  color: var(--color-text-label);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-semibold);
+  line-height: 1.4;
+}
+
+.inlineAction {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-regular);
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inlineAction:hover {
+  color: var(--color-brand-blue-500);
+}
+
+.textInput {
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-surface-input);
+  border-radius: 7px;
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  font-weight: var(--font-weight-body-regular);
+  color: var(--color-text-heading);
+  line-height: 1.4;
+  padding: 11px 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.inputWrapper {
+  position: relative;
+}
+
+.passwordInput {
+  padding-right: 42px;
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.passwordToggle:hover {
+  color: var(--color-brand-blue-500);
+}
+
+.passwordToggle:focus-visible {
+  outline: 2px solid var(--color-brand-blue-100);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.eyeIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.textInput::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.textInput:focus {
+  border-color: var(--color-brand-blue-200);
+  box-shadow: 0 0 0 3px var(--color-brand-focus-ring);
+}
+
+.belowActionRow {
+  margin-top: 7px;
+  display: flex;
+  justify-content: flex-end;
+}
