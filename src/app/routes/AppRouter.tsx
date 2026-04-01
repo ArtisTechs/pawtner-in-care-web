@@ -1,0 +1,91 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { APP_ROUTES } from '@/app/routes/route-paths'
+import type { AuthSession } from '@/features/auth/types/auth-api'
+import SignInPage from '@/features/auth/pages/SignInPage'
+import AdoptionRequestListPage from '@/features/adoption-requests/pages/AdoptionRequestListPage'
+import DashboardPage from '@/features/dashboard/pages/DashboardPage'
+import DonationCampaignListPage from '@/features/donation-campaigns/pages/DonationCampaignListPage'
+import PetListPage from '@/features/pets/pages/PetListPage'
+
+type AppRouterProps = {
+  defaultRoute: string
+  isAuthenticated: boolean
+  onLogout: () => void
+  onSignInSuccess: (session: AuthSession) => void
+  session: AuthSession | null
+}
+
+function AppRouter({
+  defaultRoute,
+  isAuthenticated,
+  onLogout,
+  onSignInSuccess,
+  session,
+}: AppRouterProps) {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path={APP_ROUTES.root} element={<Navigate to={defaultRoute} replace />} />
+
+        <Route
+          path={APP_ROUTES.login}
+          element={
+            isAuthenticated ? (
+              <Navigate to={APP_ROUTES.dashboard} replace />
+            ) : (
+              <SignInPage onSignInSuccess={onSignInSuccess} />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.dashboard}
+          element={
+            isAuthenticated ? (
+              <DashboardPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.petList}
+          element={
+            isAuthenticated ? (
+              <PetListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.adoptionRequests}
+          element={
+            isAuthenticated ? (
+              <AdoptionRequestListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.donationList}
+          element={
+            isAuthenticated ? (
+              <DonationCampaignListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route path="*" element={<Navigate to={defaultRoute} replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default AppRouter
