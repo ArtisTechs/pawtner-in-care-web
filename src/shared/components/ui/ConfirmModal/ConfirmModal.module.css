@@ -76,8 +76,15 @@
 
 .confirmButton {
   border: 0;
-  background: linear-gradient(180deg, #d86686 0%, #bf4267 100%);
   color: #ffffff;
+}
+
+.confirmButtonDanger {
+  background: linear-gradient(180deg, #d86686 0%, #bf4267 100%);
+}
+
+.confirmButtonSuccess {
+  background: linear-gradient(180deg, #49a96a 0%, #3a8f5a 100%);
 }
 
 .cancelButton:disabled,

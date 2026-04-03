@@ -11,6 +11,13 @@
   margin: 0 auto;
 }
 
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .pageTitle {
   margin: 0;
   color: #ffffff;
@@ -19,6 +26,28 @@
   font-weight: 400;
   line-height: 1.1;
   text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
+}
+
+.addButton {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.addButtonIcon {
+  width: 16px;
+  height: 16px;
 }
 
 .filterBar {
@@ -94,7 +123,7 @@
 
 .table {
   width: 100%;
-  min-width: 760px;
+  min-width: 860px;
   border-collapse: collapse;
 }
 
@@ -117,6 +146,11 @@
   color: #2c2c2c;
   font-size: 13px;
   font-weight: 600;
+}
+
+.amountCell {
+  color: #1f4f84 !important;
+  font-weight: 800 !important;
 }
 
 .clickableRow {
@@ -142,51 +176,6 @@
   padding-block: 24px !important;
 }
 
-.typeBadge {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: linear-gradient(180deg, #3f92e5 0%, #2b78cd 100%);
-  display: inline-grid;
-  place-items: center;
-  box-shadow: 0 5px 12px rgba(40, 114, 193, 0.3);
-}
-
-.typeIcon {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-}
-
-.statusBadge {
-  width: fit-content;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.statusCompleted {
-  color: #2f9a84;
-  background: #c2efdf;
-}
-
-.statusProcessing {
-  color: #7a44cf;
-  background: #e4d8f9;
-}
-
-.statusCancelled {
-  color: #d45050;
-  background: #f9d7d7;
-}
-
-.statusOnHold {
-  color: #d18f3f;
-  background: #f9e8d5;
-}
-
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -198,7 +187,7 @@
 }
 
 .modalCard {
-  width: min(520px, 100%);
+  width: min(560px, 100%);
   border-radius: 16px;
   border: 1px solid #d4e0ef;
   background: #ffffff;
@@ -323,107 +312,48 @@
   background: #f4f8fd;
 }
 
+.fieldInputError {
+  border-color: #d45050;
+}
+
+.fieldErrorText {
+  color: #d45050;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .modalActions {
   padding: 0 16px 16px;
 }
 
-.modalStatusIndicator {
-  min-height: 42px;
-  border-radius: 10px;
-  border: 1px solid #d3dfef;
-  background: #f8fbff;
+.modalButtonRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.modalStatusIndicatorText {
-  color: #3f5d7f;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.modalIconActions {
-  display: flex;
-  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  justify-content: center;
-  align-items: center;
 }
 
-.modalIconButton {
-  width: 44px;
-  height: 42px;
-  border-radius: 999px;
-  border: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 0 12px;
-  overflow: hidden;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    width 0.22s ease,
-    border-radius 0.22s ease,
-    box-shadow 0.22s ease,
-    transform 0.18s ease;
-}
-
-.modalIconButton svg {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-.modalIconLabel {
-  max-width: 0;
-  opacity: 0;
-  margin-left: 0;
-  transform: translateX(-6px);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  overflow: hidden;
-  transition:
-    max-width 0.22s ease,
-    opacity 0.2s ease,
-    margin-left 0.22s ease,
-    transform 0.22s ease;
-}
-
-.modalIconButton:hover:not(:disabled),
-.modalIconButton:focus-visible:not(:disabled) {
-  width: 118px;
+.modalCancelButton,
+.modalSubmitButton,
+.modalDeleteButton {
+  min-width: 92px;
+  height: 38px;
   border-radius: 10px;
-  box-shadow: 0 8px 18px rgba(18, 44, 77, 0.26);
-  transform: translateY(-1px);
+  border: 1px solid transparent;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.modalIconButton:hover:not(:disabled) .modalIconLabel,
-.modalIconButton:focus-visible:not(:disabled) .modalIconLabel {
-  max-width: 72px;
-  opacity: 1;
-  margin-left: 8px;
-  transform: translateX(0);
+.modalCancelButton {
+  border-color: #d4e0ef;
+  background: #f8fbff;
+  color: #496283;
 }
 
-.modalApproveButton {
-  background: linear-gradient(180deg, #4eb88e 0%, #2c9f74 100%);
-  color: #ffffff;
-}
-
-.modalRejectButton {
-  background: linear-gradient(180deg, #ea8b5e 0%, #d3663d 100%);
-  color: #ffffff;
-}
-
-.modalCancelRequestButton {
-  background: linear-gradient(180deg, #d6aa54 0%, #be8d34 100%);
+.modalSubmitButton {
+  background: linear-gradient(180deg, #3d98e8 0%, #2f80d7 100%);
   color: #ffffff;
 }
 
@@ -432,7 +362,9 @@
   color: #ffffff;
 }
 
-.modalIconButton:disabled {
+.modalCancelButton:disabled,
+.modalSubmitButton:disabled,
+.modalDeleteButton:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -493,6 +425,11 @@
     padding: 16px 10px 14px;
   }
 
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .pageTitle {
     font-size: 28px;
   }
@@ -513,10 +450,17 @@
   }
 
   .table {
-    min-width: 760px;
+    min-width: 860px;
   }
 
-  .modalIconActions {
-    justify-content: center;
+  .modalButtonRow {
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .modalCancelButton,
+  .modalSubmitButton,
+  .modalDeleteButton {
+    flex: 1;
   }
 }

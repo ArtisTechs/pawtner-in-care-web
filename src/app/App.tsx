@@ -26,7 +26,11 @@ function App() {
         onSignInSuccess={onSignInSuccess}
         session={session}
       />
-      <FullScreenLoader visible={isSigningOut} subtitle="Signing you out..." />
+      <FullScreenLoader
+        visible={isSigningOut}
+        subtitle="Signing you out..."
+        backgroundColor="rgba(9, 20, 37, 0.24)"
+      />
     </>
   )
 }

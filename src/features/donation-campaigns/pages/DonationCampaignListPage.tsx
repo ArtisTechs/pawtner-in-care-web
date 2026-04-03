@@ -39,7 +39,7 @@ import { useToast } from '@/shared/hooks/useToast'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './DonationCampaignListPage.module.css'
 
-const ACTIVE_MENU_ITEM: SidebarItemKey = 'donation-logs'
+const ACTIVE_MENU_ITEM: SidebarItemKey = 'donation-campaign-list'
 
 interface DonationCampaignListPageProps {
   onLogout?: () => void
@@ -49,6 +49,7 @@ interface DonationCampaignListPageProps {
 type CampaignFormErrorKey = 'title' | 'totalCost' | 'startDate' | 'deadline' | 'photo'
 
 type CampaignFormErrors = Record<CampaignFormErrorKey, string>
+const REQUIRED_FIELDS_ERROR_MESSAGE = 'Please complete all required fields.'
 
 const createEmptyCampaignFormErrors = (): CampaignFormErrors => ({
   deadline: '',
@@ -242,16 +243,16 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
       const trimmedDeadline = addCampaignForm.deadline.trim()
       const trimmedPhoto = addCampaignForm.photo.trim()
       const nextFormErrors: CampaignFormErrors = {
-        deadline: trimmedDeadline ? '' : 'Deadline is required.',
-        photo: trimmedPhoto ? '' : 'Campaign photo is required.',
-        startDate: trimmedStartDate ? '' : 'Start date is required.',
-        title: trimmedTitle ? '' : 'Title is required.',
-        totalCost: trimmedCost ? '' : 'Total cost is required.',
+        deadline: trimmedDeadline ? '' : REQUIRED_FIELDS_ERROR_MESSAGE,
+        photo: trimmedPhoto ? '' : REQUIRED_FIELDS_ERROR_MESSAGE,
+        startDate: trimmedStartDate ? '' : REQUIRED_FIELDS_ERROR_MESSAGE,
+        title: trimmedTitle ? '' : REQUIRED_FIELDS_ERROR_MESSAGE,
+        totalCost: trimmedCost ? '' : REQUIRED_FIELDS_ERROR_MESSAGE,
       }
 
       if (Object.values(nextFormErrors).some(Boolean) || !addCampaignForm.status || !addCampaignForm.type) {
         setCampaignFormErrors(nextFormErrors)
-        showToast('Please complete all required fields.', { variant: 'error' })
+        showToast(REQUIRED_FIELDS_ERROR_MESSAGE, { variant: 'error' })
         return
       }
 

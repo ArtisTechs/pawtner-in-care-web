@@ -82,6 +82,34 @@ const formatMeasure = (value?: number | null, unit?: string) => {
   return `${value} ${unit}`
 }
 
+const resolveAdoptedByLabel = (adoptedBy?: Pet['adoptedBy']) => {
+  if (!adoptedBy) {
+    return 'N/A'
+  }
+
+  if (typeof adoptedBy === 'string') {
+    const normalized = adoptedBy.trim()
+    return normalized || 'N/A'
+  }
+
+  const name = [adoptedBy.firstName, adoptedBy.middleName, adoptedBy.lastName]
+    .map((namePart) => namePart?.trim() || '')
+    .filter(Boolean)
+    .join(' ')
+
+  if (name) {
+    return name
+  }
+
+  const email = adoptedBy.email?.trim()
+  if (email) {
+    return email
+  }
+
+  const identifier = adoptedBy.id?.trim()
+  return identifier || 'N/A'
+}
+
 interface PetListPageProps {
   onLogout?: () => void
   session?: AuthSession | null
@@ -598,7 +626,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                 </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Adopted By</span>
-                  <span className={styles.viewDetailValue}>{viewingPet.adoptedBy || 'N/A'}</span>
+                  <span className={styles.viewDetailValue}>{resolveAdoptedByLabel(viewingPet.adoptedBy)}</span>
                 </div>
                 <div className={`${styles.viewDetailItem} ${styles.viewDetailItemWide}`}>
                   <span className={styles.viewDetailLabel}>Description</span>
@@ -672,7 +700,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
               </button>
             </div>
 
-            <form className={styles.modalForm} onSubmit={handleAddPetSubmit}>
+            <form className={styles.modalForm} onSubmit={handleAddPetSubmit} noValidate>
               <div className={styles.modalFields}>
                 <label className={styles.fieldLabel}>
                   <span>Pet Name</span>
@@ -686,7 +714,6 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                       }))
                     }}
                     className={styles.fieldInput}
-                    required
                   />
                 </label>
 

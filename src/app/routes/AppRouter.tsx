@@ -5,7 +5,10 @@ import SignInPage from '@/features/auth/pages/SignInPage'
 import AdoptionRequestListPage from '@/features/adoption-requests/pages/AdoptionRequestListPage'
 import DashboardPage from '@/features/dashboard/pages/DashboardPage'
 import DonationCampaignListPage from '@/features/donation-campaigns/pages/DonationCampaignListPage'
+import DonationTransactionListPage from '@/features/donation-transactions/pages/DonationTransactionListPage'
+import PaymentModeListPage from '@/features/payment-modes/pages/PaymentModeListPage'
 import PetListPage from '@/features/pets/pages/PetListPage'
+import UserListPage from '@/features/users/pages/UserListPage'
 
 type AppRouterProps = {
   defaultRoute: string
@@ -61,10 +64,43 @@ function AppRouter({
         />
 
         <Route
+          path={APP_ROUTES.paymentModeList}
+          element={
+            isAuthenticated ? (
+              <PaymentModeListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.userList}
+          element={
+            isAuthenticated ? (
+              <UserListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
           path={APP_ROUTES.adoptionRequests}
           element={
             isAuthenticated ? (
               <AdoptionRequestListPage session={session} onLogout={onLogout} />
+            ) : (
+              <Navigate to={APP_ROUTES.login} replace />
+            )
+          }
+        />
+
+        <Route
+          path={APP_ROUTES.donationLogs}
+          element={
+            isAuthenticated ? (
+              <DonationTransactionListPage session={session} onLogout={onLogout} />
             ) : (
               <Navigate to={APP_ROUTES.login} replace />
             )

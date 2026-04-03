@@ -5,6 +5,13 @@ type ApiErrorPayload = {
 
 const DEFAULT_API_ERROR_MESSAGE =
   'Something went wrong. Please contact the system administrator.'
+const INVALID_BEARER_ERROR_PATTERNS = [
+  /invalid token bearer/i,
+  /invalid bearer token/i,
+  /expired token/i,
+  /token expired/i,
+  /jwt expired/i,
+]
 
 const extractApiErrorMessage = (
   payload: unknown,
@@ -43,6 +50,30 @@ export class ApiError extends Error {
   static fromResponse(status: number, payload: unknown) {
     return new ApiError(status, extractApiErrorMessage(payload), payload)
   }
+}
+
+const hasInvalidBearerMarker = (value: string) =>
+  INVALID_BEARER_ERROR_PATTERNS.some((pattern) => pattern.test(value))
+
+export const isInvalidBearerTokenError = (error: unknown) => {
+  if (!(error instanceof ApiError)) {
+    return false
+  }
+
+  if (error.status === 401) {
+    return true
+  }
+
+  if (error.status !== 403) {
+    return false
+  }
+
+  if (hasInvalidBearerMarker(error.message)) {
+    return true
+  }
+
+  const detailsMessage = extractApiErrorMessage(error.details, '')
+  return detailsMessage ? hasInvalidBearerMarker(detailsMessage) : false
 }
 
 export const getErrorMessage = (

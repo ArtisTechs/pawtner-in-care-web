@@ -44,7 +44,7 @@
 
 .table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 920px;
   border-collapse: collapse;
   color: #202a35;
   background: #f9fbfe;
@@ -122,13 +122,29 @@
   border-radius: 6px;
 }
 
-.campaignImage {
+.userImage {
   width: 46px;
   height: 46px;
   border-radius: 10px;
   object-fit: cover;
   border: 1px solid #d4deed;
   background-color: #ebf2ff;
+}
+
+.userImageFallback {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  border: 1px solid #d4deed;
+  background-color: #ebf2ff;
+  color: #7f8ea4;
+  display: grid;
+  place-items: center;
+}
+
+.userImageFallbackIcon {
+  width: 28px;
+  height: 28px;
 }
 
 .campaignTitleWrap {
@@ -163,19 +179,34 @@
   text-transform: capitalize;
 }
 
-.statusOngoing {
-  color: #1d6fbe;
-  background: #e6f2ff;
-}
-
-.statusCompleted {
+.statusActive {
   color: #22833f;
   background: #e9f9ef;
 }
 
-.statusCancelled {
+.statusInactive {
   color: #b63d3d;
   background: #ffe8e8;
+}
+
+.roleBadge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+.roleAdmin {
+  color: #1d6fbe;
+  background: #e6f2ff;
+}
+
+.roleUser {
+  color: #22833f;
+  background: #e9f9ef;
 }
 
 .actionCell {
@@ -206,6 +237,25 @@
 .actionButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.toggleActionButton {
+  width: auto;
+  min-width: 72px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.enableActionButton {
+  border-color: #3a8f5a;
+  background: linear-gradient(180deg, #49a96a 0%, #3a8f5a 100%);
+}
+
+.disableActionButton {
+  border-color: #e15d5d;
+  background: linear-gradient(180deg, #f76969 0%, #e84e4e 100%);
 }
 
 .deleteButton {
@@ -323,13 +373,36 @@
   justify-items: center;
 }
 
+.viewLoadingText {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f728b;
+}
+
 .viewImage {
-  width: min(220px, 100%);
-  aspect-ratio: 3 / 4;
-  border-radius: 12px;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
   border: 1px solid #d6e1ef;
   object-fit: cover;
   background: #ebf2ff;
+}
+
+.viewImageFallback {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: 1px solid #d6e1ef;
+  background: #ebf2ff;
+  color: #7f8ea4;
+  display: grid;
+  place-items: center;
+}
+
+.viewImageFallbackIcon {
+  width: 84px;
+  height: 84px;
 }
 
 .viewDetailsGrid {
@@ -504,6 +577,18 @@
 }
 
 .viewDeleteButton {
+  background: linear-gradient(180deg, #f76969 0%, #e84e4e 100%);
+}
+
+.viewToggleButton {
+  min-width: 110px;
+}
+
+.viewEnableButton {
+  background: linear-gradient(180deg, #49a96a 0%, #3a8f5a 100%);
+}
+
+.viewDisableButton {
   background: linear-gradient(180deg, #f76969 0%, #e84e4e 100%);
 }
 

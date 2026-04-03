@@ -1,5 +1,6 @@
 import { API_CONFIG } from '@/config/env'
-import { ApiError } from './api-error'
+import { emitAuthSessionInvalid } from './auth-session-events'
+import { ApiError, isInvalidBearerTokenError } from './api-error'
 
 type RequestOptions<TBody> = {
   body?: TBody
@@ -59,7 +60,17 @@ async function request<TResponse, TBody = undefined>(
   const payload = parseResponseBody(rawBody)
 
   if (!response.ok) {
-    throw ApiError.fromResponse(response.status, payload)
+    const apiError = ApiError.fromResponse(response.status, payload)
+
+    if (options.token && isInvalidBearerTokenError(apiError)) {
+      emitAuthSessionInvalid({
+        message: apiError.message,
+        path,
+        status: apiError.status,
+      })
+    }
+
+    throw apiError
   }
 
   return payload as TResponse

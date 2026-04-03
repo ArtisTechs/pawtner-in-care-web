@@ -17,8 +17,17 @@ export interface PetPayload {
   weight?: number | null
 }
 
+export interface PetAdopter {
+  email?: string | null
+  firstName?: string | null
+  id: string
+  lastName?: string | null
+  middleName?: string | null
+  profilePicture?: string | null
+}
+
 export interface Pet extends PetPayload {
-  adoptedBy?: string | null
+  adoptedBy?: string | PetAdopter | null
   age?: number | null
   id: string
 }

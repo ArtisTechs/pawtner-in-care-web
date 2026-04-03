@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes } from 'react-icons/fa'
+import { FaBan, FaCheck, FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes, FaTrash } from 'react-icons/fa'
 import catAnimalIcon from '@/assets/cat-icon.png'
 import dogAnimalIcon from '@/assets/dog-icon.png'
 import type { AuthSession } from '@/features/auth/types/auth-api'
@@ -55,6 +55,16 @@ type AdoptionLogRow = {
   sortTime: number
   typeLabel: string
 }
+
+type PendingConfirmationAction =
+  | {
+      kind: 'delete-request'
+      request: AdoptionLogRow
+    }
+  | {
+      kind: 'update-status'
+      status: AdoptionRequestReviewStatus
+    }
 
 const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => {
   if (leftValues.length !== rightValues.length) {
@@ -218,7 +228,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
   const [selectedRequestForStatusUpdate, setSelectedRequestForStatusUpdate] = useState<AdoptionLogRow | null>(
     null,
   )
-  const [pendingDeleteRequest, setPendingDeleteRequest] = useState<AdoptionLogRow | null>(null)
+  const [pendingConfirmationAction, setPendingConfirmationAction] = useState<PendingConfirmationAction | null>(null)
   const [statusReviewNotes, setStatusReviewNotes] = useState('')
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const lastAutoLoadedTokenRef = useRef<string | null>(null)
@@ -409,7 +419,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
         allowedStatuses.push('APPROVED', 'REJECTED')
       }
 
-      if (sessionUserId && row.requesterId === sessionUserId) {
+      if (isAdminUser || (sessionUserId && row.requesterId === sessionUserId)) {
         allowedStatuses.push('CANCELLED')
       }
 
@@ -433,6 +443,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
 
     setSelectedRequestForStatusUpdate(null)
     setStatusReviewNotes('')
+    setPendingConfirmationAction(null)
   }
 
   const handleOpenStatusModal = (row: AdoptionLogRow) => {
@@ -442,6 +453,11 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
 
   const handleUpdateStatus = (status: AdoptionRequestReviewStatus) => {
     if (!selectedRequestForStatusUpdate) {
+      return
+    }
+
+    if (status === 'CANCELLED' && selectedRequestForStatusUpdate.requestStatus !== 'PENDING') {
+      showToast('You can only cancel requests that are in progress.', { variant: 'error' })
       return
     }
 
@@ -488,23 +504,76 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
     void updateRequestStatus()
   }
 
-  const handleDeleteFromListConfirm = () => {
-    if (!pendingDeleteRequest) {
-      return
-    }
-
-    const requestId = pendingDeleteRequest.requestId
+  const handleDeleteFromListConfirm = (request: AdoptionLogRow) => {
+    const requestId = request.requestId
     setRows((currentRows) => currentRows.filter((row) => row.requestId !== requestId))
-    setPendingDeleteRequest(null)
+    setPendingConfirmationAction(null)
     if (selectedRequestForStatusUpdate?.requestId === requestId) {
       closeStatusModal()
     }
     showToast('Adoption request removed from this list view.', { variant: 'success' })
   }
 
+  const getConfirmationDialogContent = useCallback(() => {
+    if (!pendingConfirmationAction || !selectedRequestForStatusUpdate) {
+      return null
+    }
+
+    const requestRef =
+      selectedRequestForStatusUpdate.requestNumber || selectedRequestForStatusUpdate.requestId || 'this request'
+
+    if (pendingConfirmationAction.kind === 'delete-request') {
+      return {
+        ariaLabel: 'Delete adoption request from list confirmation',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Delete',
+        confirmTone: 'danger' as const,
+        message: `Remove request #${pendingConfirmationAction.request.requestNumber || pendingConfirmationAction.request.requestId} from this list view?`,
+        title: 'Delete adoption request from list?',
+      }
+    }
+
+    const status = pendingConfirmationAction.status
+    const statusLabelByAction: Record<AdoptionRequestReviewStatus, string> = {
+      APPROVED: 'approve',
+      CANCELLED: 'cancel',
+      REJECTED: 'reject',
+    }
+
+    return {
+      ariaLabel: `Confirm ${statusLabelByAction[status]} adoption request status`,
+      cancelLabel: 'No',
+      confirmLabel: 'Yes',
+      confirmTone: status === 'APPROVED' ? ('success' as const) : ('danger' as const),
+      message: `Are you sure you want to ${statusLabelByAction[status]} request #${requestRef}?`,
+      title: `Confirm ${statusLabelByAction[status]}`,
+    }
+  }, [pendingConfirmationAction, selectedRequestForStatusUpdate])
+
+  const confirmationDialogContent = getConfirmationDialogContent()
+
+  const handleConfirmationAction = () => {
+    if (!pendingConfirmationAction) {
+      return
+    }
+
+    if (pendingConfirmationAction.kind === 'delete-request') {
+      handleDeleteFromListConfirm(pendingConfirmationAction.request)
+      return
+    }
+
+    handleUpdateStatus(pendingConfirmationAction.status)
+    setPendingConfirmationAction(null)
+  }
+
   const canApproveSelected = selectedAllowedStatuses.includes('APPROVED')
   const canRejectSelected = selectedAllowedStatuses.includes('REJECTED')
-  const canCancelSelected = selectedAllowedStatuses.includes('CANCELLED')
+  const canCancelSelected =
+    selectedRequestForStatusUpdate?.requestStatus === 'PENDING' && selectedAllowedStatuses.includes('CANCELLED')
+  const showCancelSelected = selectedRequestForStatusUpdate?.requestStatus === 'PENDING'
+  const showResolvedIndicator =
+    selectedRequestForStatusUpdate?.requestStatus === 'APPROVED' ||
+    selectedRequestForStatusUpdate?.requestStatus === 'REJECTED'
   const showDeleteSelected =
     selectedRequestForStatusUpdate?.requestStatus === 'PENDING' ||
     selectedRequestForStatusUpdate?.requestStatus === 'CANCELLED'
@@ -688,7 +757,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
         <div
           className={styles.modalOverlay}
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
+            if (event.target === event.currentTarget && !isUpdatingStatus) {
               closeStatusModal()
             }
           }}
@@ -709,7 +778,9 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
               <button
                 type="button"
                 className={styles.modalCloseButton}
-                onClick={closeStatusModal}
+                onClick={() => {
+                  closeStatusModal()
+                }}
                 aria-label="Close adoption request status modal"
                 disabled={isUpdatingStatus}
               >
@@ -763,60 +834,83 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
               </div>
 
               <div className={styles.modalActions}>
-                <button
-                  type="button"
-                  className={`${styles.modalActionButton} ${styles.modalCloseActionButton}`}
-                  onClick={closeStatusModal}
-                  disabled={isUpdatingStatus}
-                >
-                  Close
-                </button>
+                {showResolvedIndicator ? (
+                  <div className={styles.modalStatusIndicator}>
+                    <span
+                      className={`${styles.statusBadge} ${styles[REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].badgeClassName]}`}
+                    >
+                      {REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label}
+                    </span>
+                    <span className={styles.modalStatusIndicatorText}>
+                      This request is already {REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label}.
+                    </span>
+                  </div>
+                ) : (
+                  <div className={styles.modalIconActions}>
+                    <button
+                      type="button"
+                      className={`${styles.modalIconButton} ${styles.modalApproveButton}`}
+                      onClick={() => {
+                        setPendingConfirmationAction({ kind: 'update-status', status: 'APPROVED' })
+                      }}
+                      disabled={isUpdatingStatus || !canApproveSelected}
+                      aria-label="Approve adoption request"
+                      title="Approve"
+                    >
+                      <FaCheck aria-hidden="true" />
+                      <span className={styles.modalIconLabel}>Approve</span>
+                    </button>
 
-                <button
-                  type="button"
-                  className={`${styles.modalActionButton} ${styles.modalApproveButton}`}
-                  onClick={() => {
-                    handleUpdateStatus('APPROVED')
-                  }}
-                  disabled={isUpdatingStatus || !canApproveSelected}
-                >
-                  Approve
-                </button>
+                    <button
+                      type="button"
+                      className={`${styles.modalIconButton} ${styles.modalRejectButton}`}
+                      onClick={() => {
+                        setPendingConfirmationAction({ kind: 'update-status', status: 'REJECTED' })
+                      }}
+                      disabled={isUpdatingStatus || !canRejectSelected}
+                      aria-label="Reject adoption request"
+                      title="Reject"
+                    >
+                      <FaTimes aria-hidden="true" />
+                      <span className={styles.modalIconLabel}>Reject</span>
+                    </button>
 
-                <button
-                  type="button"
-                  className={`${styles.modalActionButton} ${styles.modalRejectButton}`}
-                  onClick={() => {
-                    handleUpdateStatus('REJECTED')
-                  }}
-                  disabled={isUpdatingStatus || !canRejectSelected}
-                >
-                  Reject
-                </button>
+                    {showCancelSelected ? (
+                      <button
+                        type="button"
+                        className={`${styles.modalIconButton} ${styles.modalCancelRequestButton}`}
+                        onClick={() => {
+                          setPendingConfirmationAction({ kind: 'update-status', status: 'CANCELLED' })
+                        }}
+                        disabled={isUpdatingStatus || !canCancelSelected}
+                        aria-label="Cancel adoption request"
+                        title="Cancel Request"
+                      >
+                        <FaBan aria-hidden="true" />
+                        <span className={styles.modalIconLabel}>Cancel</span>
+                      </button>
+                    ) : null}
 
-                <button
-                  type="button"
-                  className={`${styles.modalActionButton} ${styles.modalCancelRequestButton}`}
-                  onClick={() => {
-                    handleUpdateStatus('CANCELLED')
-                  }}
-                  disabled={isUpdatingStatus || !canCancelSelected}
-                >
-                  Cancel Request
-                </button>
-
-                {showDeleteSelected ? (
-                  <button
-                    type="button"
-                    className={`${styles.modalActionButton} ${styles.modalDeleteButton}`}
-                    onClick={() => {
-                      setPendingDeleteRequest(selectedRequestForStatusUpdate)
-                    }}
-                    disabled={isUpdatingStatus}
-                  >
-                    Delete
-                  </button>
-                ) : null}
+                    {showDeleteSelected ? (
+                      <button
+                        type="button"
+                        className={`${styles.modalIconButton} ${styles.modalDeleteButton}`}
+                        onClick={() => {
+                          setPendingConfirmationAction({
+                            kind: 'delete-request',
+                            request: selectedRequestForStatusUpdate,
+                          })
+                        }}
+                        disabled={isUpdatingStatus}
+                        aria-label="Delete adoption request from list"
+                        title="Delete"
+                      >
+                        <FaTrash aria-hidden="true" />
+                        <span className={styles.modalIconLabel}>Delete</span>
+                      </button>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -824,17 +918,18 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
       ) : null}
 
       <ConfirmModal
-        isOpen={Boolean(pendingDeleteRequest)}
-        title="Delete adoption request from list?"
-        message={`Remove request #${pendingDeleteRequest?.requestNumber || pendingDeleteRequest?.requestId || ''} from this list view?`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        ariaLabel="Delete adoption request from list confirmation"
+        isOpen={Boolean(confirmationDialogContent)}
+        title={confirmationDialogContent?.title || ''}
+        message={confirmationDialogContent?.message || ''}
+        confirmLabel={confirmationDialogContent?.confirmLabel || 'Confirm'}
+        confirmTone={confirmationDialogContent?.confirmTone || 'danger'}
+        cancelLabel={confirmationDialogContent?.cancelLabel || 'Cancel'}
+        ariaLabel={confirmationDialogContent?.ariaLabel || 'Confirmation dialog'}
         isBusy={isUpdatingStatus}
         onCancel={() => {
-          setPendingDeleteRequest(null)
+          setPendingConfirmationAction(null)
         }}
-        onConfirm={handleDeleteFromListConfirm}
+        onConfirm={handleConfirmationAction}
       />
     </MainLayout>
   )

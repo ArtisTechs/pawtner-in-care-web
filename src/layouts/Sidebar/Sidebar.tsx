@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { SidebarIconName, SidebarItemKey, SidebarMenuItem } from '@/shared/types/layout'
+import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import type { IconType } from 'react-icons'
 import {
   FaAddressBook,
@@ -6,11 +8,13 @@ import {
   FaCheckSquare,
   FaClipboardList,
   FaCog,
+  FaCreditCard,
   FaDonate,
   FaInbox,
   FaPaw,
   FaSignOutAlt,
   FaTachometerAlt,
+  FaUsers,
 } from 'react-icons/fa'
 import { NavLink } from 'react-router-dom'
 import styles from './Sidebar.module.css'
@@ -33,8 +37,11 @@ const SIDEBAR_ICON_MAP: Record<SidebarIconName, IconType> = {
   dashboard: FaTachometerAlt,
   inbox: FaInbox,
   'pet-list': FaPaw,
+  'user-list': FaUsers,
   'adoption-logs': FaClipboardList,
+  'donation-campaign-list': FaDonate,
   'donation-logs': FaDonate,
+  'payment-mode-list': FaCreditCard,
   calendar: FaCalendarAlt,
   'to-do': FaCheckSquare,
   contact: FaAddressBook,
@@ -88,20 +95,50 @@ function SidebarList({ activeItem, items, onLogout }: SidebarListProps) {
 }
 
 function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: SidebarProps) {
+  const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false)
+
+  const handleLogoutRequest = () => {
+    if (!onLogout) {
+      return
+    }
+
+    setIsLogoutConfirmationOpen(true)
+  }
+
+  const handleLogoutConfirm = () => {
+    setIsLogoutConfirmationOpen(false)
+    onLogout?.()
+  }
+
   return (
-    <div className={styles.sidebar}>
-      <div className={styles.logoWrap}>
-        <img src={logoSrc} alt="Pawtner in Care" className={styles.logo} />
+    <>
+      <div className={styles.sidebar}>
+        <div className={styles.logoWrap}>
+          <img src={logoSrc} alt="Pawtner in Care" className={styles.logo} />
+        </div>
+
+        <nav className={styles.nav} aria-label="Main navigation">
+          <SidebarList activeItem={activeItem} items={menuItems} onLogout={handleLogoutRequest} />
+        </nav>
+
+        <div className={styles.bottomNav} aria-label="Secondary navigation">
+          <SidebarList activeItem={activeItem} items={bottomItems} onLogout={handleLogoutRequest} />
+        </div>
       </div>
 
-      <nav className={styles.nav} aria-label="Main navigation">
-        <SidebarList activeItem={activeItem} items={menuItems} onLogout={onLogout} />
-      </nav>
-
-      <div className={styles.bottomNav} aria-label="Secondary navigation">
-        <SidebarList activeItem={activeItem} items={bottomItems} onLogout={onLogout} />
-      </div>
-    </div>
+      <ConfirmModal
+        isOpen={isLogoutConfirmationOpen}
+        title="Sign out?"
+        message="Are you sure you want to sign out of your account?"
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        ariaLabel="Sign out confirmation"
+        onCancel={() => {
+          setIsLogoutConfirmationOpen(false)
+        }}
+        onConfirm={handleLogoutConfirm}
+      />
+    </>
   )
 }
 
