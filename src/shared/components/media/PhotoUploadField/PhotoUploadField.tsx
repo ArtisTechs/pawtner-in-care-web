@@ -10,6 +10,7 @@ import styles from './PhotoUploadField.module.css'
 type PhotoUploadFieldProps = {
   cameraButtonLabel?: string
   choosePhotoButtonLabel?: string
+  cropAspectRatio?: number
   disabled?: boolean
   helperText?: string
   onChange: (nextPhoto: string) => void
@@ -30,7 +31,8 @@ type CropRect = {
 }
 
 const notifyFallback = () => {}
-const TARGET_CROP_RATIO = 3 / 4
+const DEFAULT_CROP_RATIO = 3 / 4
+const SQUARE_CROP_RATIO = 1
 const JPEG_QUALITY = 0.92
 
 const resolveCenteredCrop = (sourceWidth: number, sourceHeight: number, targetRatio: number): CropRect => {
@@ -66,7 +68,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality: number) 
     }, type, quality)
   })
 
-const cropImageBlobToThreeByFour = async (sourceBlob: Blob) => {
+const cropImageBlobToAspectRatio = async (sourceBlob: Blob, targetRatio: number) => {
   const sourceUrl = URL.createObjectURL(sourceBlob)
 
   try {
@@ -77,7 +79,7 @@ const cropImageBlobToThreeByFour = async (sourceBlob: Blob) => {
       nextImage.src = sourceUrl
     })
 
-    const crop = resolveCenteredCrop(image.naturalWidth, image.naturalHeight, TARGET_CROP_RATIO)
+    const crop = resolveCenteredCrop(image.naturalWidth, image.naturalHeight, targetRatio)
     const canvas = document.createElement('canvas')
     canvas.width = crop.width
     canvas.height = crop.height
@@ -108,8 +110,9 @@ const cropImageBlobToThreeByFour = async (sourceBlob: Blob) => {
 function PhotoUploadField({
   cameraButtonLabel = 'Open Camera',
   choosePhotoButtonLabel = 'Choose Photo to Upload',
+  cropAspectRatio = DEFAULT_CROP_RATIO,
   disabled = false,
-  helperText = 'Photos are automatically center-cropped to 3:4 before upload.',
+  helperText,
   onChange,
   onNotify = notifyFallback,
   previewAlt = 'Uploaded image preview',
@@ -119,6 +122,12 @@ function PhotoUploadField({
   uploadFolder,
   value,
 }: PhotoUploadFieldProps) {
+  const usesSquareCrop = Math.abs(cropAspectRatio - SQUARE_CROP_RATIO) < 0.001
+  const resolvedHelperText =
+    helperText ??
+    (usesSquareCrop
+      ? 'Photos are automatically center-cropped to 1:1 before upload.'
+      : 'Photos are automatically center-cropped to 3:4 before upload.')
   const [isUploading, setIsUploading] = useState(false)
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
   const [isStartingCamera, setIsStartingCamera] = useState(false)
@@ -224,7 +233,7 @@ function PhotoUploadField({
     }
 
     try {
-      const croppedBlob = await cropImageBlobToThreeByFour(selectedFile)
+      const croppedBlob = await cropImageBlobToAspectRatio(selectedFile, cropAspectRatio)
       const croppedFile = new File([croppedBlob], `upload-crop-${Date.now()}.jpg`, {
         type: croppedBlob.type || 'image/jpeg',
       })
@@ -271,7 +280,7 @@ function PhotoUploadField({
     setCameraError('')
 
     try {
-      const crop = resolveCenteredCrop(videoElement.videoWidth, videoElement.videoHeight, TARGET_CROP_RATIO)
+      const crop = resolveCenteredCrop(videoElement.videoWidth, videoElement.videoHeight, cropAspectRatio)
       canvasElement.width = crop.width
       canvasElement.height = crop.height
 
@@ -346,7 +355,7 @@ function PhotoUploadField({
       </div>
 
       {value ? (
-        <div className={styles.previewBox}>
+        <div className={`${styles.previewBox} ${usesSquareCrop ? styles.previewBoxSquare : ''}`}>
           <img src={value} alt={previewAlt} className={styles.previewImage} />
           <button
             type="button"
@@ -386,7 +395,7 @@ function PhotoUploadField({
         </div>
         <p className={styles.helperText}>
           {isCloudinaryConfigured
-            ? helperText
+            ? resolvedHelperText
             : 'Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET to enable uploads.'}
         </p>
       </div>
@@ -401,7 +410,7 @@ function PhotoUploadField({
               </button>
             </div>
 
-            <div className={styles.cameraViewport}>
+            <div className={`${styles.cameraViewport} ${usesSquareCrop ? styles.cameraViewportSquare : ''}`}>
               {capturedPhoto ? (
                 <img src={capturedPhoto.previewUrl} alt="Captured preview" className={styles.cameraCapturedImage} />
               ) : (

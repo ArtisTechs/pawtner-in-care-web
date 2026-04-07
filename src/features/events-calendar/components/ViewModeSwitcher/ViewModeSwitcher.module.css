@@ -1,0 +1,35 @@
+.switcher {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid #d6e3f2;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.modeButton {
+  min-width: 52px;
+  height: 30px;
+  border: 0;
+  background: #ffffff;
+  color: #6d7b8d;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+.modeButton + .modeButton {
+  border-left: 1px solid #e4edf8;
+}
+
+.modeButtonActive {
+  background: linear-gradient(180deg, #3d96e7 0%, #2f80d7 100%);
+  color: #ffffff;
+}
+
+.modeButton:disabled {
+  background: #f3f7fc;
+  color: #9aa8ba;
+  cursor: not-allowed;
+}

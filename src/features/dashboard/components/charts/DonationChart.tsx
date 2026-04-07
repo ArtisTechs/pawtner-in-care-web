@@ -2,6 +2,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,18 +15,59 @@ interface DonationChartProps {
 }
 
 function DonationChart({ data }: DonationChartProps) {
+  if (!data.length) {
+    return null
+  }
+
+  const groupedByLabel = new Map<string, Record<string, number | string>>()
+  const paymentMethods = new Set<string>()
+
+  for (const point of data) {
+    const method = point.paymentMethod?.trim() || 'Unknown'
+    paymentMethods.add(method)
+
+    const row = groupedByLabel.get(point.label) ?? { label: point.label }
+    row[method] = point.value
+    groupedByLabel.set(point.label, row)
+  }
+
+  const methods = Array.from(paymentMethods)
+  const chartData = Array.from(groupedByLabel.values()).map((row) => {
+    const normalizedRow: Record<string, number | string> = { label: String(row.label) }
+
+    for (const method of methods) {
+      const value = row[method]
+      normalizedRow[method] = typeof value === 'number' ? value : 0
+    }
+
+    return normalizedRow
+  })
+
+  const currencyFormatter = new Intl.NumberFormat('en-PH', {
+    currency: 'PHP',
+    style: 'currency',
+  })
+
+  const methodPalette = ['#f2997a', '#ba90ef', '#4b86ea', '#67b87a', '#f2b547']
+  const gradientIdByMethod = new Map(
+    methods.map((method) => [method, `donationFill-${method.replace(/[^a-zA-Z0-9_-]/g, '-')}`]),
+  )
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 14, right: 14, left: 0, bottom: 4 }}>
+      <AreaChart data={chartData} margin={{ top: 14, right: 14, left: 0, bottom: 4 }}>
         <defs>
-          <linearGradient id="donationDogsFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59f82" stopOpacity={0.95} />
-            <stop offset="100%" stopColor="#f59f82" stopOpacity={0.06} />
-          </linearGradient>
-          <linearGradient id="donationCatsFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#c6a2f3" stopOpacity={0.95} />
-            <stop offset="100%" stopColor="#c6a2f3" stopOpacity={0.07} />
-          </linearGradient>
+          {methods.map((method, index) => {
+            const color = methodPalette[index % methodPalette.length]
+            const gradientId = gradientIdByMethod.get(method) ?? 'donationFill-fallback'
+
+            return (
+              <linearGradient key={method} id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.85} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.05} />
+              </linearGradient>
+            )
+          })}
         </defs>
 
         <CartesianGrid stroke="#edf2fb" vertical={false} />
@@ -38,8 +80,7 @@ function DonationChart({ data }: DonationChartProps) {
         <YAxis
           axisLine={false}
           tickLine={false}
-          domain={[0, 100]}
-          ticks={[0, 20, 40, 60, 80, 100]}
+          domain={[0, 'dataMax + 10']}
           tick={{ fill: '#9ca6b4', fontSize: 11 }}
           width={34}
         />
@@ -50,24 +91,29 @@ function DonationChart({ data }: DonationChartProps) {
             boxShadow: '0 8px 20px rgba(35, 86, 162, 0.12)',
             fontSize: 12,
           }}
+          formatter={(value, name) => {
+            const donationValue = typeof value === 'number' ? value : Number(value) || 0
+            return [currencyFormatter.format(donationValue), String(name)]
+          }}
         />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
 
-        <Area
-          type="monotone"
-          dataKey="dogs"
-          stroke="#f2997a"
-          strokeWidth={2}
-          fill="url(#donationDogsFill)"
-          activeDot={{ r: 5 }}
-        />
-        <Area
-          type="monotone"
-          dataKey="cats"
-          stroke="#ba90ef"
-          strokeWidth={2}
-          fill="url(#donationCatsFill)"
-          activeDot={{ r: 5 }}
-        />
+        {methods.map((method, index) => {
+          const color = methodPalette[index % methodPalette.length]
+          const gradientId = gradientIdByMethod.get(method) ?? 'donationFill-fallback'
+          return (
+            <Area
+              key={method}
+              type="monotone"
+              dataKey={method}
+              name={method}
+              stroke={color}
+              strokeWidth={2}
+              fill={`url(#${gradientId})`}
+              activeDot={{ r: 5 }}
+            />
+          )
+        })}
       </AreaChart>
     </ResponsiveContainer>
   )

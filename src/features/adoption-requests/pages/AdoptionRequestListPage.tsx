@@ -47,6 +47,7 @@ type AdoptionLogRow = {
   petName: string
   petStatusLabel: string
   race: string
+  reviewNotes: string
   requestId: string
   requestNumber: string
   requestStatus: AdoptionRequestStatus
@@ -201,6 +202,7 @@ const mapLogRow = (request: AdoptionRequest): AdoptionLogRow => {
     petName: requestPet?.name?.trim() || 'Unknown Pet',
     petStatusLabel: PET_STATUS_LABELS[petStatus as PetStatus] ?? (petStatus || 'Unknown'),
     race: toRaceLabel(requestPet?.race),
+    reviewNotes: request.reviewNotes?.trim() || '',
     requestId: request.id,
     requestNumber: toRequestNumberLabel(request.requestNumber),
     requestStatus: request.status,
@@ -448,7 +450,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
 
   const handleOpenStatusModal = (row: AdoptionLogRow) => {
     setSelectedRequestForStatusUpdate(row)
-    setStatusReviewNotes('')
+    setStatusReviewNotes(row.reviewNotes)
   }
 
   const handleUpdateStatus = (status: AdoptionRequestReviewStatus) => {
@@ -577,6 +579,9 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
   const showDeleteSelected =
     selectedRequestForStatusUpdate?.requestStatus === 'PENDING' ||
     selectedRequestForStatusUpdate?.requestStatus === 'CANCELLED'
+  const showReviewNotesEditor = selectedRequestForStatusUpdate?.requestStatus === 'PENDING'
+  const hasReviewNotesValue = statusReviewNotes.trim().length > 0
+  const showReviewNotesView = !showReviewNotesEditor && hasReviewNotesValue
 
   return (
     <MainLayout
@@ -807,30 +812,37 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
                   <span className={styles.modalMetaValue}>{selectedRequestForStatusUpdate.requesterName}</span>
                 </div>
 
-                <label className={styles.fieldLabel}>
+                <div className={styles.fieldLabel}>
                   <span>Current Status</span>
-                  <input
-                    type="text"
-                    className={styles.fieldInput}
-                    value={`${selectedRequestForStatusUpdate.requestStatus} (${REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label})`}
-                    readOnly
-                  />
-                </label>
+                  <div className={styles.fieldDisplay}>
+                    {selectedRequestForStatusUpdate.requestStatus} (
+                    {REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label})
+                  </div>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>Review Notes (Optional)</span>
-                  <textarea
-                    value={statusReviewNotes}
-                    onChange={(event) => {
-                      setStatusReviewNotes(event.target.value)
-                    }}
-                    className={styles.fieldTextarea}
-                    rows={4}
-                    maxLength={1000}
-                    disabled={isUpdatingStatus}
-                    placeholder="Enter review notes for this status update."
-                  />
-                </label>
+                {showReviewNotesEditor ? (
+                  <label className={styles.fieldLabel}>
+                    <span>Review Notes (Optional)</span>
+                    <textarea
+                      value={statusReviewNotes}
+                      onChange={(event) => {
+                        setStatusReviewNotes(event.target.value)
+                      }}
+                      className={styles.fieldTextarea}
+                      rows={4}
+                      maxLength={1000}
+                      disabled={isUpdatingStatus}
+                      placeholder="Enter review notes for this status update."
+                    />
+                  </label>
+                ) : null}
+
+                {showReviewNotesView ? (
+                  <div className={styles.fieldLabel}>
+                    <span>Review Notes</span>
+                    <div className={styles.fieldTextView}>{statusReviewNotes}</div>
+                  </div>
+                ) : null}
               </div>
 
               <div className={styles.modalActions}>

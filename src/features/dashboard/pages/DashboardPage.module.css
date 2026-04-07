@@ -27,10 +27,183 @@
   gap: 16px;
 }
 
+.dashboardWidgetGrid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.widgetCard {
+  border-radius: 14px;
+  background-color: #f4f5f7;
+  padding: 18px 18px 16px;
+  box-shadow: 0 10px 22px rgba(17, 67, 125, 0.14);
+}
+
+.widgetTitle {
+  margin: 0;
+  color: #1f2835;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.petsPieWrap {
+  margin: 16px auto 18px;
+  width: 176px;
+  height: 176px;
+  position: relative;
+}
+
+.petsPieChart {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    #4b86ea 0deg var(--dogs-angle),
+    #8eaee0 var(--dogs-angle) var(--cats-end-angle),
+    #d8e2f1 var(--cats-end-angle) 360deg
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.petsLegendRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.petsLegendItem {
+  text-align: center;
+}
+
+.petsLegendValue {
+  margin: 0;
+  color: #1f2835;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.petsLegendLabel {
+  margin: 6px 0 0;
+  color: #465567;
+  font-size: 23px;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.petsLegendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.petsLegendDotPrimary {
+  background-color: #4b86ea;
+}
+
+.petsLegendDotMuted {
+  background-color: #8eaee0;
+}
+
+.petsLegendDotSpace {
+  background-color: #d8e2f1;
+}
+
+.topPostRow {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.topPostArrowButton {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background-color: #e8ebf1;
+  color: #707887;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.topPostArrowButton:hover {
+  background-color: #dde6f6;
+  color: #4f5b72;
+}
+
+.topPostArrowButton:focus-visible {
+  outline: 2px solid #8dbbf2;
+  outline-offset: 2px;
+}
+
+.topPostArrowButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.topPostMain {
+  text-align: center;
+}
+
+.topPostImage {
+  width: 172px;
+  height: 230px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
+}
+
+.topPostTitle {
+  margin: 10px 0 0;
+  color: #1f2835;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.topPostParticipants {
+  margin: 8px 0 0;
+  color: #4b86ea;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.topPostStateMessage {
+  margin: 24px 0;
+  color: #5e6c80;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .chartsStack {
   margin-top: 20px;
   display: grid;
   gap: 20px;
+}
+
+.chartStateMessage {
+  margin: 0;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #5e6c80;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 @media (max-width: 1300px) {
@@ -47,6 +220,26 @@
   .statsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .widgetTitle {
+    font-size: 28px;
+  }
+
+  .petsLegendValue {
+    font-size: 30px;
+  }
+
+  .petsLegendLabel {
+    font-size: 16px;
+  }
+
+  .topPostTitle {
+    font-size: 19px;
+  }
+
+  .topPostParticipants {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -61,6 +254,58 @@
   .statsGrid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .dashboardWidgetGrid {
+    margin-top: 14px;
+    gap: 14px;
+  }
+
+  .widgetCard {
+    padding: 14px 14px 12px;
+  }
+
+  .widgetTitle {
+    font-size: 24px;
+  }
+
+  .petsPieWrap {
+    width: 148px;
+    height: 148px;
+  }
+
+  .petsLegendValue {
+    font-size: 24px;
+  }
+
+  .petsLegendLabel {
+    font-size: 13px;
+  }
+
+  .topPostRow {
+    gap: 8px;
+  }
+
+  .topPostArrowButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .topPostImage {
+    width: 138px;
+    height: 184px;
+  }
+
+  .topPostTitle {
+    font-size: 16px;
+  }
+
+  .topPostParticipants {
+    font-size: 16px;
+  }
+
+  .dashboardWidgetGrid {
+    grid-template-columns: 1fr;
   }
 
   .chartsStack {

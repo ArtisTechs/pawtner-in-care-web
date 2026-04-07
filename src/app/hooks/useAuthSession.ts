@@ -3,30 +3,14 @@ import { APP_ROUTES } from '@/app/routes/route-paths'
 import { sessionPreloadService } from '@/app/services/session-preload.service'
 import { authStorage } from '@/features/auth/services/auth.storage'
 import type { AuthSession } from '@/features/auth/types/auth-api'
+import { getAuthSessionUserId, isAdminAuthSession } from '@/features/auth/utils/auth-utils'
 import { subscribeToAuthSessionInvalid } from '@/shared/api/auth-session-events'
 import { wait } from '@/shared/lib/async/wait'
 
 const LOGOUT_DELAY_MS = 900
 
-const hasValidSession = (session: AuthSession | null) => Boolean(session?.accessToken)
-
-const getSessionUserId = (user: AuthSession['user']) => {
-  if (!user || typeof user !== 'object') {
-    return undefined
-  }
-
-  const record = user as Record<string, unknown>
-
-  if (typeof record.id === 'string' && record.id.trim()) {
-    return record.id.trim()
-  }
-
-  if (typeof record.userId === 'string' && record.userId.trim()) {
-    return record.userId.trim()
-  }
-
-  return undefined
-}
+const hasValidSession = (session: AuthSession | null) =>
+  Boolean(session?.accessToken) && isAdminAuthSession(session)
 
 export const useAuthSession = () => {
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -41,9 +25,15 @@ export const useAuthSession = () => {
     const hydrateSession = async () => {
       try {
         const storedSession = await authStorage.getSession()
+        const isSessionAllowed = hasValidSession(storedSession)
+
+        if (storedSession && !isSessionAllowed) {
+          const userId = getAuthSessionUserId(storedSession?.user)
+          await sessionPreloadService.clearSessionCache(userId)
+        }
 
         if (isMounted) {
-          setSession(storedSession)
+          setSession(isSessionAllowed ? storedSession : null)
         }
       } finally {
         if (isMounted) {
@@ -73,7 +63,7 @@ export const useAuthSession = () => {
     }
 
     isSigningOutRef.current = true
-    const userId = getSessionUserId(sessionRef.current?.user)
+    const userId = getAuthSessionUserId(sessionRef.current?.user)
     const signOut = async () => {
       setIsSigningOut(true)
 

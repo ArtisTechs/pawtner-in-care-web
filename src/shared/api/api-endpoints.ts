@@ -5,6 +5,14 @@ const DONATION_CAMPAIGN_BASE_PATH = '/donation-campaigns'
 const DONATION_TRANSACTION_BASE_PATH = '/donation-transactions'
 const ADOPTION_REQUEST_BASE_PATH = '/adoption-requests'
 const PAYMENT_MODE_BASE_PATH = '/payment-modes'
+const VETERINARY_CLINIC_BASE_PATH = '/veterinary-clinics'
+const EVENT_BASE_PATH = '/events'
+const VOLUNTEER_BASE_PATH = '/volunteers'
+const GAMIFICATION_BASE_PATH = '/gamification'
+const COMMUNITY_POST_BASE_PATH = '/community/posts'
+const COMPANY_SETTINGS_BASE_PATH = '/company-settings'
+const DASHBOARD_BASE_PATH = '/dashboard'
+const EMERGENCY_SOS_BASE_PATH = '/emergency-sos'
 
 export const API_ENDPOINTS = {
   auth: {
@@ -19,6 +27,7 @@ export const API_ENDPOINTS = {
     base: PET_BASE_PATH,
     adoptionRequests: (petId: string) => `${PET_BASE_PATH}/${petId}/adoption-requests`,
     byId: (id: string) => `${PET_BASE_PATH}/${id}`,
+    count: `${PET_BASE_PATH}/count`,
     favorites: (petId: string) => `${PET_BASE_PATH}/${petId}/favorites`,
     userFavorites: (userId: string) => `${USER_BASE_PATH}/${userId}/favorite-pets`,
   },
@@ -44,8 +53,52 @@ export const API_ENDPOINTS = {
     base: DONATION_TRANSACTION_BASE_PATH,
     byId: (id: string) => `${DONATION_TRANSACTION_BASE_PATH}/${id}`,
   },
+  events: {
+    base: EVENT_BASE_PATH,
+    byDate: (date: string) => `${EVENT_BASE_PATH}?date=${encodeURIComponent(date)}`,
+    byId: (id: string) => `${EVENT_BASE_PATH}/${id}`,
+    join: (id: string) => `${EVENT_BASE_PATH}/${id}/join`,
+  },
+  volunteers: {
+    base: VOLUNTEER_BASE_PATH,
+    byDate: (date: string) => `${VOLUNTEER_BASE_PATH}?date=${encodeURIComponent(date)}`,
+    byId: (id: string) => `${VOLUNTEER_BASE_PATH}/${id}`,
+    join: (id: string) => `${VOLUNTEER_BASE_PATH}/${id}/join`,
+  },
   paymentModes: {
     base: PAYMENT_MODE_BASE_PATH,
     byId: (id: string) => `${PAYMENT_MODE_BASE_PATH}/${id}`,
+  },
+  veterinaryClinics: {
+    base: VETERINARY_CLINIC_BASE_PATH,
+    byId: (id: string) => `${VETERINARY_CLINIC_BASE_PATH}/${id}`,
+  },
+  achievements: {
+    base: `${GAMIFICATION_BASE_PATH}/admin/achievements`,
+    assign: `${GAMIFICATION_BASE_PATH}/admin/achievements/assign`,
+    byId: (id: string) => `${GAMIFICATION_BASE_PATH}/admin/achievements/${id}`,
+  },
+  heroesWall: {
+    base: `${GAMIFICATION_BASE_PATH}/heroes-wall`,
+  },
+  communityPosts: {
+    base: COMMUNITY_POST_BASE_PATH,
+    byId: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}`,
+    hidden: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}/hidden`,
+  },
+  companySettings: {
+    base: COMPANY_SETTINGS_BASE_PATH,
+  },
+  dashboard: {
+    base: DASHBOARD_BASE_PATH,
+    charts: `${DASHBOARD_BASE_PATH}/charts`,
+    topPosts: `${DASHBOARD_BASE_PATH}/top-posts`,
+  },
+  emergencySos: {
+    base: EMERGENCY_SOS_BASE_PATH,
+    byId: (id: string) => `${EMERGENCY_SOS_BASE_PATH}/${id}`,
+    count: `${EMERGENCY_SOS_BASE_PATH}/count`,
+    statuses: `${EMERGENCY_SOS_BASE_PATH}/statuses`,
+    types: `${EMERGENCY_SOS_BASE_PATH}/types`,
   },
 } as const

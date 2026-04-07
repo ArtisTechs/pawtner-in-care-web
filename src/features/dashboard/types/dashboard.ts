@@ -7,7 +7,7 @@ export interface StatCardData {
   icon: StatIconName
 }
 
-export type ChartRange = 'day' | 'week' | 'month'
+export type ChartRange = 'day' | 'week' | 'month' | 'year'
 
 export interface ChartFilterOption {
   value: ChartRange
@@ -21,6 +21,6 @@ export interface ReportChartPoint {
 
 export interface DonationChartPoint {
   label: string
-  dogs: number
-  cats: number
+  paymentMethod: string
+  value: number
 }

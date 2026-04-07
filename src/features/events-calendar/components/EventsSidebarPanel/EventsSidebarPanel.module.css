@@ -1,0 +1,65 @@
+.card {
+  border-radius: 12px;
+  border: 1px solid #d4e2f2;
+  background: #ffffff;
+  box-shadow: 0 14px 28px rgba(18, 58, 112, 0.14);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.addButton {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #327fcf;
+  background: linear-gradient(180deg, #4599ea 0%, #2e7ed0 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #1f2f45;
+  font-size: 23px;
+  font-family: var(--font-family-heading-1);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 1px dashed #cfddf0;
+  color: #5d718a;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.seeMoreButton {
+  width: min(120px, 100%);
+  height: 32px;
+  align-self: center;
+  border-radius: 999px;
+  border: 1px solid #d7e3f3;
+  background: #f5f9ff;
+  color: #4a6283;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}

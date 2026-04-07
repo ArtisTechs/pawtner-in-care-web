@@ -1,0 +1,823 @@
+.page {
+  min-height: calc(100vh - 74px);
+  padding: 22px 18px 16px;
+  background:
+    radial-gradient(circle at 6% 18%, rgba(120, 176, 247, 0.24) 0%, rgba(120, 176, 247, 0) 34%),
+    linear-gradient(105deg, #1f5fad 0%, #3393e7 55%, #2f80d7 100%);
+}
+
+.container {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pageHeaderButton {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid #c7d6ea;
+  background: #f8fbff;
+  color: #345d8e;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pageTitle {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-family-heading-1);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.1;
+  text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
+}
+
+.tablePanel {
+  margin-top: 16px;
+  position: relative;
+  height: clamp(420px, calc(100vh - 200px), 860px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  background-color: #ffffff;
+  border: 1px solid #c9d7ea;
+  box-shadow: 0 16px 30px rgba(16, 66, 127, 0.16);
+  overflow: hidden;
+}
+
+.tableScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #f9fbfe;
+}
+
+.cardGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  justify-content: center;
+  padding: 14px;
+}
+
+.card,
+.skeletonCard {
+  border-radius: 16px;
+  border: 1px solid #d6e3f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+  padding: 20px 14px 14px;
+  display: grid;
+  gap: 14px;
+  min-height: 372px;
+  grid-template-rows: auto 1fr auto;
+}
+
+.card {
+  box-shadow: 0 7px 16px rgba(40, 89, 151, 0.18);
+}
+
+.cardHeader {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.identityWrap {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.iconWrap {
+  width: 106px;
+  height: 106px;
+  border-radius: 999px;
+  border: 1px solid #d3dfef;
+  background: radial-gradient(circle at 34% 28%, #eff4fb 0%, #c6d4e7 50%, #9db1c8 100%);
+  color: #2f80d7;
+  display: inline-grid;
+  place-items: center;
+  font-size: 38px;
+  flex-shrink: 0;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.95),
+    0 5px 12px rgba(34, 72, 120, 0.28);
+}
+
+.iconImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  background: transparent;
+}
+
+.cardTitleWrap {
+  min-width: 0;
+  text-align: center;
+}
+
+.cardKicker {
+  margin: 0;
+  color: #25508a;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  margin: 4px 0 0;
+  color: #25508a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.badgeList {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.defaultBadge {
+  background: #f2f2f2;
+  color: #666666;
+}
+
+.commonBadge {
+  background: #ebf7f5;
+  color: #2f7f70;
+}
+
+.uncommonBadge {
+  background: #eef5e8;
+  color: #497729;
+}
+
+.rareBadge {
+  background: #ebf2fd;
+  color: #3566a3;
+}
+
+.epicBadge {
+  background: #efeafd;
+  color: #5e48a8;
+}
+
+.legendaryBadge {
+  background: #fff0dc;
+  color: #a75a11;
+}
+
+.activeBadge {
+  background: #e9f8ef;
+  color: #2c7d4b;
+}
+
+.inactiveBadge {
+  background: #ffecef;
+  color: #9d3a4f;
+}
+
+.cardDescription {
+  margin: 0;
+  color: #8ba2bc;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.2;
+  min-height: 62px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardViewButton {
+  width: 100%;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #3d98e8 0%, #2f80d7 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.metricRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metricItem {
+  border-radius: 9px;
+  border: 1px solid #dde7f5;
+  background: #f8fbff;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.metricLabel {
+  color: #597190;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.metricValue {
+  color: #284666;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metaGrid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metaItem {
+  margin: 0;
+  border-radius: 9px;
+  border: 1px solid #dde7f5;
+  background: #f8fbff;
+  padding: 7px 8px;
+  display: grid;
+  gap: 3px;
+}
+
+.metaItem dt {
+  color: #597190;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.metaItem dd {
+  margin: 0;
+  color: #284666;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ruleConfigWrap {
+  display: grid;
+  gap: 6px;
+}
+
+.ruleConfigLabel {
+  color: #597190;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.ruleConfigValue {
+  display: block;
+  margin: 0;
+  border-radius: 9px;
+  border: 1px solid #dde7f5;
+  background: #f8fbff;
+  color: #284666;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 96px;
+  overflow: auto;
+}
+
+.cardFooter {
+  border-top: 1px solid #e4ecf8;
+  padding-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  color: #4c6b8d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tableStateCell {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #637791;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 18px;
+}
+
+.skeletonTitle,
+.skeletonLine,
+.skeletonMeta {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e8eff8 0%, #f6f9ff 45%, #e8eff8 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.15s ease-in-out infinite;
+}
+
+.skeletonTitle {
+  height: 28px;
+  width: 62%;
+  margin: 0 auto;
+}
+
+.skeletonLine {
+  height: 18px;
+}
+
+.skeletonMeta {
+  height: 120px;
+  border-radius: 999px;
+  width: 120px;
+  margin: 0 auto;
+}
+
+.floatingAddButton {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #3f92e5 0%, #2b78cd 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-shadow: 0 10px 22px rgba(29, 89, 158, 0.36);
+  cursor: pointer;
+  z-index: 4;
+}
+
+.floatingAddIcon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.floatingAddIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.floatingAddLabel {
+  display: none;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: rgba(11, 22, 39, 0.58);
+  display: grid;
+  place-items: center;
+  padding: 18px 12px;
+  animation: modal-overlay-enter 180ms ease-out;
+}
+
+.modalCard {
+  width: min(760px, 100%);
+  max-height: min(92vh, 860px);
+  border-radius: 16px;
+  border: 1px solid #d4e0ef;
+  background: #ffffff;
+  box-shadow: 0 24px 46px rgba(18, 44, 77, 0.33);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.viewModalCard {
+  width: min(700px, 100%);
+}
+
+.modalHeader {
+  min-height: 52px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #dce6f3;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #2a4463;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.modalCloseButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid #cfdced;
+  background: #f8fbff;
+  color: #5f7692;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.modalCloseButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.modalCloseButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.modalForm {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewModalBody {
+  padding: 14px 16px 10px;
+  display: grid;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.viewAchievementTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.viewAchievementIcon {
+  width: 86px;
+  height: 86px;
+  border-radius: 999px;
+  border: 1px solid #d3dfef;
+  background: radial-gradient(circle at 34% 28%, #eff4fb 0%, #c6d4e7 50%, #9db1c8 100%);
+  color: #2f80d7;
+  display: inline-grid;
+  place-items: center;
+  font-size: 30px;
+  flex-shrink: 0;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.95),
+    0 5px 12px rgba(34, 72, 120, 0.28);
+}
+
+.viewAchievementImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  background: transparent;
+}
+
+.viewAchievementTitleWrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.viewAchievementTitle {
+  margin: 0;
+  color: #25508a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.08;
+}
+
+.viewAchievementDescription {
+  margin: 0;
+  color: #45668b;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.modalFields {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.fieldLabel {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldLabel > span,
+.checkboxField > span {
+  color: #4f6684;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.requiredMark {
+  color: #d45050;
+}
+
+.uploadFieldWrap {
+  display: grid;
+  gap: 6px;
+}
+
+.uploadRequiredLabel {
+  color: #4f6684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fieldInput,
+.fieldTextarea {
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid #d3dfef;
+  background: #ffffff;
+  color: #2d4968;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 11px;
+  outline: none;
+}
+
+.fieldInput {
+  height: 38px;
+}
+
+.fieldTextarea {
+  min-height: 96px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.fieldInput:focus,
+.fieldTextarea:focus {
+  border-color: #7ca5d3;
+}
+
+.fieldInput:disabled,
+.fieldTextarea:disabled {
+  background: #f4f8fd;
+}
+
+.fieldInputError {
+  border-color: #d45050;
+}
+
+.fieldErrorText {
+  color: #d45050;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fullWidthField {
+  grid-column: 1 / -1;
+}
+
+.checkboxRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.checkboxField {
+  display: grid;
+  gap: 6px;
+}
+
+.modalActions {
+  padding: 0 16px 16px;
+  flex-shrink: 0;
+}
+
+.modalButtonRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modalCancelButton,
+.modalSubmitButton {
+  min-width: 120px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalCancelButton {
+  border-color: #d4e0ef;
+  background: #f8fbff;
+  color: #496283;
+}
+
+.modalSubmitButton {
+  background: linear-gradient(180deg, #3d98e8 0%, #2f80d7 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.viewModalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.viewDeleteButton {
+  background: linear-gradient(180deg, #e75d5d 0%, #c83d3d 100%);
+}
+
+.modalCancelButton:disabled,
+.modalSubmitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 1040px) {
+  .page {
+    padding: 16px 10px 14px;
+  }
+
+  .pageTitle {
+    font-size: 30px;
+  }
+
+  .cardGrid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 240px));
+  }
+
+  .cardTitle {
+    font-size: 24px;
+  }
+
+  .cardDescription {
+    font-size: 22px;
+  }
+
+  .modalFields {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidthField {
+    grid-column: auto;
+  }
+
+  .checkboxRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .page {
+    padding: 16px 10px 14px;
+  }
+
+  .pageTitle {
+    font-size: 28px;
+  }
+
+  .cardTitle {
+    font-size: 20px;
+  }
+
+  .cardDescription {
+    font-size: 18px;
+    min-height: 40px;
+  }
+
+  .iconWrap {
+    width: 88px;
+    height: 88px;
+    font-size: 30px;
+  }
+
+  .metricRow {
+    grid-template-columns: 1fr;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .floatingAddButton {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .modalButtonRow {
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .modalCancelButton,
+  .modalSubmitButton {
+    flex: 1;
+  }
+
+  .viewAchievementTop {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .viewAchievementTitleWrap {
+    justify-items: center;
+  }
+
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .skeletonCard {
+    min-height: 332px;
+  }
+}

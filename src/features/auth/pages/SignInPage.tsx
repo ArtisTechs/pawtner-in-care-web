@@ -25,6 +25,7 @@ import type {
 } from '@/features/auth/types/auth'
 import {
   formatCountdownTime,
+  isAdminAuthSession,
   getOtpResendCooldownSeconds,
   LOGIN_SUCCESS_DELAY_MS,
 } from '@/features/auth/utils/auth-utils'
@@ -33,6 +34,7 @@ import Toast from '@/shared/components/feedback/Toast'
 import FullScreenLoader from '@/shared/components/ui/FullScreenLoader/FullScreenLoader'
 import { useToast } from '@/shared/hooks/useToast'
 import { wait } from '@/shared/lib/async/wait'
+import { isValidEmail } from '@/shared/lib/validation/contact'
 import styles from './SignInPage.module.css'
 
 interface SignInPageProps {
@@ -126,11 +128,22 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       return
     }
 
+    if (!isValidEmail(payload.email)) {
+      showToast('Please enter a valid email address.', { variant: 'error' })
+      return
+    }
+
     clearToast()
     setIsSubmitting(true)
 
     try {
       const loginSession = await authService.login(payload)
+
+      if (!isAdminAuthSession(loginSession)) {
+        showToast('Only admin accounts can log in to the web dashboard.', { variant: 'error' })
+        return
+      }
+
       const hydratedSession = await sessionPreloadService.preloadSessionData(loginSession)
       await wait(LOGIN_SUCCESS_DELAY_MS)
       onSignInSuccess?.(hydratedSession)
@@ -175,6 +188,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
           return
         }
 
+        if (!isValidEmail(email)) {
+          showToast('Please enter a valid email address.', { variant: 'error' })
+          return
+        }
+
         setForgotPasswordFormState((currentState) => ({
           ...currentState,
           email,
@@ -187,6 +205,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       if (forgotPasswordStep === 'verify-otp') {
         if (!email) {
           showToast('Email address is required.', { variant: 'error' })
+          return
+        }
+
+        if (!isValidEmail(email)) {
+          showToast('Email address must be a valid email.', { variant: 'error' })
           return
         }
 
@@ -208,6 +231,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
 
       if (!email) {
         showToast('Email address is required.', { variant: 'error' })
+        return
+      }
+
+      if (!isValidEmail(email)) {
+        showToast('Email address must be a valid email.', { variant: 'error' })
         return
       }
 
@@ -249,6 +277,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
 
     if (!email) {
       showToast('Email address is required to resend OTP.', { variant: 'error' })
+      return
+    }
+
+    if (!isValidEmail(email)) {
+      showToast('Email address must be a valid email.', { variant: 'error' })
       return
     }
 

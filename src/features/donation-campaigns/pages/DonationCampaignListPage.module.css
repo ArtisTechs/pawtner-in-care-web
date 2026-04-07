@@ -257,6 +257,7 @@
   display: grid;
   place-items: center;
   padding: 20px 12px;
+  animation: modal-overlay-enter 180ms ease-out;
 }
 
 .modalCard {
@@ -270,6 +271,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .viewModalCard {
@@ -524,6 +526,28 @@
   color: #cde0ff;
 }
 
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: 200% 0;
@@ -531,6 +555,13 @@
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modalCard {
+    animation: none;
   }
 }
 

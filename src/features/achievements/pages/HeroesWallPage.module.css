@@ -1,0 +1,476 @@
+.page {
+  min-height: calc(100vh - 74px);
+  padding: 22px 18px 16px;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(152, 205, 255, 0.34) 0%, rgba(152, 205, 255, 0) 36%),
+    radial-gradient(circle at 92% 10%, rgba(81, 152, 232, 0.28) 0%, rgba(81, 152, 232, 0) 28%),
+    linear-gradient(115deg, #1f5faf 0%, #2e7fcd 52%, #4094de 100%);
+}
+
+.container {
+  width: min(1160px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pageTitle {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-family-heading-1);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.06;
+  text-shadow: 0 3px 8px rgba(12, 53, 104, 0.26);
+}
+
+.pageSubtitle {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.refreshButton {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid #cbdaee;
+  background: #f9fcff;
+  color: #345d8e;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.refreshButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.refreshIconSpin {
+  animation: spin 0.9s linear infinite;
+}
+
+.periodTabs {
+  width: min(420px, 100%);
+  background: #76aee7;
+  border-radius: 999px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(160, 198, 237, 0.86);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.36);
+}
+
+.periodTab {
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #165999;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.periodTabActive {
+  background: #2677cb;
+  color: #ffffff;
+}
+
+.podiumSection {
+  border-radius: 16px;
+  border: 1px solid #c9d8ea;
+  background: #ffffff;
+  box-shadow: 0 16px 30px rgba(16, 66, 127, 0.16);
+  padding: 16px 14px 12px;
+}
+
+.podiumGrid,
+.podiumLoading {
+  min-height: 230px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.podiumSlot {
+  display: flex;
+  justify-content: center;
+}
+
+.podiumCenter {
+  align-items: flex-start;
+}
+
+.podiumCard,
+.podiumLoadingCard {
+  width: min(190px, 100%);
+  border-radius: 14px;
+  border: 1px solid #d4e1f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 100%);
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 14px 10px 10px;
+}
+
+.podiumChampion {
+  padding-top: 10px;
+  box-shadow: 0 14px 26px rgba(24, 78, 144, 0.24);
+}
+
+.podiumPlaceholder {
+  min-height: 164px;
+  place-content: center;
+  color: #7f93ab;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.avatarWrap {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+
+.avatarImage,
+.avatarFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  border: 2px solid #9ec4ee;
+  background: #e6f2ff;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  display: inline-grid;
+  place-items: center;
+  color: #3a7fc6;
+  font-size: 42px;
+}
+
+.crown {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  width: 42px;
+  transform: translateX(-50%);
+}
+
+.rankBadge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: #2b74bf;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.heroName {
+  margin-top: 8px;
+  color: #24558f;
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.heroDonated {
+  color: #2e7ac6;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.podiumLoadingCard {
+  min-height: 172px;
+  background: linear-gradient(90deg, #e5edf9 0%, #f7faff 45%, #e5edf9 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.15s ease-in-out infinite;
+}
+
+.podiumLoadingCenterCard {
+  min-height: 192px;
+}
+
+.emptyState {
+  min-height: 220px;
+  border-radius: 12px;
+  border: 1px dashed #cad8eb;
+  background: #f9fbff;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #617b97;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tablePanel {
+  border-radius: 16px;
+  border: 1px solid #c9d8ea;
+  background: #e9edf3;
+  padding: 18px 14px 14px;
+  box-shadow: 0 16px 30px rgba(16, 66, 127, 0.16);
+}
+
+.tableHeader {
+  height: 52px;
+  border-radius: 999px;
+  background: #8ec0f4;
+  color: #1e5a96;
+  font-size: 20px;
+  font-weight: 800;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 140px 110px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.alignEnd {
+  text-align: right;
+}
+
+.tableBody {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.row,
+.rowSkeleton {
+  min-height: 68px;
+  border-radius: 12px;
+  background: #2f79c8;
+  color: #ffffff;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 140px 110px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.rowSkeleton {
+  min-height: 60px;
+  background: linear-gradient(90deg, #467fbf 0%, #5b95d2 45%, #467fbf 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.05s ease-in-out infinite;
+}
+
+.rankValue {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.userCell {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rowAvatar,
+.rowAvatarFallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #dcecff;
+  border: 2px solid #9ec4ee;
+  flex-shrink: 0;
+}
+
+.rowAvatar {
+  object-fit: cover;
+}
+
+.rowAvatarFallback {
+  display: inline-grid;
+  place-items: center;
+  font-size: 24px;
+  color: #2f79c8;
+}
+
+.userName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.amountValue,
+.pointsValue {
+  text-align: right;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.tableState {
+  min-height: 110px;
+  border-radius: 12px;
+  border: 1px dashed #c7d6ea;
+  background: #f9fbff;
+  color: #637791;
+  font-size: 14px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 12px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 1040px) {
+  .page {
+    padding: 16px 10px 14px;
+  }
+
+  .pageTitle {
+    font-size: 32px;
+  }
+
+  .heroName {
+    font-size: 16px;
+  }
+
+  .heroDonated {
+    font-size: 13px;
+  }
+
+  .tableHeader,
+  .row,
+  .rowSkeleton {
+    grid-template-columns: 60px minmax(0, 1fr) 130px 100px;
+  }
+
+  .tableHeader {
+    font-size: 16px;
+    height: 44px;
+  }
+
+  .rankValue {
+    font-size: 20px;
+  }
+
+  .userName {
+    font-size: 16px;
+  }
+
+  .amountValue,
+  .pointsValue {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 860px) {
+  .pageHeader {
+    flex-direction: column;
+  }
+
+  .refreshButton {
+    width: 100%;
+  }
+
+  .periodTabs {
+    width: 100%;
+  }
+
+  .periodTab {
+    font-size: 16px;
+  }
+
+  .podiumGrid,
+  .podiumLoading {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .podiumLeft,
+  .podiumRight,
+  .podiumCenter {
+    order: initial;
+  }
+
+  .podiumCard,
+  .podiumLoadingCard {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .tablePanel {
+    padding: 12px 10px;
+  }
+
+  .tableHeader,
+  .row,
+  .rowSkeleton {
+    grid-template-columns: 52px minmax(0, 1fr) 120px;
+    padding: 0 10px;
+  }
+
+  .tableHeader span:last-child,
+  .row span:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .tableHeader,
+  .row,
+  .rowSkeleton {
+    grid-template-columns: 44px minmax(0, 1fr) 104px;
+  }
+
+  .rowAvatar,
+  .rowAvatarFallback {
+    width: 34px;
+    height: 34px;
+  }
+}

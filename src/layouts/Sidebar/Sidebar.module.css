@@ -20,10 +20,14 @@
 
 .nav {
   margin-top: 18px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .bottomNav {
-  margin-top: auto;
+  margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid #eef2f8;
 }

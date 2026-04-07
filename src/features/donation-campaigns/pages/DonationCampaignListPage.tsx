@@ -59,6 +59,18 @@ const createEmptyCampaignFormErrors = (): CampaignFormErrors => ({
   totalCost: '',
 })
 
+const toTitleCase = (value: string) =>
+  value
+    .split(/(\s+)/)
+    .map((segment) => {
+      if (!segment.trim()) {
+        return segment
+      }
+
+      return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
+    })
+    .join('')
+
 const resolveCampaignImage = (campaign: DonationCampaign) => {
   if (campaign.photo) {
     return campaign.photo
@@ -602,10 +614,6 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
 
               <div className={styles.viewDetailsGrid}>
                 <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>ID</span>
-                  <span className={styles.viewDetailValue}>{viewingCampaign.id}</span>
-                </div>
-                <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Title</span>
                   <span className={styles.viewDetailValue}>{viewingCampaign.title || 'N/A'}</span>
                 </div>
@@ -747,9 +755,10 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
                     value={addCampaignForm.title}
                     onChange={(event) => {
                       clearCampaignFormError('title')
+                      const normalizedTitle = toTitleCase(event.target.value)
                       setAddCampaignForm((currentForm) => ({
                         ...currentForm,
-                        title: event.target.value,
+                        title: normalizedTitle,
                       }))
                     }}
                     className={`${styles.fieldInput}${campaignFormErrors.title ? ` ${styles.fieldInputError}` : ''}`}

@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { FaChevronLeft, FaChevronRight, FaFilter, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { donationTransactionService } from '@/features/donation-transactions/services/donation-transaction.service'
-import type {
-  DonationTransaction,
-  DonationTransactionPayload,
-} from '@/features/donation-transactions/types/donation-transaction-api'
+import type { DonationTransaction } from '@/features/donation-transactions/types/donation-transaction-api'
 import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems } from '@/layouts/config/navigation'
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
@@ -13,7 +10,6 @@ import Sidebar from '@/layouts/Sidebar/Sidebar'
 import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
 import DateMultiSelectPicker from '@/shared/components/ui/DateMultiSelectPicker/DateMultiSelectPicker'
-import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import PillMultiSelectDropdown from '@/shared/components/ui/PillMultiSelectDropdown/PillMultiSelectDropdown'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
@@ -40,35 +36,6 @@ type DonationLogRow = {
   transactionId: string
   userId: string
 }
-
-type DonationTransactionForm = {
-  donatedAmount: string
-  donationCampaignId: string
-  message: string
-  paymentModeId: string
-  photoProof: string
-  userId: string
-}
-
-type FormErrorKey = 'userId' | 'paymentModeId' | 'donationCampaignId' | 'photoProof' | 'donatedAmount'
-type FormErrors = Record<FormErrorKey, string>
-
-const createDefaultDonationTransactionForm = (): DonationTransactionForm => ({
-  donatedAmount: '',
-  donationCampaignId: '',
-  message: '',
-  paymentModeId: '',
-  photoProof: '',
-  userId: '',
-})
-
-const createEmptyFormErrors = (): FormErrors => ({
-  donatedAmount: '',
-  donationCampaignId: '',
-  paymentModeId: '',
-  photoProof: '',
-  userId: '',
-})
 
 const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => {
   if (leftValues.length !== rightValues.length) {
@@ -144,13 +111,18 @@ const toSortTime = (value?: string | null) => {
 }
 
 const resolveDonorLabel = (transaction: DonationTransaction, fallbackUserId: string) => {
+  const fullName = normalizeText(transaction.user?.fullName)
+  if (fullName) {
+    return fullName
+  }
+
   const firstName = normalizeText(transaction.user?.firstName)
   const middleName = normalizeText(transaction.user?.middleName)
   const lastName = normalizeText(transaction.user?.lastName)
-  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ')
+  const derivedName = [firstName, middleName, lastName].filter(Boolean).join(' ')
 
-  if (fullName) {
-    return fullName
+  if (derivedName) {
+    return derivedName
   }
 
   const email = normalizeText(transaction.user?.email)
@@ -166,6 +138,7 @@ const resolvePaymentModeLabel = (transaction: DonationTransaction, fallbackPayme
     normalizeText(transaction.paymentMode?.name) ||
     normalizeText(transaction.paymentMode?.label) ||
     normalizeText(transaction.paymentMode?.mode) ||
+    normalizeText(transaction.paymentMode?.accountNumber) ||
     fallbackPaymentModeId ||
     'Unknown Payment Mode'
   )
@@ -186,7 +159,8 @@ const mapDonationTransactionToRow = (transaction: DonationTransaction): Donation
     normalizeText(transaction.paymentModeId) || normalizeText(transaction.paymentMode?.id)
   const campaignId =
     normalizeText(transaction.donationCampaignId) || normalizeText(transaction.donationCampaign?.id)
-  const createdAt = transaction.createdAt ?? transaction.updatedAt
+  const createdAt =
+    transaction.createdDate ?? transaction.createdAt ?? transaction.updatedDate ?? transaction.updatedAt
   const donatedAmount = parseAmount(transaction.donatedAmount)
 
   return {
@@ -203,33 +177,8 @@ const mapDonationTransactionToRow = (transaction: DonationTransaction): Donation
     paymentModeLabel: resolvePaymentModeLabel(transaction, paymentModeId),
     photoProof: normalizeText(transaction.photoProof),
     sortTime: toSortTime(createdAt),
-    transactionId: transaction.id,
+    transactionId: normalizeText(transaction.transactionId) || transaction.id,
     userId,
-  }
-}
-
-const mapRowToForm = (row: DonationLogRow): DonationTransactionForm => ({
-  donatedAmount: row.donatedAmount > 0 ? String(row.donatedAmount) : '',
-  donationCampaignId: row.campaignId,
-  message: row.message,
-  paymentModeId: row.paymentModeId,
-  photoProof: row.photoProof,
-  userId: row.userId,
-})
-
-const buildPayloadFromForm = (form: DonationTransactionForm): DonationTransactionPayload | null => {
-  const donatedAmount = Number.parseFloat(form.donatedAmount.trim())
-  if (!Number.isFinite(donatedAmount) || donatedAmount <= 0) {
-    return null
-  }
-
-  return {
-    donatedAmount,
-    donationCampaignId: form.donationCampaignId.trim(),
-    message: form.message.trim() || undefined,
-    paymentModeId: form.paymentModeId.trim(),
-    photoProof: form.photoProof.trim(),
-    userId: form.userId.trim(),
   }
 }
 
@@ -242,19 +191,12 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
   const { clearToast, showToast, toast } = useToast()
   const [searchValue, setSearchValue] = useState('')
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
-  const [isSavingTransaction, setIsSavingTransaction] = useState(false)
-  const [isDeletingTransaction, setIsDeletingTransaction] = useState(false)
   const [rows, setRows] = useState<DonationLogRow[]>([])
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([])
   const [selectedPaymentModeValues, setSelectedPaymentModeValues] = useState<string[]>([])
   const [selectedCampaignValues, setSelectedCampaignValues] = useState<string[]>([])
   const [selectedTransaction, setSelectedTransaction] = useState<DonationLogRow | null>(null)
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
-  const [transactionForm, setTransactionForm] = useState<DonationTransactionForm>(
-    createDefaultDonationTransactionForm,
-  )
-  const [formErrors, setFormErrors] = useState<FormErrors>(createEmptyFormErrors)
-  const [pendingDeleteTransaction, setPendingDeleteTransaction] = useState<DonationLogRow | null>(null)
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const lastAutoLoadedTokenRef = useRef<string | null>(null)
   const resolvedHeaderProfile = useHeaderProfile({
@@ -430,136 +372,13 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
   }
 
   const closeTransactionModal = useCallback(() => {
-    if (isSavingTransaction || isDeletingTransaction) {
-      return
-    }
-
     setIsTransactionModalOpen(false)
     setSelectedTransaction(null)
-    setTransactionForm(createDefaultDonationTransactionForm())
-    setFormErrors(createEmptyFormErrors())
-  }, [isDeletingTransaction, isSavingTransaction])
-
-  const openCreateModal = () => {
-    setSelectedTransaction(null)
-    setTransactionForm(createDefaultDonationTransactionForm())
-    setFormErrors(createEmptyFormErrors())
-    setIsTransactionModalOpen(true)
-  }
-
-  const openEditModal = (row: DonationLogRow) => {
-    setSelectedTransaction(row)
-    setTransactionForm(mapRowToForm(row))
-    setFormErrors(createEmptyFormErrors())
-    setIsTransactionModalOpen(true)
-  }
-
-  const clearFormError = useCallback((field: FormErrorKey) => {
-    setFormErrors((currentErrors) => {
-      if (!currentErrors[field]) {
-        return currentErrors
-      }
-
-      return {
-        ...currentErrors,
-        [field]: '',
-      }
-    })
   }, [])
 
-  const handleTransactionSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!accessToken) {
-      showToast('You need to sign in before managing donation transactions.', { variant: 'error' })
-      return
-    }
-
-    const persistTransaction = async () => {
-      const nextErrors: FormErrors = {
-        donatedAmount: transactionForm.donatedAmount.trim() ? '' : 'Donated amount is required.',
-        donationCampaignId: transactionForm.donationCampaignId.trim() ? '' : 'Donation campaign ID is required.',
-        paymentModeId: transactionForm.paymentModeId.trim() ? '' : 'Payment mode ID is required.',
-        photoProof: transactionForm.photoProof.trim() ? '' : 'Photo proof URL is required.',
-        userId: transactionForm.userId.trim() ? '' : 'User ID is required.',
-      }
-
-      const donatedAmount = Number.parseFloat(transactionForm.donatedAmount.trim())
-      if (!Number.isFinite(donatedAmount) || donatedAmount <= 0) {
-        nextErrors.donatedAmount = 'Donated amount must be a number greater than 0.'
-      }
-
-      if (Object.values(nextErrors).some(Boolean)) {
-        setFormErrors(nextErrors)
-        showToast('Please complete all required fields.', { variant: 'error' })
-        return
-      }
-
-      const payload = buildPayloadFromForm(transactionForm)
-      if (!payload) {
-        setFormErrors((currentErrors) => ({
-          ...currentErrors,
-          donatedAmount: 'Donated amount must be a number greater than 0.',
-        }))
-        showToast('Please enter a valid donated amount.', { variant: 'error' })
-        return
-      }
-
-      setIsSavingTransaction(true)
-
-      try {
-        if (selectedTransaction) {
-          await donationTransactionService.update(selectedTransaction.transactionId, payload, accessToken)
-          showToast('Donation transaction updated successfully.', { variant: 'success' })
-        } else {
-          await donationTransactionService.create(payload, accessToken)
-          showToast('Donation transaction created successfully.', { variant: 'success' })
-        }
-
-        closeTransactionModal()
-        await loadDonationLogs()
-      } catch (error) {
-        showToast(getErrorMessage(error), { variant: 'error' })
-      } finally {
-        setIsSavingTransaction(false)
-      }
-    }
-
-    void persistTransaction()
-  }
-
-  const handleDeleteTransactionConfirm = () => {
-    if (!pendingDeleteTransaction) {
-      return
-    }
-
-    if (!accessToken) {
-      showToast('You need to sign in before deleting donation transactions.', { variant: 'error' })
-      return
-    }
-
-    const transactionToDelete = pendingDeleteTransaction
-
-    const deleteTransaction = async () => {
-      setIsDeletingTransaction(true)
-
-      try {
-        await donationTransactionService.delete(transactionToDelete.transactionId, accessToken)
-        setPendingDeleteTransaction(null)
-        if (selectedTransaction?.transactionId === transactionToDelete.transactionId) {
-          setIsTransactionModalOpen(false)
-          setSelectedTransaction(null)
-        }
-        showToast('Donation transaction deleted successfully.', { variant: 'success' })
-        await loadDonationLogs()
-      } catch (error) {
-        showToast(getErrorMessage(error), { variant: 'error' })
-      } finally {
-        setIsDeletingTransaction(false)
-      }
-    }
-
-    void deleteTransaction()
+  const openViewModal = (row: DonationLogRow) => {
+    setSelectedTransaction(row)
+    setIsTransactionModalOpen(true)
   }
 
   return (
@@ -595,10 +414,6 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
         <section className={styles.container}>
           <div className={styles.pageHeader}>
             <h1 className={styles.pageTitle}>Donation Logs</h1>
-            <button type="button" className={styles.addButton} onClick={openCreateModal}>
-              <FaPlus className={styles.addButtonIcon} aria-hidden="true" />
-              <span>Add Donation</span>
-            </button>
           </div>
 
           <div className={styles.filterBar}>
@@ -688,7 +503,7 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
                         key={row.transactionId}
                         className={styles.clickableRow}
                         onClick={() => {
-                          openEditModal(row)
+                          openViewModal(row)
                         }}
                       >
                         <td>{row.transactionId}</td>
@@ -749,7 +564,7 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
           >
             <div className={styles.modalHeader}>
               <h2 id="donation-transaction-modal-title" className={styles.modalTitle}>
-                {selectedTransaction ? 'Edit Donation Transaction' : 'Add Donation Transaction'}
+                Donation Transaction Details
               </h2>
               <button
                 type="button"
@@ -758,144 +573,56 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
                   closeTransactionModal()
                 }}
                 aria-label="Close donation transaction modal"
-                disabled={isSavingTransaction || isDeletingTransaction}
               >
                 <FaTimes aria-hidden="true" />
               </button>
             </div>
 
-            <form className={styles.modalForm} onSubmit={handleTransactionSubmit} noValidate>
+            <div className={styles.modalForm}>
               <div className={styles.modalFields}>
-                {selectedTransaction ? (
-                  <>
-                    <div className={styles.modalMeta}>
-                      <span className={styles.modalMetaLabel}>Transaction ID</span>
-                      <span className={styles.modalMetaValue}>{selectedTransaction.transactionId}</span>
-                    </div>
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Donor</span>
+                  <span className={styles.modalMetaValue}>{selectedTransaction?.donorLabel || 'N/A'}</span>
+                </div>
 
-                    <div className={styles.modalMeta}>
-                      <span className={styles.modalMetaLabel}>Created Date</span>
-                      <span className={styles.modalMetaValue}>{selectedTransaction.createdAtLabel}</span>
-                    </div>
-                  </>
-                ) : null}
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Campaign</span>
+                  <span className={styles.modalMetaValue}>{selectedTransaction?.campaignLabel || 'N/A'}</span>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>User ID</span>
-                  <input
-                    type="text"
-                    value={transactionForm.userId}
-                    onChange={(event) => {
-                      clearFormError('userId')
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        userId: event.target.value,
-                      }))
-                    }}
-                    className={`${styles.fieldInput}${formErrors.userId ? ` ${styles.fieldInputError}` : ''}`}
-                    placeholder="Enter user UUID"
-                  />
-                  {formErrors.userId ? <span className={styles.fieldErrorText}>{formErrors.userId}</span> : null}
-                </label>
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Donated Amount</span>
+                  <span className={styles.modalMetaValue}>{selectedTransaction?.amountLabel || 'N/A'}</span>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>Payment Mode ID</span>
-                  <input
-                    type="text"
-                    value={transactionForm.paymentModeId}
-                    onChange={(event) => {
-                      clearFormError('paymentModeId')
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        paymentModeId: event.target.value,
-                      }))
-                    }}
-                    className={`${styles.fieldInput}${formErrors.paymentModeId ? ` ${styles.fieldInputError}` : ''}`}
-                    placeholder="Enter payment mode UUID"
-                  />
-                  {formErrors.paymentModeId ? (
-                    <span className={styles.fieldErrorText}>{formErrors.paymentModeId}</span>
-                  ) : null}
-                </label>
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Date</span>
+                  <span className={styles.modalMetaValue}>{selectedTransaction?.createdAtLabel || 'N/A'}</span>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>Donation Campaign ID</span>
-                  <input
-                    type="text"
-                    value={transactionForm.donationCampaignId}
-                    onChange={(event) => {
-                      clearFormError('donationCampaignId')
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        donationCampaignId: event.target.value,
-                      }))
-                    }}
-                    className={`${styles.fieldInput}${formErrors.donationCampaignId ? ` ${styles.fieldInputError}` : ''}`}
-                    placeholder="Enter donation campaign UUID"
-                  />
-                  {formErrors.donationCampaignId ? (
-                    <span className={styles.fieldErrorText}>{formErrors.donationCampaignId}</span>
-                  ) : null}
-                </label>
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Payment Mode</span>
+                  <span className={styles.modalMetaValue}>{selectedTransaction?.paymentModeLabel || 'N/A'}</span>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>Photo Proof URL</span>
-                  <input
-                    type="url"
-                    value={transactionForm.photoProof}
-                    onChange={(event) => {
-                      clearFormError('photoProof')
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        photoProof: event.target.value,
-                      }))
-                    }}
-                    className={`${styles.fieldInput}${formErrors.photoProof ? ` ${styles.fieldInputError}` : ''}`}
-                    placeholder="https://example.com/proofs/donation-proof.png"
-                  />
-                  {formErrors.photoProof ? (
-                    <span className={styles.fieldErrorText}>{formErrors.photoProof}</span>
-                  ) : null}
-                </label>
+                <div className={styles.modalMetaColumn}>
+                  <span className={styles.modalMetaLabel}>Message</span>
+                  <span className={styles.modalMetaText}>{selectedTransaction?.message || 'No message provided.'}</span>
+                </div>
 
-                <label className={styles.fieldLabel}>
-                  <span>Donated Amount (PHP)</span>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={transactionForm.donatedAmount}
-                    onChange={(event) => {
-                      clearFormError('donatedAmount')
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        donatedAmount: event.target.value,
-                      }))
-                    }}
-                    className={`${styles.fieldInput}${formErrors.donatedAmount ? ` ${styles.fieldInputError}` : ''}`}
-                    placeholder="e.g. 1500.00"
-                  />
-                  {formErrors.donatedAmount ? (
-                    <span className={styles.fieldErrorText}>{formErrors.donatedAmount}</span>
-                  ) : null}
-                </label>
-
-                <label className={styles.fieldLabel}>
-                  <span>Message (Optional)</span>
-                  <textarea
-                    value={transactionForm.message}
-                    onChange={(event) => {
-                      setTransactionForm((currentForm) => ({
-                        ...currentForm,
-                        message: event.target.value,
-                      }))
-                    }}
-                    className={styles.fieldTextarea}
-                    rows={4}
-                    maxLength={1000}
-                    placeholder="Enter optional donation message."
-                  />
-                </label>
+                <div className={styles.modalMetaColumn}>
+                  <span className={styles.modalMetaLabel}>Photo Proof</span>
+                  {selectedTransaction?.photoProof ? (
+                    <img
+                      className={styles.proofImage}
+                      src={selectedTransaction.photoProof}
+                      alt="Donation proof"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className={styles.modalMetaText}>No photo proof provided.</span>
+                  )}
+                </div>
               </div>
 
               <div className={styles.modalActions}>
@@ -906,58 +633,15 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
                     onClick={() => {
                       closeTransactionModal()
                     }}
-                    disabled={isSavingTransaction || isDeletingTransaction}
                   >
-                    Cancel
-                  </button>
-
-                  {selectedTransaction ? (
-                    <button
-                      type="button"
-                      className={styles.modalDeleteButton}
-                      onClick={() => {
-                        setPendingDeleteTransaction(selectedTransaction)
-                      }}
-                      disabled={isSavingTransaction || isDeletingTransaction}
-                    >
-                      Delete
-                    </button>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    className={styles.modalSubmitButton}
-                    disabled={isSavingTransaction || isDeletingTransaction}
-                  >
-                    {isSavingTransaction
-                      ? 'Saving...'
-                      : selectedTransaction
-                        ? 'Save Changes'
-                        : 'Add Donation'}
+                    Close
                   </button>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={Boolean(pendingDeleteTransaction)}
-        title="Delete donation transaction?"
-        message={`Are you sure you want to delete transaction ${pendingDeleteTransaction?.transactionId ?? ''}? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        ariaLabel="Delete donation transaction confirmation"
-        isBusy={isDeletingTransaction}
-        onCancel={() => {
-          if (isDeletingTransaction) {
-            return
-          }
-          setPendingDeleteTransaction(null)
-        }}
-        onConfirm={handleDeleteTransactionConfirm}
-      />
     </MainLayout>
   )
 }

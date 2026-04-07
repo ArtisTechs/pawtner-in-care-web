@@ -195,6 +195,7 @@
   display: grid;
   place-items: center;
   padding: 18px 12px;
+  animation: modal-overlay-enter 180ms ease-out;
 }
 
 .modalCard {
@@ -204,6 +205,7 @@
   background: #ffffff;
   box-shadow: 0 24px 46px rgba(18, 44, 77, 0.33);
   overflow: hidden;
+  animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modalHeader {
@@ -321,6 +323,33 @@
 
 .fieldInput:read-only {
   background: #f4f8fd;
+}
+
+.fieldDisplay {
+  min-height: 38px;
+  border-radius: 9px;
+  border: 1px solid #d3dfef;
+  background: #f4f8fd;
+  color: #2d4968;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+}
+
+.fieldTextView {
+  min-height: 96px;
+  border-radius: 9px;
+  border: 1px solid #d3dfef;
+  background: #f4f8fd;
+  color: #2d4968;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 10px 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .modalActions {
@@ -472,6 +501,28 @@
   height: 11px;
 }
 
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes skeleton-shimmer {
   0% {
     background-position: 200% 0;
@@ -479,6 +530,13 @@
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modalCard {
+    animation: none;
   }
 }
 

@@ -1,4 +1,5 @@
 export interface DonationTransactionUser {
+  fullName?: string | null
   email?: string | null
   firstName?: string | null
   id: string
@@ -7,6 +8,7 @@ export interface DonationTransactionUser {
 }
 
 export interface DonationTransactionPaymentMode {
+  accountNumber?: string | null
   id: string
   label?: string | null
   mode?: string | null
@@ -20,6 +22,7 @@ export interface DonationTransactionCampaign {
 }
 
 export interface DonationTransaction {
+  createdDate?: string | null
   createdAt?: string | null
   donatedAmount?: number | string | null
   donationCampaign?: DonationTransactionCampaign | null
@@ -29,6 +32,8 @@ export interface DonationTransaction {
   paymentMode?: DonationTransactionPaymentMode | null
   paymentModeId?: string | null
   photoProof?: string | null
+  transactionId?: string | null
+  updatedDate?: string | null
   updatedAt?: string | null
   user?: DonationTransactionUser | null
   userId?: string | null

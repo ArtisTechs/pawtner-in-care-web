@@ -36,6 +36,10 @@
   overflow: hidden;
 }
 
+.previewBoxSquare {
+  aspect-ratio: 1 / 1;
+}
+
 .previewImage {
   display: block;
   width: 100%;
@@ -152,6 +156,7 @@
   display: grid;
   place-items: center;
   padding: 18px 12px;
+  animation: modal-overlay-enter 180ms ease-out;
 }
 
 .cameraModalCard {
@@ -163,6 +168,7 @@
   padding: 14px;
   display: grid;
   gap: 10px;
+  animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cameraModalHeader {
@@ -199,6 +205,10 @@
   border: 1px solid #d3dfef;
   background: #0f2743;
   overflow: hidden;
+}
+
+.cameraViewportSquare {
+  aspect-ratio: 1 / 1;
 }
 
 .cameraVideo,
@@ -257,6 +267,35 @@
 
 .hiddenCanvas {
   display: none;
+}
+
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cameraModalOverlay,
+  .cameraModalCard {
+    animation: none;
+  }
 }
 
 @media (max-width: 600px) {

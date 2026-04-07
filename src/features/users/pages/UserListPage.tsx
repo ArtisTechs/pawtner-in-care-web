@@ -33,6 +33,7 @@ import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { isValidEmail } from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './UserListPage.module.css'
 
@@ -325,6 +326,11 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
 
       if (!editingUserId && !trimmedPassword) {
         showToast('Please complete all required fields.', { variant: 'error' })
+        return
+      }
+
+      if (!isValidEmail(trimmedEmail)) {
+        showToast('Email address must be a valid email.', { variant: 'error' })
         return
       }
 
@@ -675,10 +681,6 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
               </div>
 
               <div className={styles.viewDetailsGrid}>
-                <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>ID</span>
-                  <span className={styles.viewDetailValue}>{viewingUser.id}</span>
-                </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Name</span>
                   <span className={styles.viewDetailValue}>{resolveUserDisplayName(viewingUser) || 'N/A'}</span>

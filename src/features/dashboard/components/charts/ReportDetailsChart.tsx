@@ -14,6 +14,14 @@ interface ReportDetailsChartProps {
 }
 
 function ReportDetailsChart({ data }: ReportDetailsChartProps) {
+  const highlightIndex = data.reduce((currentHighestIndex, currentPoint, currentIndex, allPoints) => {
+    if (!allPoints[currentHighestIndex] || currentPoint.value > allPoints[currentHighestIndex].value) {
+      return currentIndex
+    }
+
+    return currentHighestIndex
+  }, 0)
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 18, right: 14, left: 0, bottom: 4 }}>
@@ -35,9 +43,9 @@ function ReportDetailsChart({ data }: ReportDetailsChartProps) {
         <YAxis
           axisLine={false}
           tickLine={false}
-          domain={[0, 100]}
-          ticks={[0, 20, 40, 60, 80, 100]}
-          tickFormatter={(value) => `${value}%`}
+          domain={[0, 'dataMax + 10']}
+          allowDecimals={false}
+          tickFormatter={(value) => `${value}`}
           tick={{ fill: '#9ca6b4', fontSize: 11 }}
           width={38}
         />
@@ -49,7 +57,7 @@ function ReportDetailsChart({ data }: ReportDetailsChartProps) {
             boxShadow: '0 8px 20px rgba(35, 86, 162, 0.12)',
             fontSize: 12,
           }}
-          formatter={(value) => [`${value}%`, 'Report Rate']}
+          formatter={(value) => [`${value}`, 'Reports']}
         />
 
         <Area
@@ -61,7 +69,7 @@ function ReportDetailsChart({ data }: ReportDetailsChartProps) {
           activeDot={{ r: 5, stroke: '#ffffff', strokeWidth: 2 }}
           dot={(dotProps) => {
             const { cx, cy, index } = dotProps
-            const isHighlight = index === 10
+            const isHighlight = index === highlightIndex
 
             if (!isHighlight || typeof cx !== 'number' || typeof cy !== 'number') {
               return (

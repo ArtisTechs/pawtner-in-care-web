@@ -51,7 +51,6 @@ const formatDateLabel = (value?: string | null) => {
 }
 
 const resolveCreatedDate = (paymentMode: PaymentMode) => paymentMode.createdDate ?? paymentMode.createdAt
-const resolveUpdatedDate = (paymentMode: PaymentMode) => paymentMode.updatedDate ?? paymentMode.updatedAt
 
 interface PaymentModeListPageProps {
   onLogout?: () => void
@@ -348,7 +347,6 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                     <th scope="col">QR</th>
                     <th scope="col">Name</th>
                     <th scope="col">Account Number</th>
-                    <th scope="col">QR Link</th>
                     <th scope="col">Created Date</th>
                     <th scope="col">Action</th>
                   </tr>
@@ -368,9 +366,6 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                           <div className={`${styles.skeletonBlock} ${styles.skeletonTextWide}`} />
                         </td>
                         <td>
-                          <div className={`${styles.skeletonBlock} ${styles.skeletonTextWide}`} />
-                        </td>
-                        <td>
                           <div className={`${styles.skeletonBlock} ${styles.skeletonText}`} />
                         </td>
                         <td>
@@ -380,7 +375,7 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                     ))
                   ) : filteredPaymentModes.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className={styles.tableStateCell}>
+                      <td colSpan={5} className={styles.tableStateCell}>
                         No payment methods found.
                       </td>
                     </tr>
@@ -402,22 +397,6 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                         </td>
                         <td>{paymentMode.name || 'N/A'}</td>
                         <td>{paymentMode.accountNumber?.trim() || 'N/A'}</td>
-                        <td>
-                          {paymentMode.photoQr ? (
-                            <a
-                              href={paymentMode.photoQr}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                              }}
-                            >
-                              Open QR
-                            </a>
-                          ) : (
-                            'N/A'
-                          )}
-                        </td>
                         <td>{formatDateLabel(resolveCreatedDate(paymentMode))}</td>
                         <td>
                           <div className={styles.actionCell}>
@@ -521,29 +500,9 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                   alt={viewingPaymentMode.name || 'Payment method QR'}
                   className={styles.viewImage}
                 />
-
-                <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>QR Link</span>
-                  {viewingPaymentMode.photoQr ? (
-                    <a
-                      href={viewingPaymentMode.photoQr}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.viewDetailValue}
-                    >
-                      {viewingPaymentMode.photoQr}
-                    </a>
-                  ) : (
-                    <span className={styles.viewDetailValue}>N/A</span>
-                  )}
-                </div>
               </div>
 
               <div className={styles.viewDetailsGrid}>
-                <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>ID</span>
-                  <span className={styles.viewDetailValue}>{viewingPaymentMode.id}</span>
-                </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Name</span>
                   <span className={styles.viewDetailValue}>{viewingPaymentMode.name || 'N/A'}</span>
@@ -558,12 +517,6 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                   <span className={styles.viewDetailLabel}>Created Date</span>
                   <span className={styles.viewDetailValue}>
                     {formatDateLabel(resolveCreatedDate(viewingPaymentMode))}
-                  </span>
-                </div>
-                <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>Updated Date</span>
-                  <span className={styles.viewDetailValue}>
-                    {formatDateLabel(resolveUpdatedDate(viewingPaymentMode))}
                   </span>
                 </div>
               </div>
@@ -670,6 +623,7 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
 
                 <div className={styles.fieldLabelWide}>
                   <PhotoUploadField
+                    cropAspectRatio={1}
                     value={addPaymentModeForm.photoQr}
                     onChange={(nextPhotoQr) => {
                       setAddPaymentModeForm((currentForm) => ({ ...currentForm, photoQr: nextPhotoQr }))

@@ -132,6 +132,9 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
   const [petIdBeingDeleted, setPetIdBeingDeleted] = useState<string | null>(null)
   const [pendingDeletePet, setPendingDeletePet] = useState<{ id: string; name: string } | null>(null)
   const [addPetForm, setAddPetForm] = useState<AddPetForm>(DEFAULT_ADD_PET_FORM)
+  const [petNameError, setPetNameError] = useState('')
+  const [adoptionDateError, setAdoptionDateError] = useState('')
+  const [petPhotoError, setPetPhotoError] = useState('')
   const [visiblePetCount, setVisiblePetCount] = useState(LIST_INITIAL_BATCH_SIZE)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
@@ -232,6 +235,9 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
     setIsAddModalOpen(false)
     setEditingPetId(null)
     setAddPetForm(DEFAULT_ADD_PET_FORM)
+    setPetNameError('')
+    setAdoptionDateError('')
+    setPetPhotoError('')
   }, [])
 
   const closeViewModal = useCallback(() => {
@@ -250,8 +256,30 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
       const trimmedGender = addPetForm.gender.trim()
       const trimmedType = addPetForm.type.trim()
 
+      setPetNameError('')
+      setAdoptionDateError('')
+      setPetPhotoError('')
+
       if (!trimmedName || !trimmedGender || !trimmedType || !addPetForm.status) {
+        if (!trimmedName) {
+          setPetNameError('Pet name is required.')
+        }
+
         showToast('Please complete all required fields.', { variant: 'error' })
+        return
+      }
+
+      if (addPetForm.status === 'ADOPTED' && !addPetForm.adoptionDate.trim()) {
+        const errorMessage = 'Adoption date is required for adopted pets.'
+        setAdoptionDateError(errorMessage)
+        showToast(errorMessage, { variant: 'error' })
+        return
+      }
+
+      if (!addPetForm.photo.trim()) {
+        const errorMessage = 'Pet photo is required.'
+        setPetPhotoError(errorMessage)
+        showToast(errorMessage, { variant: 'error' })
         return
       }
 
@@ -283,6 +311,9 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
   const handleEditPet = (pet: Pet) => {
     setEditingPetId(pet.id)
     setAddPetForm(mapPetToForm(pet))
+    setPetNameError('')
+    setAdoptionDateError('')
+    setPetPhotoError('')
     setIsAddModalOpen(true)
   }
 
@@ -500,6 +531,9 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
               onClick={() => {
                 setEditingPetId(null)
                 setAddPetForm(DEFAULT_ADD_PET_FORM)
+                setPetNameError('')
+                setAdoptionDateError('')
+                setPetPhotoError('')
                 setIsAddModalOpen(true)
               }}
             >
@@ -566,10 +600,6 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
               </div>
 
               <div className={styles.viewDetailsGrid}>
-                <div className={styles.viewDetailItem}>
-                  <span className={styles.viewDetailLabel}>ID</span>
-                  <span className={styles.viewDetailValue}>{viewingPet.id}</span>
-                </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Name</span>
                   <span className={styles.viewDetailValue}>{viewingPet.name || 'N/A'}</span>
@@ -703,22 +733,28 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
             <form className={styles.modalForm} onSubmit={handleAddPetSubmit} noValidate>
               <div className={styles.modalFields}>
                 <label className={styles.fieldLabel}>
-                  <span>Pet Name</span>
+                  <span>
+                    Pet Name <span className={styles.requiredAsterisk}>*</span>
+                  </span>
                   <input
                     type="text"
                     value={addPetForm.name}
                     onChange={(event) => {
+                      setPetNameError('')
                       setAddPetForm((currentForm) => ({
                         ...currentForm,
                         name: toProperNameCase(event.target.value),
                       }))
                     }}
-                    className={styles.fieldInput}
+                    className={`${styles.fieldInput}${petNameError ? ` ${styles.fieldInputError}` : ''}`}
                   />
+                  {petNameError ? <span className={styles.fieldErrorText}>{petNameError}</span> : null}
                 </label>
 
                 <label className={styles.fieldLabel}>
-                  <span>Gender</span>
+                  <span>
+                    Gender <span className={styles.requiredAsterisk}>*</span>
+                  </span>
                   <select
                     value={addPetForm.gender}
                     onChange={(event) => {
@@ -732,7 +768,9 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                 </label>
 
                 <label className={styles.fieldLabel}>
-                  <span>Type</span>
+                  <span>
+                    Type <span className={styles.requiredAsterisk}>*</span>
+                  </span>
                   <select
                     value={addPetForm.type}
                     onChange={(event) => {
@@ -762,11 +800,14 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                 </label>
 
                 <label className={styles.fieldLabel}>
-                  <span>Status</span>
+                  <span>
+                    Status <span className={styles.requiredAsterisk}>*</span>
+                  </span>
                   <select
                     value={addPetForm.status}
                     onChange={(event) => {
                       const value = event.target.value as PetStatus
+                      setAdoptionDateError('')
                       setAddPetForm((currentForm) => ({
                         ...currentForm,
                         adoptionDate: value === 'ADOPTED' ? currentForm.adoptionDate : '',
@@ -859,15 +900,19 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
 
                 {shouldShowAdoptionDate ? (
                   <label className={styles.fieldLabel}>
-                    <span>Adoption Date</span>
+                    <span>
+                      Adoption Date <span className={styles.requiredAsterisk}>*</span>
+                    </span>
                     <input
                       type="date"
                       value={addPetForm.adoptionDate}
                       onChange={(event) => {
+                        setAdoptionDateError('')
                         setAddPetForm((currentForm) => ({ ...currentForm, adoptionDate: event.target.value }))
                       }}
-                      className={styles.fieldInput}
+                      className={`${styles.fieldInput}${adoptionDateError ? ` ${styles.fieldInputError}` : ''}`}
                     />
+                    {adoptionDateError ? <span className={styles.fieldErrorText}>{adoptionDateError}</span> : null}
                   </label>
                 ) : null}
 
@@ -875,6 +920,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                   <PhotoUploadField
                     value={addPetForm.photo}
                     onChange={(nextPhoto) => {
+                      setPetPhotoError('')
                       setAddPetForm((currentForm) => ({ ...currentForm, photo: nextPhoto }))
                     }}
                     onNotify={(message, variant) => {
@@ -885,6 +931,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                     previewAlt={addPetForm.name ? `${addPetForm.name} photo` : 'Pet photo preview'}
                     uploadFolder="pets"
                   />
+                  {petPhotoError ? <span className={styles.fieldErrorText}>{petPhotoError}</span> : null}
                 </div>
 
                 <div className={styles.fieldLabelWide}>

@@ -1,0 +1,167 @@
+.container {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.container:focus-visible {
+  outline: 2px solid #7ca8dd;
+  outline-offset: 2px;
+}
+
+.chip {
+  position: relative;
+  width: 100%;
+  min-height: 17px;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--calendar-chip-color) 45%, #dbe5f3);
+  background: color-mix(in srgb, var(--calendar-chip-color) 24%, #ffffff);
+  color: color-mix(in srgb, var(--calendar-chip-color) 18%, #1f4169);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px 0 10px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 3px;
+  background: color-mix(in srgb, var(--calendar-chip-color) 72%, #2a4f80);
+}
+
+.chip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -35deg,
+    rgba(255, 255, 255, 0.18) 0,
+    rgba(255, 255, 255, 0.18) 2px,
+    rgba(255, 255, 255, 0) 2px,
+    rgba(255, 255, 255, 0) 8px
+  );
+  pointer-events: none;
+}
+
+.hoverCard {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 80;
+  width: 220px;
+  border: 1px solid #d9e4f4;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 16px 36px rgba(22, 50, 88, 0.28);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+  pointer-events: none;
+}
+
+.container:hover .hoverCard,
+.container:focus-within .hoverCard {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.coverImage {
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  display: block;
+}
+
+.cardBody {
+  padding: 8px 9px 10px;
+}
+
+.title {
+  margin: 0;
+  color: #132a47;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.meta {
+  margin: 4px 0 0;
+  color: #2c4a71;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.description {
+  margin: 4px 0 0;
+  color: #607794;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.attendees {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.attendeeAvatar {
+  width: 20px;
+  height: 20px;
+  margin-left: -4px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  background: #dce6f4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #304e70;
+  font-size: 9px;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.attendeeAvatar:first-child {
+  margin-left: 0;
+}
+
+.attendeeAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attendeeOverflow {
+  min-width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  border-radius: 999px;
+  border: 1px solid #9fb9df;
+  background: #eaf1ff;
+  color: #335684;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 5px;
+}
