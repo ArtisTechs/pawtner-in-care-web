@@ -61,6 +61,11 @@
 
   --color-shadow-strong: rgba(24, 72, 136, 0.18);
   --color-shadow-soft: rgba(24, 72, 136, 0.1);
+  --gradient-auth-primary: linear-gradient(
+    92deg,
+    var(--color-brand-blue-500) 0%,
+    var(--color-brand-blue-300) 100%
+  );
 
   --font-family-heading-1: 'Franxurter', 'Trebuchet MS', sans-serif;
   --font-family-heading-2: 'Source Sans Pro', 'Segoe UI', sans-serif;
@@ -79,6 +84,8 @@
   --font-weight-heading-3: 900;
   --font-weight-body-regular: 400;
   --font-weight-body-semibold: 600;
+
+  --size-auth-action-height: 42px;
 }
 
 html,

@@ -1,0 +1,159 @@
+.row {
+  width: 100%;
+  display: flex;
+}
+
+.rowIncoming {
+  justify-content: flex-start;
+}
+
+.rowOutgoing {
+  justify-content: flex-end;
+}
+
+.bubble {
+  width: fit-content;
+  max-width: min(72%, 640px);
+  border-radius: 14px;
+  padding: 14px 16px 10px;
+  box-shadow: 0 8px 16px rgba(34, 78, 137, 0.08);
+}
+
+.bubbleEnter {
+  animation: bubble-enter-incoming 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+.rowIncoming .bubbleEnter {
+  transform-origin: left bottom;
+}
+
+.rowOutgoing .bubbleEnter {
+  animation-name: bubble-enter-outgoing;
+  transform-origin: right bottom;
+}
+
+.bubbleWithImage {
+  padding: 10px 10px 8px;
+}
+
+.bubbleIncoming {
+  background: #f1f4f8;
+  color: #2f3f53;
+}
+
+.bubbleOutgoing {
+  background: linear-gradient(180deg, #4e8bf3 0%, #3f79dd 100%);
+  color: #ffffff;
+}
+
+.body {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.imageLink {
+  display: block;
+  margin-top: 6px;
+}
+
+.imagePreview {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(360px, 62vw);
+  max-height: 460px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.attachmentWrap {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.attachmentLink,
+.attachmentText {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  opacity: 1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bubbleIncoming .meta {
+  color: #3a4d62;
+}
+
+.bubbleOutgoing .meta {
+  color: #ffffff;
+}
+
+@keyframes bubble-enter-incoming {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.985);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate3d(0, -1px, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes bubble-enter-outgoing {
+  0% {
+    opacity: 0;
+    transform: translate3d(14px, 10px, 0) scale(0.985);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translate3d(-1px, -1px, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubbleEnter {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .bubble {
+    max-width: min(88%, 500px);
+  }
+
+  .imagePreview {
+    max-width: min(82vw, 320px);
+    max-height: 360px;
+  }
+}

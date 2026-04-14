@@ -8,6 +8,7 @@ import type {
   ResetPasswordPayload,
   SendOtpPayload,
   SendOtpResponse,
+  SignUpPayload,
 } from '@/features/auth/types/auth-api'
 
 export const authService = {
@@ -28,4 +29,6 @@ export const authService = {
       API_ENDPOINTS.auth.sendOtp,
       payload,
     ),
+  signUp: (payload: SignUpPayload) =>
+    apiClient.post<ApiMessageResponse | null, SignUpPayload>(API_ENDPOINTS.auth.signUp, payload),
 }

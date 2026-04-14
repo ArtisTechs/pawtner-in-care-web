@@ -1,0 +1,78 @@
+.root {
+  min-height: 56px;
+  border-bottom: 1px solid #dce5f1;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.backButton {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #ebeff5;
+  color: #516579;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.backButton svg {
+  width: 10px;
+  height: 10px;
+}
+
+.title {
+  margin: 0;
+  color: #2e3d52;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d8e2ee;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.actionButton {
+  width: 38px;
+  height: 30px;
+  border: 0;
+  border-right: 1px solid #d8e2ee;
+  background: #ffffff;
+  color: #35485d;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.actionButton:last-child {
+  border-right: 0;
+}
+
+.actionButton svg {
+  width: 13px;
+  height: 13px;
+}
+
+@media (max-width: 760px) {
+  .title {
+    font-size: 24px;
+  }
+}

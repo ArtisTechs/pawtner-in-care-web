@@ -159,32 +159,41 @@
 }
 
 .statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: fit-content;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.1;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
 }
 
 .statusCompleted {
-  color: #2f9a84;
-  background: #c2efdf;
+  color: #22833f;
+  background: #e9f9ef;
 }
 
 .statusProcessing {
-  color: #7a44cf;
-  background: #e4d8f9;
+  color: #1d6fbe;
+  background: #e6f2ff;
 }
 
 .statusCancelled {
-  color: #d45050;
-  background: #f9d7d7;
+  color: #b63d3d;
+  background: #ffe8e8;
 }
 
 .statusOnHold {
-  color: #d18f3f;
-  background: #f9e8d5;
+  color: #a56b17;
+  background: #fff6e6;
 }
 
 .modalOverlay {
@@ -572,6 +581,12 @@
 
   .table {
     min-width: 760px;
+  }
+
+  .statusBadge {
+    min-height: 24px;
+    padding: 0 9px;
+    font-size: 11px;
   }
 
   .modalIconActions {

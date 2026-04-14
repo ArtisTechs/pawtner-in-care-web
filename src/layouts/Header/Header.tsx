@@ -1,5 +1,8 @@
-import { useState, type ChangeEvent } from 'react'
+import { useContext, useState, type ChangeEvent } from 'react'
 import { FaBars, FaBell, FaSearch, FaUserCircle } from 'react-icons/fa'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { APP_ROUTES } from '@/app/routes/route-paths'
+import { NotificationContext } from '@/features/notifications/providers/notification-context'
 import type { HeaderProfile } from '@/shared/types/layout'
 import styles from './Header.module.css'
 
@@ -12,8 +15,14 @@ interface HeaderProps {
 }
 
 function Header({ profile, searchValue, onSearchChange, isMenuOpen, onMenuToggle }: HeaderProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { unreadCount } = useContext(NotificationContext)
   const avatarSrc = profile.avatarSrc?.trim() ?? ''
   const [failedAvatarSrc, setFailedAvatarSrc] = useState<string | null>(null)
+  const isNotificationPage =
+    location.pathname === APP_ROUTES.notifications ||
+    location.pathname.startsWith(`${APP_ROUTES.notifications}/`)
 
   const shouldShowAvatarImage = avatarSrc.length > 0 && failedAvatarSrc !== avatarSrc
 
@@ -48,8 +57,25 @@ function Header({ profile, searchValue, onSearchChange, isMenuOpen, onMenuToggle
       </div>
 
       <div className={styles.actions}>
-        <button type="button" className={styles.iconButton} aria-label="Notifications">
-          <FaBell aria-hidden="true" className={styles.notificationIcon} />
+        <button
+          type="button"
+          className={`${styles.iconButton} ${isNotificationPage ? styles.iconButtonActive : ''}`}
+          aria-label={
+            unreadCount > 0 ? `Notifications, ${unreadCount} unread notifications` : 'Notifications'
+          }
+          aria-current={isNotificationPage ? 'page' : undefined}
+          onClick={() => {
+            navigate(APP_ROUTES.notifications)
+          }}
+        >
+          <span className={styles.notificationIconWrap}>
+            <FaBell aria-hidden="true" className={styles.notificationIcon} />
+            {unreadCount > 0 ? (
+              <span className={styles.notificationBadge} aria-hidden="true">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            ) : null}
+          </span>
         </button>
 
         <button type="button" className={styles.profileButton} aria-label="Open profile menu">

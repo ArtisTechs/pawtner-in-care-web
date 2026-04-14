@@ -14,8 +14,9 @@
 .pageTitle {
   margin: 0;
   color: #ffffff;
+  font-family: var(--font-family-heading-1);
   font-size: 42px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.1;
   text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
 }
@@ -61,12 +62,41 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
+  position: relative;
   background: conic-gradient(
     #4b86ea 0deg var(--dogs-angle),
     #8eaee0 var(--dogs-angle) var(--cats-end-angle),
     #d8e2f1 var(--cats-end-angle) 360deg
   );
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.petsPiePopover {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  background-color: rgba(31, 40, 53, 0.92);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 10px 24px rgba(31, 40, 53, 0.3);
+}
+
+.petsPiePopover::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: rgba(31, 40, 53, 0.92);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
 }
 
 .petsLegendRow {

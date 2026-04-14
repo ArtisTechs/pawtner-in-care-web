@@ -83,8 +83,8 @@
 }
 
 .iconButton {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border: 0;
   background: transparent;
   display: grid;
@@ -94,9 +94,42 @@
   padding: 0;
 }
 
+.iconButtonActive {
+  background: #e8f2ff;
+  border: 1px solid #bad5f6;
+  border-radius: 10px;
+  color: #1656a7;
+}
+
+.notificationIconWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .notificationIcon {
   width: 20px;
   height: 20px;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -6px;
+  right: -11px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #e64040;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .profileButton {

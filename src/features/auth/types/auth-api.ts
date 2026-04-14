@@ -26,6 +26,17 @@ export interface ResetPasswordPayload {
   confirmPassword: string
   email: string
   newPassword: string
+  otp: string
+}
+
+export interface SignUpPayload {
+  firstName: string
+  middleName: string
+  lastName: string
+  email: string
+  password: string
+  profilePicture?: string
+  role?: 'ADMIN' | 'USER'
 }
 
 export type ApiMessageResponse = {

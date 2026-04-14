@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import topPostPreviewImage from '@/assets/pet-hugging.png'
 import ChartCard from '@/features/dashboard/components/ChartCard/ChartCard'
@@ -8,7 +8,7 @@ import ReportDetailsChart from '@/features/dashboard/components/charts/ReportDet
 import StatCard from '@/features/dashboard/components/StatCard/StatCard'
 import { statCards } from '@/features/dashboard/data/dashboard.data'
 import { dashboardService } from '@/features/dashboard/services/dashboard.service'
-import type { DashboardTopPost } from '@/features/dashboard/types/dashboard-api'
+import type { DashboardTopPostEntry } from '@/features/dashboard/types/dashboard-api'
 import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
 import { petService } from '@/features/pets/services/pet.service'
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'
@@ -42,13 +42,31 @@ interface DashboardPageProps {
   session?: AuthSession | null
 }
 
+type PieSegment = 'dogs' | 'cats' | 'available-space'
+
+interface PieHoverState {
+  label: string
+  value: number
+  x: number
+  y: number
+}
+
+const getTopPostPreviewMedia = (media: DashboardTopPostEntry['post']['media'] | undefined) => {
+  if (!Array.isArray(media) || !media.length) {
+    return null
+  }
+
+  const [firstMedia] = [...media].sort((firstItem, secondItem) => firstItem.sortOrder - secondItem.sortOrder)
+  return firstMedia ?? null
+}
+
 function DashboardPage({ onLogout, session }: DashboardPageProps) {
   const [searchValue, setSearchValue] = useState('')
   const [reportFilter, setReportFilter] = useState<ChartRange>('week')
   const [donationFilter, setDonationFilter] = useState<ChartRange>('week')
   const [reportChartData, setReportChartData] = useState<ReportChartPoint[]>([])
   const [donationChartData, setDonationChartData] = useState<DonationChartPoint[]>([])
-  const [topPosts, setTopPosts] = useState<DashboardTopPost[]>([])
+  const [topPosts, setTopPosts] = useState<DashboardTopPostEntry[]>([])
   const [isReportChartLoading, setIsReportChartLoading] = useState(false)
   const [isDonationChartLoading, setIsDonationChartLoading] = useState(false)
   const [isTopPostsLoading, setIsTopPostsLoading] = useState(false)
@@ -56,6 +74,7 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
   const [totalCats, setTotalCats] = useState<number | null>(null)
   const [totalAvailableSpaceForPets, setTotalAvailableSpaceForPets] = useState<number | null>(null)
   const [topPostIndex, setTopPostIndex] = useState(0)
+  const [pieHoverState, setPieHoverState] = useState<PieHoverState | null>(null)
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const accessToken = session?.accessToken?.trim() ?? ''
   const resolvedHeaderProfile = useHeaderProfile({
@@ -266,7 +285,9 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
   )
   const dogsCount = totalDogs ?? 0
   const catsCount = totalCats ?? 0
-  const availableSpaceCount = totalAvailableSpaceForPets ?? 0
+  const occupiedSpaceCount = dogsCount + catsCount
+  const totalCapacityCount = totalAvailableSpaceForPets ?? 0
+  const availableSpaceCount = Math.max(0, totalCapacityCount - occupiedSpaceCount)
   const pieTotal = dogsCount + catsCount + availableSpaceCount
   const dogsAngle = pieTotal > 0 ? (dogsCount / pieTotal) * 360 : 0
   const catsAngle = pieTotal > 0 ? (catsCount / pieTotal) * 360 : 0
@@ -276,9 +297,13 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
     '--cats-end-angle': `${catsEndAngle}deg`,
   } as CSSProperties
 
-  const activeTopPost = topPosts[topPostIndex]
+  const activeTopPostEntry = topPosts[topPostIndex]
+  const activeTopPost = activeTopPostEntry?.post
   const hasMultipleTopPosts = topPosts.length > 1
   const activeTopPostTitle = activeTopPost?.content?.trim() || 'Untitled post'
+  const activeTopPostPreviewMedia = getTopPostPreviewMedia(activeTopPost?.media)
+  const activeTopPostMediaUrl = activeTopPostPreviewMedia?.mediaUrl?.trim() || ''
+  const isActiveTopPostVideo = activeTopPostPreviewMedia?.mediaType === 'VIDEO' && activeTopPostMediaUrl.length > 0
 
   const handlePreviousTopPost = () => {
     if (!hasMultipleTopPosts) {
@@ -294,6 +319,78 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
     }
 
     setTopPostIndex((previousIndex) => (previousIndex === topPosts.length - 1 ? 0 : previousIndex + 1))
+  }
+
+  const resolvePieSegmentByAngle = (angle: number): PieSegment | null => {
+    if (pieTotal <= 0) {
+      return null
+    }
+
+    if (angle < dogsAngle) {
+      return dogsCount > 0 ? 'dogs' : null
+    }
+
+    if (angle < catsEndAngle) {
+      return catsCount > 0 ? 'cats' : null
+    }
+
+    return availableSpaceCount > 0 ? 'available-space' : null
+  }
+
+  const handlePieMouseMove = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const pieRect = event.currentTarget.getBoundingClientRect()
+    const offsetX = event.clientX - pieRect.left
+    const offsetY = event.clientY - pieRect.top
+    const radius = pieRect.width / 2
+    const centerX = pieRect.width / 2
+    const centerY = pieRect.height / 2
+    const deltaX = offsetX - centerX
+    const deltaY = offsetY - centerY
+    const distanceFromCenter = Math.hypot(deltaX, deltaY)
+
+    if (distanceFromCenter > radius) {
+      setPieHoverState(null)
+      return
+    }
+
+    const angle = (Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90 + 360) % 360
+    const activeSegment = resolvePieSegmentByAngle(angle)
+
+    if (!activeSegment) {
+      setPieHoverState(null)
+      return
+    }
+
+    if (activeSegment === 'dogs') {
+      setPieHoverState({
+        label: 'Dogs',
+        value: dogsCount,
+        x: offsetX,
+        y: offsetY,
+      })
+      return
+    }
+
+    if (activeSegment === 'cats') {
+      setPieHoverState({
+        label: 'Cats',
+        value: catsCount,
+        x: offsetX,
+        y: offsetY,
+      })
+      return
+    }
+
+    setPieHoverState({
+      label: 'Available Space',
+      value: availableSpaceCount,
+      x: offsetX,
+      y: offsetY,
+    })
+  }
+
+  const handlePieMouseLeave = () => {
+    setPieHoverState(null)
   }
 
   return (
@@ -372,7 +469,23 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
               <h2 className={styles.widgetTitle}>Total Pets</h2>
 
               <div className={styles.petsPieWrap} aria-hidden="true">
-                <div className={styles.petsPieChart} style={pieChartStyle} />
+                <div
+                  className={styles.petsPieChart}
+                  style={pieChartStyle}
+                  onMouseMove={handlePieMouseMove}
+                  onMouseLeave={handlePieMouseLeave}
+                />
+                {pieHoverState ? (
+                  <div
+                    className={styles.petsPiePopover}
+                    style={{
+                      left: `${pieHoverState.x}px`,
+                      top: `${pieHoverState.y}px`,
+                    }}
+                  >
+                    {pieHoverState.label}: {pieHoverState.value}
+                  </div>
+                ) : null}
               </div>
 
               <div className={styles.petsLegendRow}>
@@ -419,12 +532,21 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
                     <p className={styles.topPostStateMessage}>Loading top posts...</p>
                   ) : activeTopPost ? (
                     <>
-                      <img
-                        src={topPostPreviewImage}
-                        alt={activeTopPostTitle}
-                        className={styles.topPostImage}
-                        loading="lazy"
-                      />
+                      {isActiveTopPostVideo ? (
+                        <video className={styles.topPostImage} controls preload="metadata" playsInline>
+                          <source src={activeTopPostMediaUrl} />
+                        </video>
+                      ) : (
+                        <img
+                          src={activeTopPostMediaUrl || topPostPreviewImage}
+                          alt={activeTopPostTitle}
+                          className={styles.topPostImage}
+                          loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.src = topPostPreviewImage
+                          }}
+                        />
+                      )}
                       <p className={styles.topPostTitle}>{activeTopPostTitle}</p>
                       <p className={styles.topPostParticipants}>
                         {activeTopPost.likeCount ?? 0} Likes • {activeTopPost.commentCount ?? 0} Comments

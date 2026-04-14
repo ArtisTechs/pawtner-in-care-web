@@ -1,30 +1,16 @@
 export type AchievementCategory =
   | 'REGISTRATION'
-  | 'ADOPTION'
-  | 'DONATION'
-  | 'ENGAGEMENT'
+  | 'DONATION_LOGS'
+  | 'ADOPTION_LOGS'
+  | 'EMERGENCY_SOS'
+  | 'COMMUNITY'
+  | 'ACCOUNT_DAYS'
+  | 'GIFT_LOGS'
   | (string & {})
 
 export type AchievementRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | (string & {})
 
-export type AchievementVisibility = 'PUBLIC' | 'PRIVATE' | (string & {})
-
 export type AchievementAssignmentType = 'AUTO' | 'MANUAL' | (string & {})
-
-export type AchievementTriggerType =
-  | 'USER_REGISTERED'
-  | 'PET_ADOPTED'
-  | 'DONATION_MADE'
-  | 'USER_ACTIVE_MONTH'
-  | 'MANUAL'
-  | (string & {})
-
-export type AchievementRuleType =
-  | 'FIRST_ACTION'
-  | 'COUNT_THRESHOLD'
-  | 'STREAK'
-  | 'BOOLEAN_ACTION'
-  | (string & {})
 
 export type AchievementSortDir = 'asc' | 'desc'
 
@@ -35,44 +21,30 @@ export interface Achievement {
   createdAt?: string | null
   createdDate?: string | null
   description?: string | null
-  endAt?: string | null
   iconUrl?: string | null
   id: string
   isActive?: boolean | null
-  isRepeatable?: boolean | null
   points?: number | string | null
+  requiredValue?: number | string | null
   rarity?: AchievementRarity | null
-  ruleConfig?: string | null
-  ruleType?: AchievementRuleType | null
-  startAt?: string | null
   title?: string | null
-  triggerType?: AchievementTriggerType | null
   updatedAt?: string | null
   updatedDate?: string | null
-  visibility?: AchievementVisibility | null
 }
 
 export interface AchievementListQuery {
   assignmentType?: AchievementAssignmentType
   category?: AchievementCategory
   code?: string
-  endAtFrom?: string
-  endAtTo?: string
   ignorePagination?: boolean
   isActive?: boolean
-  isRepeatable?: boolean
   page?: number
   rarity?: AchievementRarity
-  ruleType?: AchievementRuleType
   search?: string
   size?: number
   sortBy?: string
   sortDir?: AchievementSortDir
-  startAtFrom?: string
-  startAtTo?: string
   title?: string
-  triggerType?: AchievementTriggerType
-  visibility?: AchievementVisibility
 }
 
 export interface AchievementListResult {
@@ -87,21 +59,15 @@ export interface AchievementListResult {
 
 export interface CreateAchievementPayload {
   assignmentType: AchievementAssignmentType
-  category: AchievementCategory
+  category?: AchievementCategory
   code: string
   description: string
-  endAt: string | null
   iconUrl: string | null
   isActive: boolean
-  isRepeatable: boolean
   points: number
+  requiredValue?: number | null
   rarity: AchievementRarity
-  ruleConfig: string | null
-  ruleType: AchievementRuleType
-  startAt: string | null
   title: string
-  triggerType: AchievementTriggerType
-  visibility: AchievementVisibility
 }
 
 export interface ManualAchievementAssignmentPayload {

@@ -13,6 +13,11 @@ const COMMUNITY_POST_BASE_PATH = '/community/posts'
 const COMPANY_SETTINGS_BASE_PATH = '/company-settings'
 const DASHBOARD_BASE_PATH = '/dashboard'
 const EMERGENCY_SOS_BASE_PATH = '/emergency-sos'
+const CHAT_BASE_PATH = '/chat'
+const TODO_BASE_PATH = '/todos'
+const ITEM_LISTING_BASE_PATH = '/item-listings'
+const GIFT_LOG_BASE_PATH = '/gift-logs'
+const NOTIFICATION_BASE_PATH = '/notifications'
 
 export const API_ENDPOINTS = {
   auth: {
@@ -100,5 +105,54 @@ export const API_ENDPOINTS = {
     count: `${EMERGENCY_SOS_BASE_PATH}/count`,
     statuses: `${EMERGENCY_SOS_BASE_PATH}/statuses`,
     types: `${EMERGENCY_SOS_BASE_PATH}/types`,
+  },
+  todos: {
+    base: TODO_BASE_PATH,
+    byId: (id: string) => `${TODO_BASE_PATH}/${id}`,
+    done: (id: string, isDone: boolean) => `${TODO_BASE_PATH}/${id}/done?isDone=${isDone}`,
+    starred: (id: string, starred: boolean) => `${TODO_BASE_PATH}/${id}/starred?starred=${starred}`,
+  },
+  itemListings: {
+    base: ITEM_LISTING_BASE_PATH,
+    byId: (id: string) => `${ITEM_LISTING_BASE_PATH}/${id}`,
+    show: (id: string, isShow: boolean) => `${ITEM_LISTING_BASE_PATH}/${id}/show?isShow=${isShow}`,
+    boxById: (id: string, quantity?: number) => {
+      const basePath = `${ITEM_LISTING_BASE_PATH}/${id}/box`
+      if (quantity === undefined) {
+        return basePath
+      }
+
+      return `${basePath}?quantity=${encodeURIComponent(String(quantity))}`
+    },
+    favoritesById: (id: string) => `${ITEM_LISTING_BASE_PATH}/${id}/favorites`,
+    userBoxItems: (userId: string) => `${USER_BASE_PATH}/${userId}/box-items`,
+    userFavoriteItems: (userId: string) => `${USER_BASE_PATH}/${userId}/favorite-items`,
+  },
+  giftLogs: {
+    base: GIFT_LOG_BASE_PATH,
+    byId: (id: string) => `${GIFT_LOG_BASE_PATH}/${id}`,
+    byIdStatus: (id: string, status: string) =>
+      `${GIFT_LOG_BASE_PATH}/${id}/status?status=${encodeURIComponent(status)}`,
+  },
+  chat: {
+    base: CHAT_BASE_PATH,
+    byId: (conversationId: string) => `${CHAT_BASE_PATH}/conversations/${conversationId}`,
+    bulkDelete: `${CHAT_BASE_PATH}/conversations/bulk`,
+    conversations: `${CHAT_BASE_PATH}/conversations`,
+    privateConversation: `${CHAT_BASE_PATH}/conversations/private`,
+    messages: (conversationId: string) => `${CHAT_BASE_PATH}/conversations/${conversationId}/messages`,
+    seen: (conversationId: string) => `${CHAT_BASE_PATH}/conversations/${conversationId}/seen`,
+    starred: (conversationId: string) => `${CHAT_BASE_PATH}/conversations/${conversationId}/starred`,
+    unreadCount: `${CHAT_BASE_PATH}/conversations/unread-count`,
+  },
+  notifications: {
+    base: NOTIFICATION_BASE_PATH,
+    me: `${NOTIFICATION_BASE_PATH}/me`,
+    my: `${NOTIFICATION_BASE_PATH}/my`,
+    byId: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}`,
+    markRead: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}/read`,
+    markUnread: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}/unread`,
+    readAll: `${NOTIFICATION_BASE_PATH}/my/read-all`,
+    unreadCount: `${NOTIFICATION_BASE_PATH}/my/unread-count`,
   },
 } as const

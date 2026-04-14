@@ -1,0 +1,111 @@
+.root {
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.label {
+  color: #365274;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.inputWrap {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #cad6e7;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.searchIcon {
+  color: #6f86a4;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #1d314d;
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input::placeholder {
+  color: #8ca1bc;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 18;
+  border-radius: 10px;
+  border: 1px solid #d7e2f1;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(19, 52, 93, 0.18);
+  overflow: hidden;
+}
+
+.dropdownMessage {
+  margin: 0;
+  padding: 10px 12px;
+  color: #4f6684;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dropdownError {
+  color: #bd3e3e;
+}
+
+.optionList {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.optionButton {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #1f3859;
+  text-align: left;
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.optionButton:hover {
+  border-color: #bfd3ea;
+  background: #eef5ff;
+}
+
+.optionName {
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.optionMeta {
+  color: #59779d;
+  font-family: var(--font-family-body);
+  font-size: 12px;
+  font-weight: 600;
+}

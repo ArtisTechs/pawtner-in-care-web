@@ -54,7 +54,7 @@ function DonationChart({ data }: DonationChartProps) {
   )
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
       <AreaChart data={chartData} margin={{ top: 14, right: 14, left: 0, bottom: 4 }}>
         <defs>
           {methods.map((method, index) => {

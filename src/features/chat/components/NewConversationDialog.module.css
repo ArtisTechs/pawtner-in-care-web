@@ -1,0 +1,143 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  background: rgba(11, 25, 44, 0.52);
+  display: grid;
+  place-items: center;
+  padding: 18px 12px;
+  animation: chat-modal-overlay-enter 180ms ease-out;
+}
+
+.card {
+  width: min(520px, 100%);
+  border-radius: 14px;
+  border: 1px solid #cdddff;
+  background: #ffffff;
+  box-shadow: 0 24px 42px rgba(14, 45, 83, 0.31);
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+  animation: chat-modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.title {
+  margin: 0;
+  color: #214365;
+  font-family: var(--font-family-heading-2);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: #4f6888;
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.closeButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #ccd9ea;
+  border-radius: 10px;
+  background: #f7faff;
+  color: #4b607b;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.errorText {
+  margin: 0;
+  color: #c53f3f;
+  font-family: var(--font-family-body);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cancelButton,
+.submitButton {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid #c7d6e8;
+  background: #ffffff;
+  color: #2f5278;
+}
+
+.submitButton {
+  border: 0;
+  color: #ffffff;
+  background: linear-gradient(180deg, #3f96e6 0%, #2a79ca 100%);
+}
+
+.cancelButton:disabled,
+.submitButton:disabled,
+.closeButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+@keyframes chat-modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes chat-modal-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .card {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}

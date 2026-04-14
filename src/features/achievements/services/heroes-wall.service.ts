@@ -1,7 +1,10 @@
 import type {
+  HeroAchievement,
+  HeroAchievementDefinition,
   HeroesWallEntry,
   HeroesWallListQuery,
   HeroesWallListResult,
+  HeroUserDetails,
 } from '@/features/achievements/types/heroes-wall-api'
 import { apiClient } from '@/shared/api/api-client'
 import { API_ENDPOINTS } from '@/shared/api/api-endpoints'
@@ -85,6 +88,25 @@ const normalizeNumeric = (value: number | null | undefined, fallbackValue: numbe
   return fallbackValue
 }
 
+const parseBoolean = (value: unknown, fallbackValue = false) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase()
+    if (normalizedValue === 'true') {
+      return true
+    }
+
+    if (normalizedValue === 'false') {
+      return false
+    }
+  }
+
+  return fallbackValue
+}
+
 const toSlug = (value: string) =>
   value
     .toLowerCase()
@@ -152,12 +174,14 @@ const mapHeroesWallEntry = (value: unknown, index: number): HeroesWallEntry | nu
     avatarUrl:
       normalizeText(
         readFirstDefined(value, [
+          'profilePicture',
           'avatarUrl',
           'imageUrl',
           'profileImage',
           'profileImageUrl',
           'profilePhoto',
           'profilePhotoUrl',
+          'user.profilePicture',
           'user.avatarUrl',
           'user.imageUrl',
           'user.profileImage',
@@ -170,24 +194,22 @@ const mapHeroesWallEntry = (value: unknown, index: number): HeroesWallEntry | nu
       readFirstDefined(value, ['badgeCount', 'totalBadges', 'achievementCount', 'achievementsUnlocked']),
     ),
     displayName,
-    donatedAmount: Math.max(
-      0,
-      parseNumeric(
-        readFirstDefined(value, [
-          'donatedAmount',
-          'totalDonated',
-          'totalDonationAmount',
-          'donationTotal',
-          'amount',
-          'donated',
-        ]),
-      ),
-    ),
     id,
     points: Math.max(
       0,
       parseNumeric(readFirstDefined(value, ['points', 'totalPoints', 'score', 'totalScore'])),
     ),
+    profileLink:
+      normalizeText(
+        readFirstDefined(value, [
+          'profileLink',
+          'profileUrl',
+          'profileURL',
+          'user.profileLink',
+          'user.profileUrl',
+          'user.profileURL',
+        ]),
+      ) || null,
     rank: toNonNegativeInteger(readFirstDefined(value, ['rank', 'position', 'leaderboardRank'])),
     userId: userId || id,
   }
@@ -203,10 +225,6 @@ const sortHeroes = (leftEntry: HeroesWallEntry, rightEntry: HeroesWallEntry) => 
 
   if (leftHasRank !== rightHasRank) {
     return leftHasRank ? -1 : 1
-  }
-
-  if (leftEntry.donatedAmount !== rightEntry.donatedAmount) {
-    return rightEntry.donatedAmount - leftEntry.donatedAmount
   }
 
   if (leftEntry.points !== rightEntry.points) {
@@ -294,6 +312,130 @@ const normalizeHeroesWallListResponse = (
   }
 }
 
+const mapHeroAchievementDefinition = (value: unknown, fallbackId: string): HeroAchievementDefinition => {
+  const achievementValue = isObject(value) ? value : {}
+  const id = normalizeText(readFirstDefined(achievementValue, ['id', 'achievementId'])) || fallbackId
+
+  return {
+    category:
+      normalizeText(readFirstDefined(achievementValue, ['category', 'type', 'group', 'achievementType'])) ||
+      null,
+    code: normalizeText(readFirstDefined(achievementValue, ['code', 'key'])) || null,
+    description: normalizeText(readFirstDefined(achievementValue, ['description', 'details'])) || null,
+    iconUrl:
+      normalizeText(readFirstDefined(achievementValue, ['iconUrl', 'icon', 'iconURL', 'imageUrl'])) || null,
+    id,
+    points: Math.max(0, parseNumeric(readFirstDefined(achievementValue, ['points', 'score']))),
+    rarity:
+      normalizeText(readFirstDefined(achievementValue, ['rarity', 'level', 'tier', 'rewardTier'])) || null,
+    title:
+      normalizeText(readFirstDefined(achievementValue, ['title', 'name', 'label'])) ||
+      'Untitled Achievement',
+  }
+}
+
+const mapHeroAchievement = (value: unknown, index: number, fallbackUserId: string): HeroAchievement | null => {
+  if (!isObject(value)) {
+    return null
+  }
+
+  const achievementPayload = readFirstDefined(value, ['achievement'])
+  const achievement = mapHeroAchievementDefinition(
+    achievementPayload,
+    `achievement-${fallbackUserId || 'hero'}-${index + 1}`,
+  )
+  const id = normalizeText(readFirstDefined(value, ['id', 'userAchievementId'])) || achievement.id
+
+  return {
+    achievement,
+    createdAt: normalizeText(readFirstDefined(value, ['createdAt'])) || null,
+    id,
+    isUnlocked: parseBoolean(readFirstDefined(value, ['isUnlocked', 'unlocked']), false),
+    progressCurrent: toNonNegativeInteger(
+      readFirstDefined(value, ['progressCurrent', 'progress', 'currentProgress']),
+    ),
+    progressTarget: toNonNegativeInteger(
+      readFirstDefined(value, ['progressTarget', 'target', 'targetProgress']),
+      1,
+    ),
+    sourceEvent: normalizeText(readFirstDefined(value, ['sourceEvent', 'source'])) || null,
+    unlockedAt: normalizeText(readFirstDefined(value, ['unlockedAt', 'completedAt'])) || null,
+    updatedAt: normalizeText(readFirstDefined(value, ['updatedAt'])) || null,
+    userId: normalizeText(readFirstDefined(value, ['userId'])) || fallbackUserId,
+  }
+}
+
+const pickUserAchievementItems = (value: JsonObject) => {
+  const achievementPaths = [
+    'achievements',
+    'userAchievements',
+    'badgeProgress',
+    'badges',
+    'awards',
+  ]
+
+  for (const achievementPath of achievementPaths) {
+    const candidate = readPath(value, achievementPath)
+    if (Array.isArray(candidate)) {
+      return candidate
+    }
+  }
+
+  return []
+}
+
+const sortHeroAchievements = (leftAchievement: HeroAchievement, rightAchievement: HeroAchievement) => {
+  if (leftAchievement.isUnlocked !== rightAchievement.isUnlocked) {
+    return leftAchievement.isUnlocked ? -1 : 1
+  }
+
+  const leftUnlockedAt = normalizeText(leftAchievement.unlockedAt)
+  const rightUnlockedAt = normalizeText(rightAchievement.unlockedAt)
+
+  if (leftUnlockedAt && rightUnlockedAt && leftUnlockedAt !== rightUnlockedAt) {
+    return rightUnlockedAt.localeCompare(leftUnlockedAt)
+  }
+
+  if (leftAchievement.achievement.points !== rightAchievement.achievement.points) {
+    return rightAchievement.achievement.points - leftAchievement.achievement.points
+  }
+
+  return leftAchievement.achievement.title.localeCompare(rightAchievement.achievement.title)
+}
+
+const normalizeHeroUserDetailsResponse = (value: unknown, fallbackUserId: string): HeroUserDetails => {
+  const payload = isObject(value) ? value : {}
+  const id = normalizeText(readFirstDefined(payload, ['id', 'userId'])) || fallbackUserId
+
+  const achievements = pickUserAchievementItems(payload)
+    .map((achievement, index) => mapHeroAchievement(achievement, index, id))
+    .filter((achievement): achievement is HeroAchievement => Boolean(achievement))
+    .sort(sortHeroAchievements)
+
+  const suppliedTotalPoints = Math.max(
+    0,
+    parseNumeric(readFirstDefined(payload, ['totalPoints', 'points', 'score', 'totalScore'])),
+  )
+  const derivedTotalPoints = achievements.reduce(
+    (totalPoints, achievement) =>
+      achievement.isUnlocked ? totalPoints + achievement.achievement.points : totalPoints,
+    0,
+  )
+
+  return {
+    achievements,
+    email: normalizeText(readFirstDefined(payload, ['email'])) || null,
+    firstName: normalizeText(readFirstDefined(payload, ['firstName'])) || null,
+    id,
+    lastName: normalizeText(readFirstDefined(payload, ['lastName'])) || null,
+    middleName: normalizeText(readFirstDefined(payload, ['middleName'])) || null,
+    profileLink:
+      normalizeText(readFirstDefined(payload, ['profileLink', 'profileUrl', 'profileURL'])) || null,
+    profilePicture: normalizeText(readFirstDefined(payload, ['profilePicture', 'avatarUrl', 'imageUrl'])) || null,
+    totalPoints: suppliedTotalPoints > 0 ? suppliedTotalPoints : derivedTotalPoints,
+  }
+}
+
 const listHeroesWall = (token: string, query?: HeroesWallListQuery) => {
   const queryString = buildListQueryString(query)
   const cacheKey = `${token}:${queryString}`
@@ -319,6 +461,12 @@ const listHeroesWall = (token: string, query?: HeroesWallListQuery) => {
   return request
 }
 
+const getHeroUserDetails = (userId: string, token: string) =>
+  apiClient
+    .get<unknown>(API_ENDPOINTS.users.byId(userId), { token })
+    .then((response) => normalizeHeroUserDetailsResponse(response, userId))
+
 export const heroesWallService = {
+  getUserDetails: getHeroUserDetails,
   list: listHeroesWall,
 }

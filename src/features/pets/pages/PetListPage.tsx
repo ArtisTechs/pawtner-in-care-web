@@ -823,20 +823,28 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                   </select>
                 </label>
 
-                <label className={`${styles.fieldLabel} ${styles.checkboxField}`}>
-                  <input
-                    type="checkbox"
-                    checked={addPetForm.isVaccinated}
-                    onChange={(event) => {
-                      setAddPetForm((currentForm) => ({
-                        ...currentForm,
-                        isVaccinated: event.target.checked,
-                      }))
-                    }}
-                    className={styles.checkboxInput}
-                  />
-                  <span>Vaccinated</span>
-                </label>
+                <div className={`${styles.toggleRow} ${styles.fieldLabelWide}`}>
+                  <label className={styles.toggleCard}>
+                    <span className={styles.toggleCopy}>
+                      <span className={styles.toggleLabel}>Vaccinated</span>
+                      <span className={styles.toggleHint}>Mark this pet as vaccinated.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={addPetForm.isVaccinated}
+                      onChange={(event) => {
+                        setAddPetForm((currentForm) => ({
+                          ...currentForm,
+                          isVaccinated: event.target.checked,
+                        }))
+                      }}
+                      className={styles.toggleInput}
+                    />
+                    <span className={styles.toggleTrack} aria-hidden="true">
+                      <span className={styles.toggleThumb} />
+                    </span>
+                  </label>
+                </div>
 
                 <label className={styles.fieldLabel}>
                   <span>Weight (kg)</span>
@@ -959,6 +967,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                       setAddPetForm((currentForm) => ({ ...currentForm, description: event.target.value }))
                     }}
                     className={styles.fieldTextarea}
+                    style={{ resize: 'none' }}
                     rows={3}
                   />
                 </label>

@@ -60,10 +60,51 @@
   width: 100%;
 }
 
+.createAccountRow {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.createAccountLabel {
+  color: var(--color-text-body);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-1);
+  font-weight: var(--font-weight-body-regular);
+  line-height: 1.3;
+}
+
+.createAccountAction {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--color-brand-blue-500);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-1);
+  font-weight: var(--font-weight-body-semibold);
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.createAccountAction:hover {
+  filter: brightness(1.05);
+}
+
+.createAccountAction:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .helperActionRow {
   margin-top: 10px;
   display: flex;
   justify-content: flex-end;
+}
+
+.centerActionRow {
+  justify-content: center;
 }
 
 .helperAction {
@@ -89,23 +130,26 @@
 .signInButton {
   margin-top: 20px;
   width: 100%;
-  height: 42px;
+  min-height: var(--size-auth-action-height);
+  height: var(--size-auth-action-height);
+  max-height: var(--size-auth-action-height);
   border: none;
   border-radius: 7px;
+  padding: 0 14px;
   color: var(--color-surface-primary);
   font-family: var(--font-family-body);
   font-size: var(--font-size-body-1);
   font-weight: var(--font-weight-body-semibold);
   line-height: 1.2;
   cursor: pointer;
-  background: linear-gradient(
-    92deg,
-    var(--color-brand-blue-500) 0%,
-    var(--color-brand-blue-300) 100%
-  );
+  background: var(--gradient-auth-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     filter 0.2s ease,
     transform 0.2s ease;
+  white-space: nowrap;
 }
 
 .signInButton:hover {
@@ -126,6 +170,42 @@
 .signInButton:focus-visible {
   outline: 2px solid var(--color-brand-blue-100);
   outline-offset: 2px;
+}
+
+.backToSignInButton {
+  margin-top: 20px;
+  width: 100%;
+  min-height: var(--size-auth-action-height);
+  height: var(--size-auth-action-height);
+  max-height: var(--size-auth-action-height);
+  border: 1px solid var(--color-brand-blue-300);
+  border-radius: 7px;
+  padding: 0 14px;
+  background: var(--color-surface-primary);
+  color: var(--color-brand-blue-500);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-1);
+  font-weight: var(--font-weight-body-semibold);
+  line-height: 1.2;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.backInlineButton {
+  margin-top: 0;
+}
+
+.backToSignInButton:hover {
+  border-color: var(--color-brand-blue-400);
+  color: var(--color-brand-blue-600);
+}
+
+.backToSignInButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 @media (max-width: 520px) {

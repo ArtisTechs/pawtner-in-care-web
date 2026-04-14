@@ -11,6 +11,10 @@ type AuthTextFieldProps<TName extends string> = {
   type: AuthFieldType
   value: string
   placeholder: string
+  autoComplete?: string
+  disabled?: boolean
+  required?: boolean
+  errorMessage?: string
   actionText?: string
   actionPlacement?: 'inline' | 'below'
   onValueChange: (name: TName, value: string) => void
@@ -24,6 +28,10 @@ function AuthTextField<TName extends string>({
   type,
   value,
   placeholder,
+  autoComplete,
+  disabled = false,
+  required = false,
+  errorMessage,
   actionText,
   actionPlacement = 'inline',
   onValueChange,
@@ -42,9 +50,15 @@ function AuthTextField<TName extends string>({
       <div className={styles.fieldLabelRow}>
         <label htmlFor={id} className={styles.fieldLabel}>
           {label}
+          {required ? <span className={styles.requiredMark}>*</span> : null}
         </label>
         {actionText && actionPlacement === 'inline' ? (
-          <button type="button" className={styles.inlineAction} onClick={onActionClick}>
+          <button
+            type="button"
+            className={styles.inlineAction}
+            onClick={onActionClick}
+            disabled={disabled}
+          >
             {actionText}
           </button>
         ) : null}
@@ -56,8 +70,11 @@ function AuthTextField<TName extends string>({
           type={effectiveInputType}
           value={value}
           placeholder={placeholder}
-          className={`${styles.textInput} ${isPasswordField ? styles.passwordInput : ''}`}
-          autoComplete={type === 'email' ? 'email' : 'current-password'}
+          className={`${styles.textInput} ${isPasswordField ? styles.passwordInput : ''} ${errorMessage ? styles.textInputError : ''}`}
+          autoComplete={autoComplete ?? (type === 'email' ? 'email' : 'current-password')}
+          disabled={disabled}
+          aria-required={required}
+          aria-invalid={Boolean(errorMessage)}
           onChange={handleChange}
         />
 
@@ -68,6 +85,7 @@ function AuthTextField<TName extends string>({
             onClick={() => setIsPasswordVisible((currentState) => !currentState)}
             aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
             aria-pressed={isPasswordVisible}
+            disabled={disabled}
           >
             {isPasswordVisible ? (
               <FaEyeSlash aria-hidden="true" className={styles.eyeIcon} />
@@ -77,9 +95,15 @@ function AuthTextField<TName extends string>({
           </button>
         ) : null}
       </div>
+      {errorMessage ? <p className={styles.errorText}>{errorMessage}</p> : null}
       {actionText && actionPlacement === 'below' ? (
         <div className={styles.belowActionRow}>
-          <button type="button" className={styles.inlineAction} onClick={onActionClick}>
+          <button
+            type="button"
+            className={styles.inlineAction}
+            onClick={onActionClick}
+            disabled={disabled}
+          >
             {actionText}
           </button>
         </div>

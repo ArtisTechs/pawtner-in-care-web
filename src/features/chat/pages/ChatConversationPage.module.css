@@ -1,0 +1,44 @@
+.page {
+  min-height: calc(100vh - 74px);
+  padding: 22px 18px 14px;
+  background:
+    radial-gradient(circle at 7% 17%, rgba(130, 190, 253, 0.24) 0%, rgba(130, 190, 253, 0) 34%),
+    linear-gradient(108deg, #1f5fad 0%, #3896e7 56%, #2f80d7 100%);
+}
+
+.container {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.pageTitle {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-family-heading-1);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.1;
+  text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
+}
+
+.card {
+  margin-top: 16px;
+  height: clamp(440px, calc(100vh - 214px), 840px);
+  border-radius: 12px;
+  border: 1px solid #bdd6ef;
+  background: #ffffff;
+  box-shadow: 0 18px 32px rgba(13, 55, 105, 0.17);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 920px) {
+  .page {
+    padding: 16px 10px 12px;
+  }
+
+  .pageTitle {
+    font-size: 32px;
+  }
+}

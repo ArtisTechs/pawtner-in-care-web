@@ -1,0 +1,72 @@
+.page {
+  min-height: calc(100vh - 74px);
+  padding: 22px 18px 14px;
+  background:
+    radial-gradient(circle at 7% 17%, rgba(130, 190, 253, 0.24) 0%, rgba(130, 190, 253, 0) 34%),
+    linear-gradient(108deg, #1f5fad 0%, #3896e7 56%, #2f80d7 100%);
+}
+
+.container {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.pageTitle {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--font-family-heading-1);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.1;
+  text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
+}
+
+.card {
+  margin-top: 16px;
+  min-height: clamp(420px, calc(100vh - 210px), 820px);
+  border-radius: 12px;
+  border: 1px solid #bdd6ef;
+  background: #ffffff;
+  box-shadow: 0 18px 32px rgba(13, 55, 105, 0.17);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.toolbarWrap {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #dce5f1;
+  display: grid;
+  gap: 10px;
+  background: #fcfdff;
+}
+
+.listWrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.listScrollArea {
+  height: 100%;
+  overflow: auto;
+}
+
+.loadingMoreIndicator {
+  padding: 12px 14px 16px;
+  color: #4a5f78;
+  font-family: var(--font-family-base);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .page {
+    padding: 16px 10px 12px;
+  }
+
+  .pageTitle {
+    font-size: 32px;
+  }
+}

@@ -1,0 +1,25 @@
+.root {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #d4deeb;
+  background: #f7faff;
+  color: #486687;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.root svg {
+  width: 14px;
+  height: 14px;
+}
+
+.rootDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hiddenInput {
+  display: none;
+}

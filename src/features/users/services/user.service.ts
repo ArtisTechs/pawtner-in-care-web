@@ -13,12 +13,14 @@ const inFlightUserListRequests = new Map<string, Promise<User[]>>()
 type UserListResponse = User[] | { content?: User[] | null }
 
 interface UserListParams {
+  active?: boolean
   email?: string
   firstName?: string
   lastName?: string
   middleName?: string
   page?: number
   profilePicture?: string
+  role?: string
   search?: string
   size?: number
   sortBy?: UserSortBy

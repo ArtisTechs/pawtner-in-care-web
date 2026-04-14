@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FaSyncAlt, FaUserCircle } from 'react-icons/fa'
+import { FaTimes, FaUserCircle } from 'react-icons/fa'
 import crownIcon from '@/assets/crown-icon.png'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { heroesWallService } from '@/features/achievements/services/heroes-wall.service'
-import type { HeroesWallEntry, HeroesWallPeriod } from '@/features/achievements/types/heroes-wall-api'
+import type {
+  HeroAchievement,
+  HeroUserDetails,
+  HeroesWallEntry,
+  HeroesWallPeriod,
+} from '@/features/achievements/types/heroes-wall-api'
 import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems } from '@/layouts/config/navigation'
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
@@ -24,17 +29,45 @@ const PERIOD_OPTIONS: Array<{ label: string; value: HeroesWallPeriod }> = [
   { label: 'All time', value: 'ALL_TIME' },
 ]
 
-const formatDonatedAmount = (value: number) =>
-  new Intl.NumberFormat('en-PH', {
-    currency: 'PHP',
-    maximumFractionDigits: 0,
-    style: 'currency',
-  }).format(value)
-
 const formatPoints = (value: number) => value.toLocaleString('en-PH')
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 'Not available'
+  }
+
+  const dateValue = new Date(value)
+  if (Number.isNaN(dateValue.getTime())) {
+    return 'Not available'
+  }
+
+  return new Intl.DateTimeFormat('en-PH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(dateValue)
+}
+
+const combineNameParts = (...parts: Array<string | null | undefined>) =>
+  parts
+    .map((part) => part?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ')
+
+const normalizeImageUrl = (value: string | null | undefined) => {
+  const normalizedValue = value?.trim() ?? ''
+  return normalizedValue || null
+}
+
+const getHeroAvatarUrl = (hero: HeroesWallEntry | null, heroDetails?: HeroUserDetails | null) =>
+  normalizeImageUrl(heroDetails?.profilePicture) ??
+  normalizeImageUrl(hero?.avatarUrl)
 
 const toSearchText = (hero: HeroesWallEntry) =>
-  [hero.displayName, hero.userId, hero.rank, hero.donatedAmount, hero.points].join(' ').toLowerCase()
+  [hero.displayName, hero.userId, hero.rank, hero.points, hero.profileLink ?? ''].join(' ').toLowerCase()
+
+const toAchievementProgressText = (achievement: HeroAchievement) => {
+  const target = achievement.progressTarget > 0 ? achievement.progressTarget : 1
+  return `${achievement.progressCurrent}/${target}`
+}
 
 interface HeroesWallPageProps {
   onLogout?: () => void
@@ -47,6 +80,10 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
   const [activePeriod, setActivePeriod] = useState<HeroesWallPeriod>('WEEKLY')
   const [isLoadingHeroes, setIsLoadingHeroes] = useState(false)
   const [heroes, setHeroes] = useState<HeroesWallEntry[]>([])
+  const [selectedHero, setSelectedHero] = useState<HeroesWallEntry | null>(null)
+  const [selectedHeroDetails, setSelectedHeroDetails] = useState<HeroUserDetails | null>(null)
+  const [isLoadingHeroDetails, setIsLoadingHeroDetails] = useState(false)
+  const [heroDetailsError, setHeroDetailsError] = useState('')
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const resolvedHeaderProfile = useHeaderProfile({
     fallbackProfile: defaultHeaderProfile,
@@ -97,6 +134,57 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
   const centerPodiumHero = topThreeHeroes[0] ?? null
   const rightPodiumHero = topThreeHeroes[1] ?? null
 
+  const closeHeroDetailsModal = useCallback(() => {
+    setSelectedHero(null)
+    setSelectedHeroDetails(null)
+    setHeroDetailsError('')
+    setIsLoadingHeroDetails(false)
+  }, [])
+
+  const handleViewHeroDetails = useCallback(
+    async (hero: HeroesWallEntry) => {
+      if (!accessToken) {
+        showToast('You need to sign in before viewing user details.', { variant: 'error' })
+        return
+      }
+
+      setSelectedHero(hero)
+      setSelectedHeroDetails(null)
+      setHeroDetailsError('')
+      setIsLoadingHeroDetails(true)
+
+      try {
+        const userDetails = await heroesWallService.getUserDetails(hero.userId, accessToken)
+        setSelectedHeroDetails(userDetails)
+      } catch (error) {
+        const errorMessage = getErrorMessage(error)
+        setHeroDetailsError(errorMessage)
+        showToast(errorMessage, { variant: 'error' })
+      } finally {
+        setIsLoadingHeroDetails(false)
+      }
+    },
+    [accessToken, showToast],
+  )
+
+  const selectedHeroDisplayName = useMemo(() => {
+    if (!selectedHero) {
+      return ''
+    }
+
+    const detailedName = combineNameParts(
+      selectedHeroDetails?.firstName,
+      selectedHeroDetails?.middleName,
+      selectedHeroDetails?.lastName,
+    )
+
+    return detailedName || selectedHero.displayName
+  }, [selectedHero, selectedHeroDetails])
+
+  const selectedHeroAvatarUrl = getHeroAvatarUrl(selectedHero, selectedHeroDetails)
+  const selectedHeroAchievements = selectedHeroDetails?.achievements ?? []
+  const selectedHeroTotalPoints = Math.max(selectedHeroDetails?.totalPoints ?? 0, selectedHero?.points ?? 0)
+
   const renderPodiumHeroCard = (
     hero: HeroesWallEntry | null,
     slot: 'center' | 'left' | 'right',
@@ -110,12 +198,14 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
     }
 
     const isChampion = slot === 'center'
+    const heroAvatarUrl = getHeroAvatarUrl(hero)
+
     return (
       <div className={`${styles.podiumCard} ${isChampion ? styles.podiumChampion : ''}`}>
         <div className={styles.avatarWrap}>
           {isChampion ? <img src={crownIcon} alt="" className={styles.crown} aria-hidden="true" /> : null}
-          {hero.avatarUrl ? (
-            <img src={hero.avatarUrl} alt={hero.displayName} className={styles.avatarImage} loading="lazy" />
+          {heroAvatarUrl ? (
+            <img src={heroAvatarUrl} alt={hero.displayName} className={styles.avatarImage} loading="lazy" />
           ) : (
             <span className={styles.avatarFallback} aria-hidden="true">
               <FaUserCircle />
@@ -123,8 +213,18 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
           )}
           <span className={styles.rankBadge}>{hero.rank}</span>
         </div>
-        <strong className={styles.heroName}>{hero.displayName}</strong>
-        <span className={styles.heroDonated}>{formatDonatedAmount(hero.donatedAmount)}</span>
+        <strong className={styles.heroName}>
+          <button
+            type="button"
+            className={styles.heroNameButton}
+            onClick={() => {
+              void handleViewHeroDetails(hero)
+            }}
+          >
+            {hero.displayName}
+          </button>
+        </strong>
+        <span className={styles.heroPoints}>{formatPoints(hero.points)} points</span>
       </div>
     )
   }
@@ -163,22 +263,7 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
           <div className={styles.pageHeader}>
             <div>
               <h1 className={styles.pageTitle}>Heroes Wall</h1>
-              <p className={styles.pageSubtitle}>
-                Public leaderboard of top community champions and donors.
-              </p>
             </div>
-
-            <button
-              type="button"
-              className={styles.refreshButton}
-              onClick={() => {
-                void loadHeroes()
-              }}
-              disabled={isLoadingHeroes}
-            >
-              <FaSyncAlt aria-hidden="true" className={isLoadingHeroes ? styles.refreshIconSpin : ''} />
-              <span>{isLoadingHeroes ? 'Loading...' : 'Refresh'}</span>
-            </button>
           </div>
 
           <div className={styles.periodTabs} role="tablist" aria-label="Heroes wall period">
@@ -202,6 +287,16 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
           </div>
 
           <div className={styles.podiumSection}>
+            <div className={styles.podiumSparkles} aria-hidden="true">
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+              <span className={styles.podiumSparkle} />
+            </div>
             {isLoadingHeroes ? (
               <div className={styles.podiumLoading}>
                 <div className={styles.podiumLoadingCard} />
@@ -229,8 +324,7 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
             <div className={styles.tableHeader}>
               <span>Rank</span>
               <span>User</span>
-              <span className={styles.alignEnd}>Donated</span>
-              <span className={styles.alignEnd}>Points</span>
+              <span className={styles.alignEnd}>Total Points</span>
             </div>
 
             <div className={styles.tableBody}>
@@ -241,33 +335,152 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
               ) : remainingHeroes.length === 0 ? (
                 <div className={styles.tableState}>No additional ranked heroes yet.</div>
               ) : (
-                remainingHeroes.map((hero) => (
-                  <div key={hero.id} className={styles.row}>
-                    <span className={styles.rankValue}>{hero.rank}</span>
-                    <div className={styles.userCell}>
-                      {hero.avatarUrl ? (
-                        <img
-                          src={hero.avatarUrl}
-                          alt={hero.displayName}
-                          className={styles.rowAvatar}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className={styles.rowAvatarFallback} aria-hidden="true">
-                          <FaUserCircle />
-                        </span>
-                      )}
-                      <span className={styles.userName}>{hero.displayName}</span>
+                remainingHeroes.map((hero) => {
+                  const heroAvatarUrl = getHeroAvatarUrl(hero)
+
+                  return (
+                    <div key={hero.id} className={styles.row}>
+                      <span className={styles.rankValue}>{hero.rank}</span>
+                      <button
+                        type="button"
+                        className={styles.userCellButton}
+                        onClick={() => {
+                          void handleViewHeroDetails(hero)
+                        }}
+                      >
+                        {heroAvatarUrl ? (
+                          <img
+                            src={heroAvatarUrl}
+                            alt={hero.displayName}
+                            className={styles.rowAvatar}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className={styles.rowAvatarFallback} aria-hidden="true">
+                            <FaUserCircle />
+                          </span>
+                        )}
+                        <span className={styles.userName}>{hero.displayName}</span>
+                      </button>
+                      <span className={styles.pointsValue}>{formatPoints(hero.points)}</span>
                     </div>
-                    <span className={styles.amountValue}>{formatDonatedAmount(hero.donatedAmount)}</span>
-                    <span className={styles.pointsValue}>{formatPoints(hero.points)}</span>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
         </section>
       </div>
+
+      {selectedHero ? (
+        <div className={styles.modalOverlay} onClick={closeHeroDetailsModal}>
+          <div
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hero-details-modal-title"
+            onClick={(event) => {
+              event.stopPropagation()
+            }}
+          >
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIdentity}>
+                {selectedHeroAvatarUrl ? (
+                  <img
+                    src={selectedHeroAvatarUrl}
+                    alt={selectedHeroDisplayName}
+                    className={styles.modalAvatar}
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className={styles.modalAvatarFallback} aria-hidden="true">
+                    <FaUserCircle />
+                  </span>
+                )}
+                <h2 id="hero-details-modal-title" className={styles.modalTitle}>
+                  {selectedHeroDisplayName}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                aria-label="Close hero details modal"
+                onClick={closeHeroDetailsModal}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className={styles.modalMetaGrid}>
+              <div className={styles.modalMetaCard}>
+                <span className={styles.modalMetaLabel}>Total Points</span>
+                <strong className={styles.modalMetaValue}>{formatPoints(selectedHeroTotalPoints)}</strong>
+              </div>
+              <div className={styles.modalMetaCard}>
+                <span className={styles.modalMetaLabel}>Email</span>
+                <strong className={styles.modalMetaValue}>
+                  {selectedHeroDetails?.email?.trim() || 'Not available'}
+                </strong>
+              </div>
+            </div>
+
+            <section className={styles.achievementSection}>
+              <h3 className={styles.achievementSectionTitle}>Achievements</h3>
+
+              {isLoadingHeroDetails ? (
+                <p className={styles.modalState}>Loading user details...</p>
+              ) : heroDetailsError ? (
+                <p className={styles.modalStateError}>{heroDetailsError}</p>
+              ) : selectedHeroAchievements.length === 0 ? (
+                <p className={styles.modalState}>No achievements found for this user.</p>
+              ) : (
+                <ul className={styles.achievementList}>
+                  {selectedHeroAchievements.map((achievement) => (
+                    <li key={achievement.id} className={styles.achievementItem}>
+                      {achievement.achievement.iconUrl ? (
+                        <img
+                          src={achievement.achievement.iconUrl}
+                          alt={achievement.achievement.title}
+                          className={styles.achievementIcon}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className={styles.achievementIconFallback} aria-hidden="true">
+                          <FaUserCircle />
+                        </span>
+                      )}
+
+                      <div className={styles.achievementContent}>
+                        <div className={styles.achievementHeadingRow}>
+                          <strong className={styles.achievementTitle}>{achievement.achievement.title}</strong>
+                          <span className={styles.achievementPoints}>
+                            {formatPoints(achievement.achievement.points)} pts
+                          </span>
+                        </div>
+                        <p className={styles.achievementDescription}>
+                          {achievement.achievement.description?.trim() || 'No description provided.'}
+                        </p>
+                        <div className={styles.achievementMetaRow}>
+                          <span>Category: {achievement.achievement.category?.trim() || 'General'}</span>
+                          <span>Rarity: {achievement.achievement.rarity?.trim() || 'Standard'}</span>
+                          <span>Progress: {toAchievementProgressText(achievement)}</span>
+                          <span>Unlocked: {formatDateTime(achievement.unlockedAt)}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.modalCloseAction} onClick={closeHeroDetailsModal}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </MainLayout>
   )
 }

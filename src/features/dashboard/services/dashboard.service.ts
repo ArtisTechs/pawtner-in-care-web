@@ -1,7 +1,7 @@
 import type {
   DashboardChartsQuery,
   DashboardChartsResponse,
-  DashboardTopPost,
+  DashboardTopPostEntry,
   DashboardTopPostsQuery,
 } from '@/features/dashboard/types/dashboard-api'
 import { apiClient } from '@/shared/api/api-client'
@@ -39,5 +39,5 @@ export const dashboardService = {
   getCharts: (token: string, query?: DashboardChartsQuery) =>
     apiClient.get<DashboardChartsResponse>(buildChartsPath(query), { token }),
   getTopPosts: (token: string, query?: DashboardTopPostsQuery) =>
-    apiClient.get<DashboardTopPost[]>(buildTopPostsPath(query), { token }),
+    apiClient.get<DashboardTopPostEntry[]>(buildTopPostsPath(query), { token }),
 }

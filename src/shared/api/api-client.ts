@@ -1,12 +1,22 @@
 import { API_CONFIG } from '@/config/env'
 import { emitAuthSessionInvalid } from './auth-session-events'
-import { ApiError, isInvalidBearerTokenError } from './api-error'
+import { ApiError, isInvalidBearerTokenError, NETWORK_API_ERROR_MESSAGE } from './api-error'
 
 type RequestOptions<TBody> = {
   body?: TBody
   headers?: Record<string, string>
   method?: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT'
   token?: string
+}
+
+const hasBearerAuthHeader = (headers: Headers) => {
+  const authorizationHeader = headers.get('Authorization')
+
+  if (!authorizationHeader) {
+    return false
+  }
+
+  return /^Bearer\b/i.test(authorizationHeader.trim())
 }
 
 const buildUrl = (path: string) => {
@@ -44,6 +54,8 @@ async function request<TResponse, TBody = undefined>(
     headers.set('Authorization', `Bearer ${options.token}`)
   }
 
+  const hasBearerAuth = hasBearerAuthHeader(headers)
+
   let response: Response
 
   try {
@@ -52,8 +64,8 @@ async function request<TResponse, TBody = undefined>(
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     })
-  } catch {
-    throw new Error('Unable to reach the API')
+  } catch (error) {
+    throw new ApiError(0, NETWORK_API_ERROR_MESSAGE, error)
   }
 
   const rawBody = await response.text()
@@ -62,7 +74,7 @@ async function request<TResponse, TBody = undefined>(
   if (!response.ok) {
     const apiError = ApiError.fromResponse(response.status, payload)
 
-    if (options.token && isInvalidBearerTokenError(apiError)) {
+    if (hasBearerAuth && isInvalidBearerTokenError(apiError)) {
       emitAuthSessionInvalid({
         message: apiError.message,
         path,
@@ -77,8 +89,8 @@ async function request<TResponse, TBody = undefined>(
 }
 
 export const apiClient = {
-  delete: <TResponse>(path: string, options?: RequestOptions<undefined>) =>
-    request<TResponse>(path, { ...options, method: 'DELETE' }),
+  delete: <TResponse, TBody = undefined>(path: string, options?: RequestOptions<TBody>) =>
+    request<TResponse, TBody>(path, { ...options, method: 'DELETE' }),
   get: <TResponse>(path: string, options?: RequestOptions<undefined>) =>
     request<TResponse>(path, { ...options, method: 'GET' }),
   patch: <TResponse, TBody>(

@@ -11,6 +11,7 @@ export interface CompanySettingsPayload {
   emailAddress: string
   linkUrl: string
   maxRescuesPerDay: number
+  messageAdminUser?: string
   totalAvailableSpaceForPets: number
 }
 

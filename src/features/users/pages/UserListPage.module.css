@@ -21,8 +21,84 @@
   text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
 }
 
-.tablePanel {
+.filterBar {
   margin-top: 16px;
+  display: grid;
+  grid-template-columns: 110px minmax(180px, 1fr) minmax(180px, 1fr) 150px;
+  border-radius: 10px;
+  border: 1px solid #d7e2f1;
+  background: #ffffff;
+  overflow: visible;
+}
+
+.filterCell {
+  min-height: 54px;
+  border-right: 1px solid #d7e2f1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  position: relative;
+}
+
+.filterByCell {
+  gap: 10px;
+  color: #2e3948;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filterByCell svg {
+  width: 16px;
+  height: 16px;
+  color: #1d2f45;
+}
+
+.filterLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: #4e6280;
+}
+
+.filterSelect {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #d3dfef;
+  background: #f8fbff;
+  color: #2f4663;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.filterSelect:focus-visible {
+  outline: 2px solid rgba(61, 152, 232, 0.35);
+  outline-offset: 1px;
+}
+
+.resetButton {
+  border: 0;
+  background: #ffffff;
+  color: #f04670;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resetButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.tablePanel {
+  margin-top: 14px;
   position: relative;
   height: clamp(420px, calc(100vh - 200px), 860px);
   display: flex;
@@ -170,12 +246,20 @@
 }
 
 .statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: fit-content;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 10px;
   border-radius: 999px;
-  padding: 6px 10px;
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: capitalize;
 }
 
@@ -658,6 +742,10 @@
   .pageTitle {
     font-size: 36px;
   }
+
+  .filterBar {
+    grid-template-columns: 110px minmax(140px, 1fr) minmax(140px, 1fr) 140px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -669,6 +757,21 @@
     font-size: 32px;
   }
 
+  .filterBar {
+    grid-template-columns: 1fr;
+    border-radius: 10px;
+  }
+
+  .filterCell {
+    border-right: 0;
+    border-bottom: 1px solid #d7e2f1;
+    min-height: 46px;
+  }
+
+  .resetButton {
+    min-height: 46px;
+  }
+
   .table thead th,
   .table tbody td {
     padding-inline: 14px;
@@ -677,6 +780,12 @@
   .tableFooter {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .statusBadge {
+    min-height: 24px;
+    padding: 0 9px;
+    font-size: 11px;
   }
 
   .floatingAddButton {

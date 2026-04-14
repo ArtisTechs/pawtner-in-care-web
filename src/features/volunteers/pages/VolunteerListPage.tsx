@@ -918,6 +918,7 @@ function VolunteerListPage({ onLogout, session }: VolunteerListPageProps) {
                       }))
                     }}
                     className={styles.fieldTextarea}
+                    style={{ resize: 'none' }}
                     rows={3}
                   />
                 </label>

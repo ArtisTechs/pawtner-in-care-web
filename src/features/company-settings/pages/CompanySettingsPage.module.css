@@ -139,6 +139,22 @@
   border-color: #7ca5d3;
 }
 
+.fieldInputError {
+  border-color: #d96d6d;
+}
+
+.fieldInputError:focus {
+  border-color: #c14a4a;
+  box-shadow: 0 0 0 2px rgba(217, 109, 109, 0.18);
+}
+
+.fieldError {
+  margin: 0;
+  color: #b83c3c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .fieldInput:disabled,
 .fieldTextarea:disabled {
   background: #f4f8fd;

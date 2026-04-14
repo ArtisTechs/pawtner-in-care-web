@@ -11,7 +11,7 @@ export const defaultHeaderProfile: HeaderProfile = {
 
 export const sidebarMenuItems: SidebarMenuItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: APP_ROUTES.dashboard },
-  { key: 'inbox', label: 'Inbox', icon: 'inbox' },
+  { key: 'inbox', label: 'Inbox', icon: 'inbox', path: APP_ROUTES.inbox },
   { key: 'pet-list', label: 'Pet List', icon: 'pet-list', path: APP_ROUTES.petList },
   {
     key: 'veterinary-clinic-list',
@@ -48,6 +48,18 @@ export const sidebarMenuItems: SidebarMenuItem[] = [
     path: APP_ROUTES.heroesWall,
   },
   {
+    key: 'item-listing',
+    label: 'Item Listings',
+    icon: 'item-listing',
+    path: APP_ROUTES.itemListing,
+  },
+  {
+    key: 'gift-logs',
+    label: 'Gift Logs',
+    icon: 'gift-logs',
+    path: APP_ROUTES.giftLogs,
+  },
+  {
     key: 'payment-mode-list',
     label: 'Payment Methods',
     icon: 'payment-mode-list',
@@ -67,8 +79,7 @@ export const sidebarMenuItems: SidebarMenuItem[] = [
     path: APP_ROUTES.communityListing,
   },
   { key: 'calendar', label: 'Calendar', icon: 'calendar', path: APP_ROUTES.calendar },
-  { key: 'to-do', label: 'To-Do', icon: 'to-do' },
-  { key: 'contact', label: 'Contact', icon: 'contact' },
+  { key: 'to-do', label: 'To-Do', icon: 'to-do', path: APP_ROUTES.toDoList },
 ]
 
 export const sidebarBottomItems: SidebarMenuItem[] = [

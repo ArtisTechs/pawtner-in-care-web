@@ -1,0 +1,41 @@
+.fabButton {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 6;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #3f92e5 0%, #2b78cd 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(29, 89, 158, 0.36);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fabIcon {
+  display: grid;
+  place-items: center;
+}
+
+.fabIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.fabButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .fabButton {
+    right: 14px;
+    bottom: 14px;
+    width: 50px;
+    height: 50px;
+  }
+}

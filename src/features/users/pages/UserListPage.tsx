@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { FaEdit, FaTimes, FaUserCircle } from 'react-icons/fa'
+import { FaEdit, FaFilter, FaSyncAlt, FaTimes, FaUserCircle } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import {
   DEFAULT_ADD_USER_FORM,
@@ -10,8 +10,12 @@ import {
   LIST_BATCH_SIZE,
   LIST_INITIAL_BATCH_SIZE,
   LIST_SKELETON_ROW_COUNT,
+  USER_ROLE_FILTER_OPTIONS,
   USER_ROLE_OPTIONS,
+  USER_STATUS_FILTER_OPTIONS,
   type AddUserForm,
+  type UserRoleFilter,
+  type UserStatusFilter,
 } from '@/features/users/constants/user-list.constants'
 import { userService } from '@/features/users/services/user.service'
 import type { User, UserRole } from '@/features/users/types/user-api'
@@ -71,6 +75,25 @@ const resolveActiveBadgeClassName = (user: User) =>
   resolveUserActiveValue(user) ? styles.statusActive : styles.statusInactive
 
 const resolveActiveLabel = (user: User) => (resolveUserActiveValue(user) ? 'Active' : 'Inactive')
+const resolveFilterStatusLabel = (statusFilter: UserStatusFilter) => {
+  if (statusFilter === 'ACTIVE') {
+    return 'Active'
+  }
+
+  if (statusFilter === 'INACTIVE') {
+    return 'Inactive'
+  }
+
+  return 'All Status'
+}
+
+const resolveFilterRoleLabel = (roleFilter: UserRoleFilter) => {
+  if (roleFilter === 'ALL') {
+    return 'All Roles'
+  }
+
+  return resolveUserRoleLabel(roleFilter)
+}
 
 interface UserAvatarProps {
   className: string
@@ -121,11 +144,8 @@ const resolveSessionIdentity = (user: AuthSession['user']) => {
 
 function UserAvatar({ className, fallbackClassName, iconClassName, user }: UserAvatarProps) {
   const profilePicture = user.profilePicture?.trim() ?? ''
-  const [hasImageError, setHasImageError] = useState(false)
-
-  useEffect(() => {
-    setHasImageError(false)
-  }, [profilePicture])
+  const [failedImageUrls, setFailedImageUrls] = useState<Record<string, true>>({})
+  const hasImageError = Boolean(profilePicture && failedImageUrls[profilePicture])
 
   if (!profilePicture || hasImageError) {
     return (
@@ -141,7 +161,20 @@ function UserAvatar({ className, fallbackClassName, iconClassName, user }: UserA
       alt={resolveUserFullName(user)}
       className={className}
       onError={() => {
-        setHasImageError(true)
+        if (!profilePicture) {
+          return
+        }
+
+        setFailedImageUrls((currentFailedImageUrls) => {
+          if (currentFailedImageUrls[profilePicture]) {
+            return currentFailedImageUrls
+          }
+
+          return {
+            ...currentFailedImageUrls,
+            [profilePicture]: true,
+          }
+        })
       }}
     />
   )
@@ -155,6 +188,8 @@ interface UserListPageProps {
 function UserListPage({ onLogout, session }: UserListPageProps) {
   const { clearToast, showToast, toast } = useToast()
   const [searchValue, setSearchValue] = useState('')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<UserStatusFilter>('ALL')
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<UserRoleFilter>('ALL')
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const resolvedHeaderProfile = useHeaderProfile({
     fallbackProfile: defaultHeaderProfile,
@@ -196,7 +231,10 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
 
       try {
         const userList = await userService.list(accessToken, {
+          active:
+            selectedStatusFilter === 'ALL' ? undefined : selectedStatusFilter === 'ACTIVE',
           page: DEFAULT_LIST_PAGE,
+          role: selectedRoleFilter === 'ALL' ? undefined : selectedRoleFilter,
           search: searchTerm.trim() || undefined,
           size: DEFAULT_LIST_SIZE,
           sortBy: DEFAULT_LIST_SORT_BY,
@@ -222,7 +260,23 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
           return true
         })
 
-        setUsers(nextUsers)
+        const filteredUsers = nextUsers.filter((userItem) => {
+          if (selectedRoleFilter !== 'ALL' && resolveUserRoleValue(userItem.role) !== selectedRoleFilter) {
+            return false
+          }
+
+          if (selectedStatusFilter === 'ACTIVE' && !resolveUserActiveValue(userItem)) {
+            return false
+          }
+
+          if (selectedStatusFilter === 'INACTIVE' && resolveUserActiveValue(userItem)) {
+            return false
+          }
+
+          return true
+        })
+
+        setUsers(filteredUsers)
       } catch (error) {
         if (requestId !== latestListRequestIdRef.current) {
           return
@@ -235,7 +289,7 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
         }
       }
     },
-    [accessToken, sessionIdentity.email, sessionIdentity.id, showToast],
+    [accessToken, selectedRoleFilter, selectedStatusFilter, sessionIdentity.email, sessionIdentity.id, showToast],
   )
 
   useEffect(() => {
@@ -480,6 +534,11 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
     handleToggleUserActive(pendingToggleUser.id, pendingToggleUser.nextActive)
   }
 
+  const handleResetFilters = () => {
+    setSelectedStatusFilter('ALL')
+    setSelectedRoleFilter('ALL')
+  }
+
   return (
     <MainLayout
       isSidebarOpen={isSidebarOpen}
@@ -512,6 +571,52 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
       <div className={styles.page}>
         <section className={styles.container}>
           <h1 className={styles.pageTitle}>User List</h1>
+
+          <div className={styles.filterBar}>
+            <div className={`${styles.filterCell} ${styles.filterByCell}`}>
+              <FaFilter aria-hidden="true" />
+              <span>Filter By</span>
+            </div>
+
+            <label className={styles.filterCell}>
+              <span className={styles.filterLabel}>Status</span>
+              <select
+                className={styles.filterSelect}
+                value={selectedStatusFilter}
+                onChange={(event) => {
+                  setSelectedStatusFilter(event.target.value as UserStatusFilter)
+                }}
+              >
+                {USER_STATUS_FILTER_OPTIONS.map((statusFilterOption) => (
+                  <option key={statusFilterOption} value={statusFilterOption}>
+                    {resolveFilterStatusLabel(statusFilterOption)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={styles.filterCell}>
+              <span className={styles.filterLabel}>Role</span>
+              <select
+                className={styles.filterSelect}
+                value={selectedRoleFilter}
+                onChange={(event) => {
+                  setSelectedRoleFilter(event.target.value as UserRoleFilter)
+                }}
+              >
+                {USER_ROLE_FILTER_OPTIONS.map((roleFilterOption) => (
+                  <option key={roleFilterOption} value={roleFilterOption}>
+                    {resolveFilterRoleLabel(roleFilterOption)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button type="button" className={styles.resetButton} onClick={handleResetFilters}>
+              <FaSyncAlt aria-hidden="true" />
+              <span>Reset Filter</span>
+            </button>
+          </div>
 
           <div className={styles.tablePanel}>
             <div className={styles.tableScroll} ref={tableScrollRef}>

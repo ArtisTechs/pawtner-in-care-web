@@ -1,0 +1,6 @@
+.status {
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}

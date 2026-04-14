@@ -789,7 +789,7 @@ function EventListPage({ onLogout, session }: EventListPageProps) {
                   />
                   {photoError ? <span className={styles.fieldErrorText}>{photoError}</span> : null}
                 </div>
-                <label className={`${styles.fieldLabel} ${styles.fieldLabelWide}`}><span>Description</span><textarea value={addEventForm.description} onChange={(event) => setAddEventForm((currentForm) => ({ ...currentForm, description: event.target.value }))} className={styles.fieldTextarea} rows={3} /></label>
+                <label className={`${styles.fieldLabel} ${styles.fieldLabelWide}`}><span>Description</span><textarea value={addEventForm.description} onChange={(event) => setAddEventForm((currentForm) => ({ ...currentForm, description: event.target.value }))} className={styles.fieldTextarea} style={{ resize: 'none' }} rows={3} /></label>
               </div>
 
               <div className={styles.modalActions}>

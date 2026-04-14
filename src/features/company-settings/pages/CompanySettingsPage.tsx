@@ -4,6 +4,9 @@ import type { AuthSession } from '@/features/auth/types/auth-api'
 import { getAuthSessionUserId } from '@/features/auth/utils/auth-utils'
 import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
 import type { CompanySettings, CompanySettingsPayload } from '@/features/company-settings/types/company-settings-api'
+import { userService } from '@/features/users/services/user.service'
+import type { User } from '@/features/users/types/user-api'
+import { resolveUserDisplayName, resolveUserRoleValue } from '@/features/users/utils/user-form'
 import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems } from '@/layouts/config/navigation'
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
@@ -22,6 +25,7 @@ const ACTIVE_MENU_ITEM: SidebarItemKey = 'settings'
 const DEFAULT_CONTACT_NUMBER = ''
 const DEFAULT_EMAIL_ADDRESS = ''
 const DEFAULT_LINK_URL = ''
+const DEFAULT_MESSAGE_ADMIN_USER = ''
 const DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS = ''
 const DEFAULT_MAX_RESCUES_PER_DAY = ''
 const HTTP_URL_PATTERN = /^https?:\/\/.+/i
@@ -33,11 +37,37 @@ type CompanyAddressForm = {
   name: string
 }
 
+type CompanyAddressFormErrors = {
+  address?: string
+  latitude?: string
+  long?: string
+  name?: string
+}
+
+type CompanySettingsFormErrors = {
+  addresses?: string
+  addressItems: CompanyAddressFormErrors[]
+  contactNumber?: string
+  emailAddress?: string
+  linkUrl?: string
+  maxRescuesPerDay?: string
+  totalAvailableSpaceForPets?: string
+}
+
+type AdminContactOption = {
+  label: string
+  value: string
+}
+
 const createEmptyAddress = (): CompanyAddressForm => ({
   address: '',
   latitude: '',
   long: '',
   name: '',
+})
+
+const createEmptyFormErrors = (): CompanySettingsFormErrors => ({
+  addressItems: [],
 })
 
 const mapSettingsToForm = (settings: CompanySettings) => ({
@@ -52,6 +82,7 @@ const mapSettingsToForm = (settings: CompanySettings) => ({
   emailAddress: settings.emailAddress?.trim() ?? DEFAULT_EMAIL_ADDRESS,
   linkUrl: settings.linkUrl?.trim() ?? DEFAULT_LINK_URL,
   maxRescuesPerDay: Number.isFinite(settings.maxRescuesPerDay) ? String(settings.maxRescuesPerDay) : DEFAULT_MAX_RESCUES_PER_DAY,
+  messageAdminUser: settings.messageAdminUser?.trim() ?? DEFAULT_MESSAGE_ADMIN_USER,
   totalAvailableSpaceForPets: Number.isFinite(settings.totalAvailableSpaceForPets)
     ? String(settings.totalAvailableSpaceForPets)
     : DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS,
@@ -61,6 +92,16 @@ const parseCoordinate = (value: string) => Number.parseFloat(value.trim())
 const parseWholeNumber = (value: string) => Number.parseInt(value.trim(), 10)
 const isValidLongitude = (value: number) => value >= -180 && value <= 180
 const isValidLatitude = (value: number) => value >= -90 && value <= 90
+const resolveAdminContactLabel = (user: User) => {
+  const fullName = resolveUserDisplayName(user)
+  const email = user.email?.trim() ?? ''
+
+  if (fullName && email) {
+    return `${fullName} (${email})`
+  }
+
+  return fullName || email || user.id
+}
 
 interface CompanySettingsPageProps {
   onLogout?: () => void
@@ -79,15 +120,56 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   const [contactNumber, setContactNumber] = useState(DEFAULT_CONTACT_NUMBER)
   const [emailAddress, setEmailAddress] = useState(DEFAULT_EMAIL_ADDRESS)
   const [linkUrl, setLinkUrl] = useState(DEFAULT_LINK_URL)
+  const [messageAdminUser, setMessageAdminUser] = useState(DEFAULT_MESSAGE_ADMIN_USER)
   const [totalAvailableSpaceForPets, setTotalAvailableSpaceForPets] = useState(DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS)
   const [maxRescuesPerDay, setMaxRescuesPerDay] = useState(DEFAULT_MAX_RESCUES_PER_DAY)
   const [addresses, setAddresses] = useState<CompanyAddressForm[]>([createEmptyAddress()])
+  const [adminContactOptions, setAdminContactOptions] = useState<AdminContactOption[]>([])
+  const [isLoadingAdminContactOptions, setIsLoadingAdminContactOptions] = useState(false)
   const [isLoadingSettings, setIsLoadingSettings] = useState(false)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [settingsRecord, setSettingsRecord] = useState<CompanySettings | null>(null)
+  const [formErrors, setFormErrors] = useState<CompanySettingsFormErrors>(createEmptyFormErrors())
   const accessToken = session?.accessToken?.trim() ?? ''
   const userId = getAuthSessionUserId(session?.user)
+
+  const clearFormErrors = useCallback(() => {
+    setFormErrors(createEmptyFormErrors())
+  }, [])
+
+  const clearAddressItemErrors = useCallback(
+    (index: number, fields?: Array<keyof CompanyAddressFormErrors>) => {
+      setFormErrors((currentErrors) => {
+        const existingItemErrors = currentErrors.addressItems[index]
+        if (!existingItemErrors) {
+          return currentErrors
+        }
+
+        const nextAddressItems = [...currentErrors.addressItems]
+        const nextItemErrors = { ...existingItemErrors }
+
+        if (fields && fields.length > 0) {
+          for (const field of fields) {
+            nextItemErrors[field] = undefined
+          }
+        } else {
+          nextAddressItems[index] = {}
+          return {
+            ...currentErrors,
+            addressItems: nextAddressItems,
+          }
+        }
+
+        nextAddressItems[index] = nextItemErrors
+        return {
+          ...currentErrors,
+          addressItems: nextAddressItems,
+        }
+      })
+    },
+    [],
+  )
 
   const filteredAddresses = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
@@ -112,16 +194,67 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       })
   }, [addresses, searchValue])
 
+  const selectedAdminContactLabel = useMemo(() => {
+    const selectedValue = messageAdminUser.trim()
+    if (!selectedValue) {
+      return ''
+    }
+
+    return adminContactOptions.find((option) => option.value === selectedValue)?.label ?? ''
+  }, [adminContactOptions, messageAdminUser])
+
+  const loadAdminContactOptions = useCallback(async () => {
+    if (!accessToken) {
+      setAdminContactOptions([])
+      setIsLoadingAdminContactOptions(false)
+      return
+    }
+
+    setIsLoadingAdminContactOptions(true)
+
+    try {
+      const users = await userService.list(accessToken, {
+        page: 0,
+        size: 200,
+        sortBy: 'lastName',
+        sortDir: 'asc',
+      })
+
+      const nextAdminOptions = users
+        .filter((user) => resolveUserRoleValue(user.role) === 'ADMIN')
+        .map((user) => {
+          const userId = user.id?.trim() ?? ''
+          if (!userId) {
+            return null
+          }
+
+          return {
+            label: resolveAdminContactLabel(user),
+            value: userId,
+          }
+        })
+        .filter((option): option is AdminContactOption => Boolean(option))
+
+      setAdminContactOptions(nextAdminOptions)
+    } catch (error) {
+      showToast(getErrorMessage(error), { variant: 'error' })
+    } finally {
+      setIsLoadingAdminContactOptions(false)
+    }
+  }, [accessToken, showToast])
+
   const loadCompanySettings = useCallback(async () => {
     if (!accessToken) {
       setContactNumber(DEFAULT_CONTACT_NUMBER)
       setEmailAddress(DEFAULT_EMAIL_ADDRESS)
       setLinkUrl(DEFAULT_LINK_URL)
+      setMessageAdminUser(DEFAULT_MESSAGE_ADMIN_USER)
       setTotalAvailableSpaceForPets(DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS)
       setMaxRescuesPerDay(DEFAULT_MAX_RESCUES_PER_DAY)
       setAddresses([createEmptyAddress()])
       setSettingsRecord(null)
       setIsEditMode(true)
+      clearFormErrors()
       return
     }
 
@@ -133,21 +266,25 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       setContactNumber(nextForm.contactNumber)
       setEmailAddress(nextForm.emailAddress)
       setLinkUrl(nextForm.linkUrl)
+      setMessageAdminUser(nextForm.messageAdminUser)
       setTotalAvailableSpaceForPets(nextForm.totalAvailableSpaceForPets)
       setMaxRescuesPerDay(nextForm.maxRescuesPerDay)
       setAddresses(nextForm.addresses.length > 0 ? nextForm.addresses : [createEmptyAddress()])
       setSettingsRecord(response)
       setIsEditMode(false)
+      clearFormErrors()
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         setContactNumber(DEFAULT_CONTACT_NUMBER)
         setEmailAddress(DEFAULT_EMAIL_ADDRESS)
         setLinkUrl(DEFAULT_LINK_URL)
+        setMessageAdminUser(DEFAULT_MESSAGE_ADMIN_USER)
         setTotalAvailableSpaceForPets(DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS)
         setMaxRescuesPerDay(DEFAULT_MAX_RESCUES_PER_DAY)
         setAddresses([createEmptyAddress()])
         setSettingsRecord(null)
         setIsEditMode(true)
+        clearFormErrors()
         return
       }
 
@@ -155,12 +292,36 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
     } finally {
       setIsLoadingSettings(false)
     }
-  }, [accessToken, showToast])
+  }, [accessToken, clearFormErrors, showToast])
 
   useEffect(() => {
     clearToast()
     void loadCompanySettings()
   }, [clearToast, loadCompanySettings])
+
+  useEffect(() => {
+    void loadAdminContactOptions()
+  }, [loadAdminContactOptions])
+
+  useEffect(() => {
+    if (adminContactOptions.length === 0) {
+      return
+    }
+
+    const selectedValue = messageAdminUser.trim()
+    const hasValidSelectedAdmin = adminContactOptions.some((option) => option.value === selectedValue)
+
+    if (hasValidSelectedAdmin) {
+      return
+    }
+
+    const defaultAdminOption = adminContactOptions[0]
+    if (!defaultAdminOption) {
+      return
+    }
+
+    setMessageAdminUser(defaultAdminOption.value)
+  }, [adminContactOptions, messageAdminUser])
 
   const handleAddressFieldChange = (
     index: number,
@@ -172,10 +333,21 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         currentIndex === index ? { ...address, [field]: value } : address,
       ),
     )
+
+    clearAddressItemErrors(index, [field])
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      addresses: undefined,
+    }))
   }
 
   const handleAddAddress = () => {
     setAddresses((currentAddresses) => [...currentAddresses, createEmptyAddress()])
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      addresses: undefined,
+      addressItems: [...currentErrors.addressItems, {}],
+    }))
   }
 
   const handleRemoveAddress = (index: number) => {
@@ -186,6 +358,22 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
 
       return currentAddresses.filter((_, currentIndex) => currentIndex !== index)
     })
+
+    setFormErrors((currentErrors) => {
+      if (currentErrors.addressItems.length <= 1) {
+        return {
+          ...currentErrors,
+          addresses: undefined,
+          addressItems: [{}],
+        }
+      }
+
+      return {
+        ...currentErrors,
+        addresses: undefined,
+        addressItems: currentErrors.addressItems.filter((_, currentIndex) => currentIndex !== index),
+      }
+    })
   }
 
   const buildPayload = (): CompanySettingsPayload | null => {
@@ -193,63 +381,49 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
     const normalizedContactNumber = normalizeContactNumber(trimmedContactNumber)
     const trimmedEmailAddress = emailAddress.trim()
     const trimmedLinkUrl = linkUrl.trim()
+    const trimmedMessageAdminUser = messageAdminUser.trim()
     const trimmedTotalAvailableSpaceForPets = totalAvailableSpaceForPets.trim()
     const trimmedMaxRescuesPerDay = maxRescuesPerDay.trim()
-    if (!trimmedContactNumber) {
-      showToast('Contact number is required.', { variant: 'error' })
-      return null
+    const nextFormErrors: CompanySettingsFormErrors = {
+      addressItems: Array.from({ length: addresses.length }, () => ({})),
     }
 
-    if (!isValidContactNumber(trimmedContactNumber)) {
-      showToast('Contact number must be 7-15 digits and may start with +.', { variant: 'error' })
-      return null
+    if (!trimmedContactNumber) {
+      nextFormErrors.contactNumber = 'Contact number is required.'
+    } else if (!isValidContactNumber(trimmedContactNumber)) {
+      nextFormErrors.contactNumber = 'Contact number must be 7-15 digits and may start with +.'
     }
 
     if (!trimmedEmailAddress) {
-      showToast('Email address is required.', { variant: 'error' })
-      return null
+      nextFormErrors.emailAddress = 'Email address is required.'
+    } else if (!isValidEmail(trimmedEmailAddress)) {
+      nextFormErrors.emailAddress = 'Email address must be a valid email.'
     }
 
-    if (!isValidEmail(trimmedEmailAddress)) {
-      showToast('Email address must be a valid email.', { variant: 'error' })
-      return null
-    }
-
-    if (!trimmedLinkUrl) {
-      showToast('Link URL is required.', { variant: 'error' })
-      return null
-    }
-
-    if (!HTTP_URL_PATTERN.test(trimmedLinkUrl)) {
-      showToast('Link URL must start with http:// or https://.', { variant: 'error' })
-      return null
+    if (trimmedLinkUrl && !HTTP_URL_PATTERN.test(trimmedLinkUrl)) {
+      nextFormErrors.linkUrl = 'Link URL must start with http:// or https://.'
     }
 
     if (!trimmedTotalAvailableSpaceForPets) {
-      showToast('Total available space for pets is required.', { variant: 'error' })
-      return null
-    }
-
-    const parsedTotalAvailableSpaceForPets = parseWholeNumber(trimmedTotalAvailableSpaceForPets)
-    if (!Number.isInteger(parsedTotalAvailableSpaceForPets) || parsedTotalAvailableSpaceForPets < 0) {
-      showToast('Total available space for pets must be 0 or greater.', { variant: 'error' })
-      return null
+      nextFormErrors.totalAvailableSpaceForPets = 'Total available space for pets is required.'
+    } else {
+      const parsedTotalAvailableSpaceForPets = parseWholeNumber(trimmedTotalAvailableSpaceForPets)
+      if (!Number.isInteger(parsedTotalAvailableSpaceForPets) || parsedTotalAvailableSpaceForPets < 0) {
+        nextFormErrors.totalAvailableSpaceForPets = 'Total available space for pets must be 0 or greater.'
+      }
     }
 
     if (!trimmedMaxRescuesPerDay) {
-      showToast('Maximum rescues per day is required.', { variant: 'error' })
-      return null
-    }
-
-    const parsedMaxRescuesPerDay = parseWholeNumber(trimmedMaxRescuesPerDay)
-    if (!Number.isInteger(parsedMaxRescuesPerDay) || parsedMaxRescuesPerDay < 1) {
-      showToast('Maximum rescues per day must be at least 1.', { variant: 'error' })
-      return null
+      nextFormErrors.maxRescuesPerDay = 'Maximum rescues per day is required.'
+    } else {
+      const parsedMaxRescuesPerDay = parseWholeNumber(trimmedMaxRescuesPerDay)
+      if (!Number.isInteger(parsedMaxRescuesPerDay) || parsedMaxRescuesPerDay < 1) {
+        nextFormErrors.maxRescuesPerDay = 'Maximum rescues per day must be at least 1.'
+      }
     }
 
     if (addresses.length === 0) {
-      showToast('At least one address is required.', { variant: 'error' })
-      return null
+      nextFormErrors.addresses = 'At least one address is required.'
     }
 
     const normalizedAddresses: CompanySettingsPayload['addresses'] = []
@@ -258,29 +432,34 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       const address = addresses[index]
       const trimmedName = address.name.trim()
       const trimmedAddress = address.address.trim()
+      const trimmedLongitude = address.long.trim()
+      const trimmedLatitude = address.latitude.trim()
       const longitude = parseCoordinate(address.long)
       const latitude = parseCoordinate(address.latitude)
-      const labelIndex = index + 1
+      const itemErrors = nextFormErrors.addressItems[index]
 
-      if (!trimmedName || !trimmedAddress || !address.long.trim() || !address.latitude.trim()) {
-        showToast(`Address #${labelIndex} requires name, address, longitude, and latitude.`, {
-          variant: 'error',
-        })
-        return null
+      if (!trimmedName) {
+        itemErrors.name = 'Name is required.'
       }
 
-      if (!Number.isFinite(longitude) || !isValidLongitude(longitude)) {
-        showToast(`Address #${labelIndex} longitude must be between -180 and 180.`, {
-          variant: 'error',
-        })
-        return null
+      if (!trimmedAddress) {
+        itemErrors.address = 'Address is required.'
       }
 
-      if (!Number.isFinite(latitude) || !isValidLatitude(latitude)) {
-        showToast(`Address #${labelIndex} latitude must be between -90 and 90.`, {
-          variant: 'error',
-        })
-        return null
+      if (!trimmedLongitude) {
+        itemErrors.long = 'Longitude is required.'
+      } else if (!Number.isFinite(longitude) || !isValidLongitude(longitude)) {
+        itemErrors.long = 'Longitude must be between -180 and 180.'
+      }
+
+      if (!trimmedLatitude) {
+        itemErrors.latitude = 'Latitude is required.'
+      } else if (!Number.isFinite(latitude) || !isValidLatitude(latitude)) {
+        itemErrors.latitude = 'Latitude must be between -90 and 90.'
+      }
+
+      if (itemErrors.name || itemErrors.address || itemErrors.long || itemErrors.latitude) {
+        continue
       }
 
       normalizedAddresses.push({
@@ -291,12 +470,36 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       })
     }
 
+    const hasErrors =
+      Boolean(
+        nextFormErrors.contactNumber ||
+          nextFormErrors.emailAddress ||
+          nextFormErrors.linkUrl ||
+          nextFormErrors.totalAvailableSpaceForPets ||
+          nextFormErrors.maxRescuesPerDay ||
+          nextFormErrors.addresses,
+      ) ||
+      nextFormErrors.addressItems.some((itemErrors) =>
+        Boolean(itemErrors.name || itemErrors.address || itemErrors.long || itemErrors.latitude),
+      )
+
+    if (hasErrors) {
+      setFormErrors(nextFormErrors)
+      return null
+    }
+
+    const parsedTotalAvailableSpaceForPets = parseWholeNumber(trimmedTotalAvailableSpaceForPets)
+    const parsedMaxRescuesPerDay = parseWholeNumber(trimmedMaxRescuesPerDay)
+
+    clearFormErrors()
+
     return {
       addresses: normalizedAddresses,
       contactNumber: normalizedContactNumber,
       emailAddress: trimmedEmailAddress,
       linkUrl: trimmedLinkUrl,
       maxRescuesPerDay: parsedMaxRescuesPerDay,
+      messageAdminUser: trimmedMessageAdminUser || undefined,
       totalAvailableSpaceForPets: parsedTotalAvailableSpaceForPets,
     }
   }
@@ -328,11 +531,13 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         setContactNumber(nextForm.contactNumber)
         setEmailAddress(nextForm.emailAddress)
         setLinkUrl(nextForm.linkUrl)
+        setMessageAdminUser(nextForm.messageAdminUser)
         setTotalAvailableSpaceForPets(nextForm.totalAvailableSpaceForPets)
         setMaxRescuesPerDay(nextForm.maxRescuesPerDay)
         setAddresses(nextForm.addresses.length > 0 ? nextForm.addresses : [createEmptyAddress()])
         setSettingsRecord(response)
         setIsEditMode(false)
+        clearFormErrors()
         showToast(
           settingsRecord ? 'Company settings updated successfully.' : 'Company settings created successfully.',
           { variant: 'success' },
@@ -391,18 +596,26 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                 Contact Number <span className={styles.requiredMark}>*</span>
               </span>
               {isEditMode ? (
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  pattern="^\\+?[0-9]{7,15}$"
-                  className={styles.fieldInput}
-                  value={contactNumber}
-                  onChange={(event) => {
-                    setContactNumber(event.target.value)
-                  }}
-                  placeholder="+63 912 345 6789"
-                  disabled={isSavingSettings || isLoadingSettings}
-                />
+                <>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    pattern="^\\+?[0-9]{7,15}$"
+                    className={`${styles.fieldInput} ${formErrors.contactNumber ? styles.fieldInputError : ''}`}
+                    value={contactNumber}
+                    onChange={(event) => {
+                      setContactNumber(event.target.value)
+                      setFormErrors((currentErrors) => ({
+                        ...currentErrors,
+                        contactNumber: undefined,
+                      }))
+                    }}
+                    placeholder="+63 912 345 6789"
+                    disabled={isSavingSettings || isLoadingSettings}
+                    aria-invalid={Boolean(formErrors.contactNumber)}
+                  />
+                  {formErrors.contactNumber ? <p className={styles.fieldError}>{formErrors.contactNumber}</p> : null}
+                </>
               ) : (
                 <span className={styles.detailValue}>{contactNumber.trim() || 'N/A'}</span>
               )}
@@ -413,16 +626,24 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                 Email Address <span className={styles.requiredMark}>*</span>
               </span>
               {isEditMode ? (
-                <input
-                  type="email"
-                  className={styles.fieldInput}
-                  value={emailAddress}
-                  onChange={(event) => {
-                    setEmailAddress(event.target.value)
-                  }}
-                  placeholder="hello@pawtnercare.com"
-                  disabled={isSavingSettings || isLoadingSettings}
-                />
+                <>
+                  <input
+                    type="email"
+                    className={`${styles.fieldInput} ${formErrors.emailAddress ? styles.fieldInputError : ''}`}
+                    value={emailAddress}
+                    onChange={(event) => {
+                      setEmailAddress(event.target.value)
+                      setFormErrors((currentErrors) => ({
+                        ...currentErrors,
+                        emailAddress: undefined,
+                      }))
+                    }}
+                    placeholder="hello@pawtnercare.com"
+                    disabled={isSavingSettings || isLoadingSettings}
+                    aria-invalid={Boolean(formErrors.emailAddress)}
+                  />
+                  {formErrors.emailAddress ? <p className={styles.fieldError}>{formErrors.emailAddress}</p> : null}
+                </>
               ) : (
                 <span className={styles.detailValue}>{emailAddress.trim() || 'N/A'}</span>
               )}
@@ -430,28 +651,66 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
 
             <label className={styles.fieldLabel}>
               <span>
-                Link URL <span className={styles.requiredMark}>*</span>
+                Link URL
               </span>
               {isEditMode ? (
-                <input
-                  type="url"
-                  className={styles.fieldInput}
-                  value={linkUrl}
-                  onChange={(event) => {
-                    setLinkUrl(event.target.value)
-                  }}
-                  placeholder="https://pawtnercare.com"
-                  disabled={isSavingSettings || isLoadingSettings}
-                />
+                <>
+                  <input
+                    type="url"
+                    className={`${styles.fieldInput} ${formErrors.linkUrl ? styles.fieldInputError : ''}`}
+                    value={linkUrl}
+                    onChange={(event) => {
+                      setLinkUrl(event.target.value)
+                      setFormErrors((currentErrors) => ({
+                        ...currentErrors,
+                        linkUrl: undefined,
+                      }))
+                    }}
+                    placeholder="https://pawtnercare.com"
+                    disabled={isSavingSettings || isLoadingSettings}
+                    aria-invalid={Boolean(formErrors.linkUrl)}
+                  />
+                  {formErrors.linkUrl ? <p className={styles.fieldError}>{formErrors.linkUrl}</p> : null}
+                </>
               ) : (
-                <a
-                  href={linkUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`${styles.detailValue} ${styles.detailLink}`}
+                linkUrl.trim() ? (
+                  <a
+                    href={linkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`${styles.detailValue} ${styles.detailLink}`}
+                  >
+                    {linkUrl.trim()}
+                  </a>
+                ) : (
+                  <span className={styles.detailValue}>N/A</span>
+                )
+              )}
+            </label>
+
+            <label className={styles.fieldLabel}>
+              <span>Default Inbox Admin Contact</span>
+              {isEditMode ? (
+                <select
+                  className={styles.fieldInput}
+                  value={messageAdminUser}
+                  onChange={(event) => {
+                    setMessageAdminUser(event.target.value)
+                  }}
+                  disabled={isSavingSettings || isLoadingSettings || isLoadingAdminContactOptions || adminContactOptions.length === 0}
                 >
-                  {linkUrl.trim() || 'N/A'}
-                </a>
+                  {isLoadingAdminContactOptions ? <option value="">Loading admin users...</option> : null}
+                  {!isLoadingAdminContactOptions && adminContactOptions.length === 0 ? (
+                    <option value="">No admin users available</option>
+                  ) : null}
+                  {adminContactOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className={styles.detailValue}>{selectedAdminContactLabel || 'N/A'}</span>
               )}
             </label>
 
@@ -461,18 +720,28 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                   Total Available Space For Pets <span className={styles.requiredMark}>*</span>
                 </span>
                 {isEditMode ? (
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    className={styles.fieldInput}
-                    value={totalAvailableSpaceForPets}
-                    onChange={(event) => {
-                      setTotalAvailableSpaceForPets(event.target.value)
-                    }}
-                    placeholder="120"
-                    disabled={isSavingSettings || isLoadingSettings}
-                  />
+                  <>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className={`${styles.fieldInput} ${formErrors.totalAvailableSpaceForPets ? styles.fieldInputError : ''}`}
+                      value={totalAvailableSpaceForPets}
+                      onChange={(event) => {
+                        setTotalAvailableSpaceForPets(event.target.value)
+                        setFormErrors((currentErrors) => ({
+                          ...currentErrors,
+                          totalAvailableSpaceForPets: undefined,
+                        }))
+                      }}
+                      placeholder="120"
+                      disabled={isSavingSettings || isLoadingSettings}
+                      aria-invalid={Boolean(formErrors.totalAvailableSpaceForPets)}
+                    />
+                    {formErrors.totalAvailableSpaceForPets ? (
+                      <p className={styles.fieldError}>{formErrors.totalAvailableSpaceForPets}</p>
+                    ) : null}
+                  </>
                 ) : (
                   <span className={styles.detailValue}>{totalAvailableSpaceForPets.trim() || 'N/A'}</span>
                 )}
@@ -483,18 +752,28 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                   Max Rescues Per Day <span className={styles.requiredMark}>*</span>
                 </span>
                 {isEditMode ? (
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    className={styles.fieldInput}
-                    value={maxRescuesPerDay}
-                    onChange={(event) => {
-                      setMaxRescuesPerDay(event.target.value)
-                    }}
-                    placeholder="3"
-                    disabled={isSavingSettings || isLoadingSettings}
-                  />
+                  <>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      className={`${styles.fieldInput} ${formErrors.maxRescuesPerDay ? styles.fieldInputError : ''}`}
+                      value={maxRescuesPerDay}
+                      onChange={(event) => {
+                        setMaxRescuesPerDay(event.target.value)
+                        setFormErrors((currentErrors) => ({
+                          ...currentErrors,
+                          maxRescuesPerDay: undefined,
+                        }))
+                      }}
+                      placeholder="3"
+                      disabled={isSavingSettings || isLoadingSettings}
+                      aria-invalid={Boolean(formErrors.maxRescuesPerDay)}
+                    />
+                    {formErrors.maxRescuesPerDay ? (
+                      <p className={styles.fieldError}>{formErrors.maxRescuesPerDay}</p>
+                    ) : null}
+                  </>
                 ) : (
                   <span className={styles.detailValue}>{maxRescuesPerDay.trim() || 'N/A'}</span>
                 )}
@@ -517,13 +796,15 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                 </button>
               ) : null}
             </div>
+            {isEditMode && formErrors.addresses ? <p className={styles.fieldError}>{formErrors.addresses}</p> : null}
 
             {filteredAddresses.length === 0 ? (
               <div className={styles.emptyState}>No matching addresses for your search.</div>
             ) : (
               <div className={styles.addressGrid}>
                 {filteredAddresses.map(({ address, index }) => {
-                  const key = `${index}-${address.name}-${address.address}`
+                  const key = `address-${index}`
+                  const addressErrors = formErrors.addressItems[index]
 
                   return (
                     <article key={key} className={styles.addressCard}>
@@ -549,16 +830,20 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                           Name <span className={styles.requiredMark}>*</span>
                         </span>
                         {isEditMode ? (
-                          <input
-                            type="text"
-                            className={styles.fieldInput}
-                            value={address.name}
-                            onChange={(event) => {
-                              handleAddressFieldChange(index, 'name', event.target.value)
-                            }}
-                            placeholder="Main Office"
-                            disabled={isSavingSettings || isLoadingSettings}
-                          />
+                          <>
+                            <input
+                              type="text"
+                              className={`${styles.fieldInput} ${addressErrors?.name ? styles.fieldInputError : ''}`}
+                              value={address.name}
+                              onChange={(event) => {
+                                handleAddressFieldChange(index, 'name', event.target.value)
+                              }}
+                              placeholder="Main Office"
+                              disabled={isSavingSettings || isLoadingSettings}
+                              aria-invalid={Boolean(addressErrors?.name)}
+                            />
+                            {addressErrors?.name ? <p className={styles.fieldError}>{addressErrors.name}</p> : null}
+                          </>
                         ) : (
                           <span className={styles.detailValue}>{address.name.trim() || 'N/A'}</span>
                         )}
@@ -569,28 +854,39 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                           Address <span className={styles.requiredMark}>*</span>
                         </span>
                         {isEditMode ? (
-                          <LocationPickerMap
-                            showCoordinateInputs={false}
-                            value={{
-                              address: address.address,
-                              latitude: address.latitude,
-                              longitude: address.long,
-                            }}
-                            onChange={(nextLocation) => {
-                              setAddresses((currentAddresses) =>
-                                currentAddresses.map((currentAddress, currentIndex) =>
-                                  currentIndex === index
-                                    ? {
-                                        ...currentAddress,
-                                        address: nextLocation.address,
-                                        latitude: nextLocation.latitude,
-                                        long: nextLocation.longitude,
-                                      }
-                                    : currentAddress,
-                                ),
-                              )
-                            }}
-                          />
+                          <>
+                            <LocationPickerMap
+                              showCoordinateInputs={false}
+                              value={{
+                                address: address.address,
+                                latitude: address.latitude,
+                                longitude: address.long,
+                              }}
+                              onChange={(nextLocation) => {
+                                setAddresses((currentAddresses) =>
+                                  currentAddresses.map((currentAddress, currentIndex) =>
+                                    currentIndex === index
+                                      ? {
+                                          ...currentAddress,
+                                          address: nextLocation.address,
+                                          latitude: nextLocation.latitude,
+                                          long: nextLocation.longitude,
+                                        }
+                                      : currentAddress,
+                                  ),
+                                )
+
+                                clearAddressItemErrors(index, ['address', 'long', 'latitude'])
+                                setFormErrors((currentErrors) => ({
+                                  ...currentErrors,
+                                  addresses: undefined,
+                                }))
+                              }}
+                            />
+                            {addressErrors?.address ? <p className={styles.fieldError}>{addressErrors.address}</p> : null}
+                            {addressErrors?.long ? <p className={styles.fieldError}>{addressErrors.long}</p> : null}
+                            {addressErrors?.latitude ? <p className={styles.fieldError}>{addressErrors.latitude}</p> : null}
+                          </>
                         ) : (
                           <span className={styles.detailValue}>{address.address.trim() || 'N/A'}</span>
                         )}
@@ -614,10 +910,12 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                         setContactNumber(nextForm.contactNumber)
                         setEmailAddress(nextForm.emailAddress)
                         setLinkUrl(nextForm.linkUrl)
+                        setMessageAdminUser(nextForm.messageAdminUser)
                         setTotalAvailableSpaceForPets(nextForm.totalAvailableSpaceForPets)
                         setMaxRescuesPerDay(nextForm.maxRescuesPerDay)
                         setAddresses(nextForm.addresses.length > 0 ? nextForm.addresses : [createEmptyAddress()])
                         setIsEditMode(false)
+                        clearFormErrors()
                       } else {
                         void loadCompanySettings()
                       }
@@ -641,6 +939,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                   type="button"
                   className={styles.saveButton}
                   onClick={() => {
+                    clearFormErrors()
                     setIsEditMode(true)
                   }}
                   disabled={isLoadingSettings}

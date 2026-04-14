@@ -126,16 +126,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: fit-content;
+  max-width: 100%;
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
 }
 
 .statusActive {
-  background: #e8f6ee;
-  color: #2f8d58;
+  background: #e9f9ef;
+  color: #22833f;
 }
 
 .statusHidden {
@@ -144,8 +151,8 @@
 }
 
 .statusDeleted {
-  background: #ffe9e9;
-  color: #cb4747;
+  background: #ffe8e8;
+  color: #b63d3d;
 }
 
 .petImage {
@@ -708,6 +715,12 @@
   .tableFooter {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .statusBadge {
+    min-height: 24px;
+    padding: 0 9px;
+    font-size: 11px;
   }
 
   .floatingAddButton {

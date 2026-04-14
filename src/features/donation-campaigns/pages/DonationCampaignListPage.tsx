@@ -870,20 +870,28 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
                   ) : null}
                 </label>
 
-                <label className={`${styles.fieldLabel} ${styles.checkboxField}`}>
-                  <input
-                    type="checkbox"
-                    checked={addCampaignForm.isUrgent}
-                    onChange={(event) => {
-                      setAddCampaignForm((currentForm) => ({
-                        ...currentForm,
-                        isUrgent: event.target.checked,
-                      }))
-                    }}
-                    className={styles.checkboxInput}
-                  />
-                  <span>Urgent</span>
-                </label>
+                <div className={`${styles.toggleRow} ${styles.fieldLabelWide}`}>
+                  <label className={styles.toggleCard}>
+                    <span className={styles.toggleCopy}>
+                      <span className={styles.toggleLabel}>Urgent</span>
+                      <span className={styles.toggleHint}>Highlight this campaign as urgent.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={addCampaignForm.isUrgent}
+                      onChange={(event) => {
+                        setAddCampaignForm((currentForm) => ({
+                          ...currentForm,
+                          isUrgent: event.target.checked,
+                        }))
+                      }}
+                      className={styles.toggleInput}
+                    />
+                    <span className={styles.toggleTrack} aria-hidden="true">
+                      <span className={styles.toggleThumb} />
+                    </span>
+                  </label>
+                </div>
 
                 <div className={styles.fieldLabelWide}>
                   <PhotoUploadField
@@ -916,6 +924,7 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
                       }))
                     }}
                     className={styles.fieldTextarea}
+                    style={{ resize: 'none' }}
                     rows={3}
                   />
                 </label>

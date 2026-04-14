@@ -1,0 +1,24 @@
+.root {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: #5f7086;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #d7e5f8;
+  border-top-color: var(--color-brand-blue-500);
+  animation: chat-spin 0.9s linear infinite;
+}
+
+@keyframes chat-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

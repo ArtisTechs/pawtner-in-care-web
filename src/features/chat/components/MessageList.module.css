@@ -1,0 +1,97 @@
+.scrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.stateArea {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px;
+  background: #ffffff;
+  display: grid;
+  align-items: center;
+}
+
+.loadOlderWrap {
+  display: flex;
+  justify-content: center;
+  min-height: 24px;
+  margin-bottom: 10px;
+}
+
+.loadingOlderText {
+  color: #4a6789;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.list {
+  display: grid;
+  gap: 16px;
+}
+
+.skeletonList {
+  gap: 14px;
+}
+
+.skeletonRow {
+  width: 100%;
+  display: flex;
+}
+
+.skeletonRowIncoming {
+  justify-content: flex-start;
+}
+
+.skeletonRowOutgoing {
+  justify-content: flex-end;
+}
+
+.skeletonBubble {
+  width: clamp(140px, 34%, 280px);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 8px 16px rgba(34, 78, 137, 0.06);
+}
+
+.skeletonBubbleIncoming {
+  background: #eef2f7;
+}
+
+.skeletonBubbleOutgoing {
+  background: linear-gradient(180deg, #6ea2f0 0%, #5b90e0 100%);
+}
+
+.skeletonLine {
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.28) 100%);
+  background-size: 220% 100%;
+  animation: message-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeletonBubbleIncoming .skeletonLine {
+  background: linear-gradient(90deg, #d9e3ee 0%, #f3f7fb 50%, #d9e3ee 100%);
+  background-size: 220% 100%;
+}
+
+.skeletonLineShort {
+  width: 62%;
+}
+
+@keyframes message-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -120% 0;
+  }
+}

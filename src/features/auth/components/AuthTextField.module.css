@@ -17,6 +17,11 @@
   line-height: 1.4;
 }
 
+.requiredMark {
+  margin-left: 3px;
+  color: var(--color-feedback-error);
+}
+
 .inlineAction {
   border: none;
   background: transparent;
@@ -97,8 +102,25 @@
   box-shadow: 0 0 0 3px var(--color-brand-focus-ring);
 }
 
+.textInputError {
+  border-color: var(--color-feedback-error);
+}
+
+.textInputError:focus {
+  border-color: var(--color-feedback-error);
+  box-shadow: 0 0 0 3px rgba(216, 64, 64, 0.18);
+}
+
 .belowActionRow {
   margin-top: 7px;
   display: flex;
   justify-content: flex-end;
+}
+
+.errorText {
+  margin: 6px 0 0;
+  color: var(--color-feedback-error);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body-2);
+  line-height: 1.3;
 }

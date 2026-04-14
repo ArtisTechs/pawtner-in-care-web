@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import titleLogo from '@/assets/title-logo.png'
+import { APP_ROUTES } from '@/app/routes/route-paths'
 import { sessionPreloadService } from '@/app/services/session-preload.service'
 import AuthTextField from '@/features/auth/components/AuthTextField'
 import OtpCodeField from '@/features/auth/components/OtpCodeField'
@@ -41,16 +43,23 @@ interface SignInPageProps {
   onSignInSuccess?: (session: AuthSession) => void
 }
 
+type SignInFieldErrors = Partial<Record<SignInTextFieldName, string>>
+type ForgotPasswordFieldErrors = Partial<Record<ForgotPasswordFieldName, string>>
+
 function SignInPage({ onSignInSuccess }: SignInPageProps) {
+  const navigate = useNavigate()
   const [authView, setAuthView] = useState<AuthView>('sign-in')
   const { clearToast, showToast, toast } = useToast()
 
   const [formState, setFormState] = useState<SignInFormState>(INITIAL_SIGN_IN_FORM)
+  const [signInFieldErrors, setSignInFieldErrors] = useState<SignInFieldErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [forgotPasswordStep, setForgotPasswordStep] = useState<ForgotPasswordStep>('request-otp')
   const [forgotPasswordFormState, setForgotPasswordFormState] =
     useState<ForgotPasswordFormState>(INITIAL_FORGOT_PASSWORD_FORM)
+  const [forgotPasswordFieldErrors, setForgotPasswordFieldErrors] =
+    useState<ForgotPasswordFieldErrors>({})
   const [isForgotPasswordSubmitting, setIsForgotPasswordSubmitting] = useState(false)
   const [otpResendRemainingSeconds, setOtpResendRemainingSeconds] = useState(0)
 
@@ -81,6 +90,15 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       ...currentState,
       [name]: value,
     }))
+    setSignInFieldErrors((currentState) => {
+      if (!currentState[name]) {
+        return currentState
+      }
+
+      const nextState = { ...currentState }
+      delete nextState[name]
+      return nextState
+    })
   }
 
   const handleForgotPasswordFieldChange = (name: ForgotPasswordFieldName, value: string) => {
@@ -88,6 +106,15 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       ...currentState,
       [name]: value,
     }))
+    setForgotPasswordFieldErrors((currentState) => {
+      if (!currentState[name]) {
+        return currentState
+      }
+
+      const nextState = { ...currentState }
+      delete nextState[name]
+      return nextState
+    })
   }
 
   const openForgotPasswordView = () => {
@@ -99,6 +126,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       ...INITIAL_FORGOT_PASSWORD_FORM,
       email: formState.email.trim(),
     })
+    setForgotPasswordFieldErrors({})
   }
 
   const backToSignInView = () => {
@@ -106,6 +134,8 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
     setForgotPasswordStep('request-otp')
     setOtpResendRemainingSeconds(0)
     clearToast()
+    setSignInFieldErrors({})
+    setForgotPasswordFieldErrors({})
 
     if (forgotPasswordFormState.email.trim()) {
       setFormState((currentState) => ({
@@ -113,6 +143,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
         email: forgotPasswordFormState.email.trim(),
       }))
     }
+  }
+
+  const openSignUpView = () => {
+    clearToast()
+    navigate(APP_ROUTES.signUp)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -123,16 +158,24 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       password: formState.password,
     }
 
-    if (!payload.email || !payload.password) {
-      showToast('Please enter your email and password.', { variant: 'error' })
+    const nextFieldErrors: SignInFieldErrors = {}
+
+    if (!payload.email) {
+      nextFieldErrors.email = 'Email address is required.'
+    } else if (!isValidEmail(payload.email)) {
+      nextFieldErrors.email = 'Please enter a valid email address.'
+    }
+
+    if (!payload.password) {
+      nextFieldErrors.password = 'Password is required.'
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setSignInFieldErrors(nextFieldErrors)
       return
     }
 
-    if (!isValidEmail(payload.email)) {
-      showToast('Please enter a valid email address.', { variant: 'error' })
-      return
-    }
-
+    setSignInFieldErrors({})
     clearToast()
     setIsSubmitting(true)
 
@@ -173,6 +216,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
     const otp = forgotPasswordFormState.otp.trim()
 
     clearToast()
+    setForgotPasswordFieldErrors({})
 
     if (forgotPasswordStep === 'completed') {
       backToSignInView()
@@ -183,13 +227,16 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
 
     try {
       if (forgotPasswordStep === 'request-otp') {
+        const nextFieldErrors: ForgotPasswordFieldErrors = {}
+
         if (!email) {
-          showToast('Please enter your email address.', { variant: 'error' })
-          return
+          nextFieldErrors.email = 'Email address is required.'
+        } else if (!isValidEmail(email)) {
+          nextFieldErrors.email = 'Please enter a valid email address.'
         }
 
-        if (!isValidEmail(email)) {
-          showToast('Please enter a valid email address.', { variant: 'error' })
+        if (Object.keys(nextFieldErrors).length > 0) {
+          setForgotPasswordFieldErrors(nextFieldErrors)
           return
         }
 
@@ -203,18 +250,22 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       }
 
       if (forgotPasswordStep === 'verify-otp') {
-        if (!email) {
-          showToast('Email address is required.', { variant: 'error' })
-          return
-        }
+        const nextFieldErrors: ForgotPasswordFieldErrors = {}
 
-        if (!isValidEmail(email)) {
-          showToast('Email address must be a valid email.', { variant: 'error' })
-          return
+        if (!email) {
+          nextFieldErrors.email = 'Email address is required.'
+        } else if (!isValidEmail(email)) {
+          nextFieldErrors.email = 'Email address must be a valid email.'
         }
 
         if (!otp) {
-          showToast('Please enter the OTP code.', { variant: 'error' })
+          nextFieldErrors.otp = 'Please enter the OTP code.'
+        } else if (!/^\d{6}$/.test(otp)) {
+          nextFieldErrors.otp = 'Please enter a valid 6-digit OTP code.'
+        }
+
+        if (Object.keys(nextFieldErrors).length > 0) {
+          setForgotPasswordFieldErrors(nextFieldErrors)
           return
         }
 
@@ -229,23 +280,33 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
         return
       }
 
+      const nextFieldErrors: ForgotPasswordFieldErrors = {}
+
       if (!email) {
-        showToast('Email address is required.', { variant: 'error' })
-        return
+        nextFieldErrors.email = 'Email address is required.'
+      } else if (!isValidEmail(email)) {
+        nextFieldErrors.email = 'Email address must be a valid email.'
       }
 
-      if (!isValidEmail(email)) {
-        showToast('Email address must be a valid email.', { variant: 'error' })
-        return
+      if (!forgotPasswordFormState.newPassword) {
+        nextFieldErrors.newPassword = 'New password is required.'
       }
 
-      if (!forgotPasswordFormState.newPassword || !forgotPasswordFormState.confirmPassword) {
-        showToast('Please enter and confirm your new password.', { variant: 'error' })
-        return
+      if (!forgotPasswordFormState.confirmPassword) {
+        nextFieldErrors.confirmPassword = 'Confirm password is required.'
+      } else if (forgotPasswordFormState.newPassword !== forgotPasswordFormState.confirmPassword) {
+        nextFieldErrors.confirmPassword = 'Passwords do not match.'
       }
 
-      if (forgotPasswordFormState.newPassword !== forgotPasswordFormState.confirmPassword) {
-        showToast('Passwords do not match.', { variant: 'error' })
+      if (!/^\d{6}$/.test(otp)) {
+        nextFieldErrors.otp = 'Please verify your 6-digit OTP again.'
+      }
+
+      if (Object.keys(nextFieldErrors).length > 0) {
+        if (nextFieldErrors.otp) {
+          setForgotPasswordStep('verify-otp')
+        }
+        setForgotPasswordFieldErrors(nextFieldErrors)
         return
       }
 
@@ -253,6 +314,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
         confirmPassword: forgotPasswordFormState.confirmPassword,
         email,
         newPassword: forgotPasswordFormState.newPassword,
+        otp,
       })
 
       showToast(response?.message ?? 'Your password has been reset.', { variant: 'success' })
@@ -276,12 +338,18 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
     }
 
     if (!email) {
-      showToast('Email address is required to resend OTP.', { variant: 'error' })
+      setForgotPasswordFieldErrors((currentState) => ({
+        ...currentState,
+        email: 'Email address is required to resend OTP.',
+      }))
       return
     }
 
     if (!isValidEmail(email)) {
-      showToast('Email address must be a valid email.', { variant: 'error' })
+      setForgotPasswordFieldErrors((currentState) => ({
+        ...currentState,
+        email: 'Email address must be a valid email.',
+      }))
       return
     }
 
@@ -331,7 +399,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
               Please enter your email and password to continue
             </p>
 
-            <form className={styles.form} onSubmit={handleSubmit}>
+            <form className={styles.form} onSubmit={handleSubmit} noValidate>
               {SIGN_IN_FIELDS.map((field) => (
                 <AuthTextField
                   key={field.id}
@@ -343,6 +411,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
                   value={formState[field.name]}
                   actionText={field.actionText}
                   actionPlacement={field.actionPlacement}
+                  errorMessage={signInFieldErrors[field.name]}
                   onActionClick={
                     field.name === 'password' ? openForgotPasswordView : undefined
                   }
@@ -353,6 +422,18 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
               <button type="submit" className={styles.signInButton} disabled={isSubmitting}>
                 Sign In
               </button>
+
+              <div className={styles.createAccountRow}>
+                <span className={styles.createAccountLabel}>Don&apos;t have an account?</span>
+                <button
+                  type="button"
+                  className={styles.createAccountAction}
+                  onClick={openSignUpView}
+                  disabled={isSubmitting}
+                >
+                  Create Account
+                </button>
+              </div>
             </form>
           </>
         ) : (
@@ -360,7 +441,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
             <h1 className={styles.heading}>{forgotPasswordCopy.heading}</h1>
             <p className={styles.subheading}>{forgotPasswordCopy.subheading}</p>
 
-            <form className={styles.form} onSubmit={handleForgotPasswordSubmit}>
+            <form className={styles.form} onSubmit={handleForgotPasswordSubmit} noValidate>
               {forgotPasswordFields.map((field) =>
                 field.name === 'otp' ? (
                   <OtpCodeField
@@ -371,6 +452,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
                     value={forgotPasswordFormState[field.name]}
                     onValueChange={handleForgotPasswordFieldChange}
                     disabled={isForgotPasswordSubmitting}
+                    errorMessage={forgotPasswordFieldErrors[field.name]}
                   />
                 ) : (
                   <AuthTextField
@@ -381,6 +463,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
                     type={field.type}
                     placeholder={field.placeholder}
                     value={forgotPasswordFormState[field.name]}
+                    errorMessage={forgotPasswordFieldErrors[field.name]}
                     onValueChange={handleForgotPasswordFieldChange}
                   />
                 ),
@@ -401,17 +484,19 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
 
               <button
                 type="submit"
-                className={styles.signInButton}
+                className={
+                  forgotPasswordStep === 'completed' ? styles.backToSignInButton : styles.signInButton
+                }
                 disabled={isForgotPasswordSubmitting}
               >
                 {forgotPasswordCopy.submitLabel}
               </button>
 
               {forgotPasswordStep !== 'completed' ? (
-                <div className={styles.helperActionRow}>
+                <div className={`${styles.helperActionRow} ${styles.centerActionRow}`}>
                   <button
                     type="button"
-                    className={styles.helperAction}
+                    className={`${styles.backToSignInButton} ${styles.backInlineButton}`}
                     onClick={backToSignInView}
                     disabled={isForgotPasswordSubmitting}
                   >

@@ -20,11 +20,6 @@
   gap: 12px;
 }
 
-.pageHeaderCopy {
-  display: grid;
-  gap: 4px;
-}
-
 .pageTitle {
   margin: 0;
   color: #ffffff;
@@ -35,13 +30,6 @@
   text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
 }
 
-.pageSubtitle {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
-  font-weight: 600;
-  max-width: 620px;
-}
 
 .secondaryButton {
   min-height: 38px;
@@ -304,34 +292,6 @@
   font-size: 13px;
 }
 
-.selectedChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.selectedChip {
-  border-radius: 999px;
-  border: 1px solid #c5daf2;
-  background: #f2f8ff;
-  color: #3f6693;
-  max-width: 100%;
-  height: 32px;
-  padding: 0 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.selectedChip span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .userTableWrap {
   flex: 1;
   min-height: 0;
@@ -414,21 +374,31 @@
 }
 
 .statusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 24px;
   border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 800;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
 }
 
 .statusActive {
-  background: #e8f8ef;
-  color: #2c7d4b;
+  background: #e9f9ef;
+  color: #22833f;
 }
 
 .statusInactive {
-  background: #ffecef;
-  color: #9d3a4f;
+  background: #ffe8e8;
+  color: #b63d3d;
 }
 
 .panelStateCell {
@@ -514,6 +484,12 @@
   .userTableWrap {
     min-height: 280px;
     max-height: 440px;
+    width: calc(100% + 48px);
+    margin-left: -24px;
+    margin-right: -24px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
   }
 
   .page {
@@ -539,5 +515,11 @@
 
   .assignButton {
     width: 100%;
+  }
+
+  .statusPill {
+    min-height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
   }
 }

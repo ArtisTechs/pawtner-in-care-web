@@ -1271,6 +1271,7 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                       setAddClinicForm((current) => ({ ...current, description: event.target.value }))
                     }}
                     className={styles.fieldTextarea}
+                    style={{ resize: 'none' }}
                     rows={4}
                   />
                 </label>

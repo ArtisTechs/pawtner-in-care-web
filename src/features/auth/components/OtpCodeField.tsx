@@ -9,6 +9,8 @@ type OtpCodeFieldProps<TName extends string> = {
   length?: number
   onValueChange: (name: TName, value: string) => void
   disabled?: boolean
+  required?: boolean
+  errorMessage?: string
 }
 
 const sanitizeOtp = (value: string, length: number) => value.replace(/\D/g, '').slice(0, length)
@@ -21,6 +23,8 @@ function OtpCodeField<TName extends string>({
   length = 6,
   onValueChange,
   disabled = false,
+  required = false,
+  errorMessage,
 }: OtpCodeFieldProps<TName>) {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
 
@@ -115,6 +119,7 @@ function OtpCodeField<TName extends string>({
       <div className={styles.fieldLabelRow}>
         <label htmlFor={`${id}-1`} className={styles.fieldLabel}>
           {label}
+          {required ? <span className={styles.requiredMark}>*</span> : null}
         </label>
       </div>
 
@@ -132,9 +137,11 @@ function OtpCodeField<TName extends string>({
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete={index === 0 ? 'one-time-code' : 'off'}
-            className={styles.digitInput}
+            className={`${styles.digitInput} ${errorMessage ? styles.digitInputError : ''}`}
             maxLength={length}
+            aria-required={required}
             aria-label={`OTP digit ${index + 1}`}
+            aria-invalid={Boolean(errorMessage)}
             onFocus={(event) => event.currentTarget.select()}
             onChange={(event) => handleChange(index, event.currentTarget.value)}
             onKeyDown={(event) => {
@@ -154,6 +161,7 @@ function OtpCodeField<TName extends string>({
           />
         ))}
       </div>
+      {errorMessage ? <p className={styles.errorText}>{errorMessage}</p> : null}
     </div>
   )
 }

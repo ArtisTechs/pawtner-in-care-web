@@ -232,16 +232,6 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
   }, [userRows, userSearchValue])
 
   const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds])
-  const selectedUserMap = useMemo(() => new Map(userRows.map((row) => [row.id, row])), [userRows])
-
-  const selectedUsers = useMemo(
-    () =>
-      selectedUserIds.map((userId) => ({
-        id: userId,
-        label: selectedUserMap.get(userId)?.name ?? userId,
-      })),
-    [selectedUserIds, selectedUserMap],
-  )
 
   const areAllFilteredUsersSelected = useMemo(() => {
     if (filteredUserRows.length === 0) {
@@ -389,12 +379,7 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
       <div className={styles.page}>
         <section className={styles.container}>
           <header className={styles.pageHeader}>
-            <div className={styles.pageHeaderCopy}>
-              <h1 className={styles.pageTitle}>Achievement Assignment</h1>
-              <p className={styles.pageSubtitle}>
-                Select one achievement and assign it to multiple users in one run.
-              </p>
-            </div>
+            <h1 className={styles.pageTitle}>Achievement Assignment</h1>
           </header>
 
           <div className={styles.contentGrid}>
@@ -525,25 +510,6 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                   <span>selected</span>
                 </span>
               </div>
-
-              {selectedUsers.length ? (
-                <div className={styles.selectedChips}>
-                  {selectedUsers.map((selectedUser) => (
-                    <button
-                      key={`selected-user-${selectedUser.id}`}
-                      type="button"
-                      className={styles.selectedChip}
-                      onClick={() => {
-                        toggleUserSelection(selectedUser.id)
-                      }}
-                      title="Remove user"
-                    >
-                      <span>{selectedUser.label}</span>
-                      <span aria-hidden="true">x</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
 
               <div className={styles.userTableWrap}>
                 <table className={styles.table}>

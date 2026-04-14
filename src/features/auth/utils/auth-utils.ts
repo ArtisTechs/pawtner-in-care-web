@@ -49,7 +49,16 @@ const getStringField = (value: unknown, keys: string[]) => {
 }
 
 export const getAuthSessionUserId = (user: AuthSession['user']) => {
-  return getStringField(user, ['id', 'userId'])
+  const directUserId = getStringField(user, ['id', 'userId', 'uuid', 'sub'])
+  if (directUserId) {
+    return directUserId
+  }
+
+  if (isRecord(user)) {
+    return getStringField(user.user, ['id', 'userId', 'uuid', 'sub'])
+  }
+
+  return ''
 }
 
 export const resolveAuthSessionRole = (session: AuthSession | null) => {

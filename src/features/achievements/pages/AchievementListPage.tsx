@@ -21,12 +21,16 @@ import styles from './AchievementListPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'achievement-list'
 
-const CATEGORY_OPTIONS = ['REGISTRATION', 'ADOPTION', 'DONATION', 'ENGAGEMENT']
+const CATEGORY_OPTIONS = [
+  'REGISTRATION',
+  'DONATION_LOGS',
+  'ADOPTION_LOGS',
+  'EMERGENCY_SOS',
+  'COMMUNITY',
+  'ACCOUNT_DAYS',
+  'GIFT_LOGS',
+]
 const RARITY_OPTIONS = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY']
-const ASSIGNMENT_TYPE_OPTIONS = ['AUTO', 'MANUAL']
-const TRIGGER_TYPE_OPTIONS = ['USER_REGISTERED', 'PET_ADOPTED', 'DONATION_MADE', 'USER_ACTIVE_MONTH', 'MANUAL']
-const RULE_TYPE_OPTIONS = ['FIRST_ACTION', 'COUNT_THRESHOLD', 'STREAK', 'BOOLEAN_ACTION']
-const VISIBILITY_OPTIONS = ['PUBLIC', 'PRIVATE']
 const REQUIRED_FIELDS_ERROR_MESSAGE = 'Please complete all required fields.'
 const PNG_IMAGE_PATTERN = /\.png(?:$|[?#])/i
 const BLACK_BACKGROUND_THRESHOLD = 22
@@ -38,56 +42,44 @@ type CreateAchievementForm = {
   category: string
   code: string
   description: string
-  endAt: string
   iconUrl: string
   isActive: string
-  isRepeatable: string
   points: string
+  requiredValue: string
   rarity: string
-  ruleConfig: string
-  ruleType: string
-  startAt: string
   title: string
-  triggerType: string
-  visibility: string
 }
 
 type CreateAchievementFormErrorKey =
+  | 'category'
   | 'code'
-  | 'dateRange'
   | 'description'
   | 'iconUrl'
   | 'points'
-  | 'ruleConfig'
+  | 'requiredValue'
   | 'title'
 type CreateAchievementFormErrors = Record<CreateAchievementFormErrorKey, string>
 
 const DEFAULT_CREATE_FORM: CreateAchievementForm = {
   assignmentType: 'AUTO',
-  category: 'DONATION',
+  category: 'DONATION_LOGS',
   code: '',
   description: '',
-  endAt: '',
   iconUrl: '',
   isActive: 'true',
-  isRepeatable: 'false',
   points: '100',
+  requiredValue: '5000',
   rarity: 'COMMON',
-  ruleConfig: '{"statField":"totalDonations","target":1}',
-  ruleType: 'COUNT_THRESHOLD',
-  startAt: '',
   title: '',
-  triggerType: 'DONATION_MADE',
-  visibility: 'PUBLIC',
 }
 
 const createEmptyCreateFormErrors = (): CreateAchievementFormErrors => ({
+  category: '',
   code: '',
-  dateRange: '',
   description: '',
   iconUrl: '',
   points: '',
-  ruleConfig: '',
+  requiredValue: '',
   title: '',
 })
 
@@ -204,61 +196,23 @@ const formatPoints = (value?: number | string | null) => {
   return '0'
 }
 
-const formatDateRange = (startAt?: string | null, endAt?: string | null) => {
-  const formattedStartAt = toFormattedDate(startAt)
-  const formattedEndAt = toFormattedDate(endAt)
-
-  if (formattedStartAt === 'N/A' && formattedEndAt === 'N/A') {
-    return 'No date window'
-  }
-
-  return `${formattedStartAt} - ${formattedEndAt}`
-}
-
-const formatRuleConfig = (ruleConfig?: string | null) => {
-  const normalizedRuleConfig = normalizeText(ruleConfig)
-  if (!normalizedRuleConfig) {
+const formatRequiredValue = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === '') {
     return 'N/A'
   }
 
-  try {
-    return JSON.stringify(JSON.parse(normalizedRuleConfig), null, 2)
-  } catch {
-    return normalizedRuleConfig
-  }
-}
-
-const toIsoStringOrNull = (value: string) => {
-  const trimmedValue = value.trim()
-  if (!trimmedValue) {
-    return null
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toLocaleString('en-PH')
   }
 
-  const parsedDate = new Date(trimmedValue)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return null
+  if (typeof value === 'string') {
+    const parsedValue = Number.parseFloat(value)
+    if (Number.isFinite(parsedValue)) {
+      return parsedValue.toLocaleString('en-PH')
+    }
   }
 
-  return parsedDate.toISOString()
-}
-
-const toDateTimeLocalValue = (value?: string | null) => {
-  if (!value) {
-    return ''
-  }
-
-  const parsedDate = new Date(value)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return ''
-  }
-
-  const year = parsedDate.getFullYear()
-  const month = String(parsedDate.getMonth() + 1).padStart(2, '0')
-  const day = String(parsedDate.getDate()).padStart(2, '0')
-  const hours = String(parsedDate.getHours()).padStart(2, '0')
-  const minutes = String(parsedDate.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  return 'N/A'
 }
 
 const getRarityStyleClass = (rarity?: string | null) => {
@@ -304,18 +258,12 @@ const mapAchievementToForm = (achievement: Achievement): CreateAchievementForm =
     category: normalizeText(achievement.category).toUpperCase() || DEFAULT_CREATE_FORM.category,
     code: normalizeText(achievement.code),
     description: normalizeText(achievement.description),
-    endAt: toDateTimeLocalValue(achievement.endAt),
     iconUrl: normalizeText(achievement.iconUrl),
     isActive: achievement.isActive === false ? 'false' : 'true',
-    isRepeatable: achievement.isRepeatable ? 'true' : 'false',
     points: Number.isFinite(normalizedPoints) ? String(normalizedPoints) : DEFAULT_CREATE_FORM.points,
+    requiredValue: normalizeText(String(achievement.requiredValue ?? '')),
     rarity: normalizeText(achievement.rarity).toUpperCase() || DEFAULT_CREATE_FORM.rarity,
-    ruleConfig: normalizeText(achievement.ruleConfig),
-    ruleType: normalizeText(achievement.ruleType).toUpperCase() || DEFAULT_CREATE_FORM.ruleType,
-    startAt: toDateTimeLocalValue(achievement.startAt),
     title: normalizeText(achievement.title),
-    triggerType: normalizeText(achievement.triggerType).toUpperCase() || DEFAULT_CREATE_FORM.triggerType,
-    visibility: normalizeText(achievement.visibility).toUpperCase() || DEFAULT_CREATE_FORM.visibility,
   }
 }
 
@@ -351,6 +299,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
     session,
   })
   const accessToken = session?.accessToken?.trim() ?? ''
+  const isAutoAssignment = createForm.assignmentType === 'AUTO'
 
   const resolveAchievementIconSource = useCallback((iconUrl?: string | null) => {
     const normalizedIconUrl = normalizeText(iconUrl)
@@ -568,10 +517,12 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
     const trimmedDescription = createForm.description.trim()
     const trimmedIconUrl = createForm.iconUrl.trim()
     const trimmedPoints = createForm.points.trim()
-    const trimmedRuleConfig = createForm.ruleConfig.trim()
+    const trimmedCategory = createForm.category.trim()
+    const trimmedRequiredValue = createForm.requiredValue.trim()
     const points = Number.parseInt(trimmedPoints, 10)
-    const normalizedStartAt = toIsoStringOrNull(createForm.startAt)
-    const normalizedEndAt = toIsoStringOrNull(createForm.endAt)
+    const parsedRequiredValue = trimmedRequiredValue ? Number.parseFloat(trimmedRequiredValue) : null
+    const isAutoAssign = createForm.assignmentType === 'AUTO'
+    const isRegistrationCategory = createForm.category === 'REGISTRATION'
     const nextErrors = createEmptyCreateFormErrors()
 
     if (!trimmedCode) {
@@ -594,18 +545,14 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
       nextErrors.points = 'Points must be a valid positive number or zero.'
     }
 
-    if (trimmedRuleConfig) {
-      try {
-        JSON.parse(trimmedRuleConfig)
-      } catch {
-        nextErrors.ruleConfig = 'Rule config must be a valid JSON string.'
-      }
+    if (isAutoAssign && !trimmedCategory) {
+      nextErrors.category = REQUIRED_FIELDS_ERROR_MESSAGE
     }
 
-    if ((createForm.startAt.trim() && !normalizedStartAt) || (createForm.endAt.trim() && !normalizedEndAt)) {
-      nextErrors.dateRange = 'Start and end date values must be valid.'
-    } else if (normalizedStartAt && normalizedEndAt && normalizedEndAt < normalizedStartAt) {
-      nextErrors.dateRange = 'End date must be later than start date.'
+    if (isAutoAssign && !isRegistrationCategory && !trimmedRequiredValue) {
+      nextErrors.requiredValue = REQUIRED_FIELDS_ERROR_MESSAGE
+    } else if (trimmedRequiredValue && (!Number.isFinite(parsedRequiredValue) || parsedRequiredValue < 0)) {
+      nextErrors.requiredValue = 'Required value must be a valid positive number or zero.'
     }
 
     const hasFormErrors = Object.values(nextErrors).some(Boolean)
@@ -621,21 +568,19 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
       try {
         const payload: CreateAchievementPayload = {
           assignmentType: createForm.assignmentType,
-          category: createForm.category,
           code: trimmedCode,
           description: trimmedDescription,
-          endAt: normalizedEndAt,
           iconUrl: trimmedIconUrl,
           isActive: createForm.isActive === 'true',
-          isRepeatable: createForm.isRepeatable === 'true',
           points,
           rarity: createForm.rarity,
-          ruleConfig: trimmedRuleConfig || null,
-          ruleType: createForm.ruleType,
-          startAt: normalizedStartAt,
           title: trimmedTitle,
-          triggerType: createForm.triggerType,
-          visibility: createForm.visibility,
+          ...(isAutoAssign
+            ? {
+                category: createForm.category,
+                requiredValue: parsedRequiredValue,
+              }
+            : {}),
         }
 
         if (editingAchievementId) {
@@ -718,7 +663,9 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                   ))}
                 </div>
               ) : achievements.length === 0 ? (
-                <div className={styles.tableStateCell}>No achievements found.</div>
+                <div className={styles.tableStateWrap}>
+                  <div className={styles.tableStateCell}>No achievements found.</div>
+                </div>
               ) : (
                 <div className={styles.cardGrid}>
                   {achievements.map((achievement) => (
@@ -845,10 +792,8 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                       <span className={styles.metricValue}>{toDisplayText(viewingAchievement.assignmentType)}</span>
                     </div>
                     <div className={styles.metricItem}>
-                      <span className={styles.metricLabel}>Repeatable</span>
-                      <span className={styles.metricValue}>
-                        {viewingAchievement.isRepeatable ? 'Repeatable' : 'One-Time'}
-                      </span>
+                      <span className={styles.metricLabel}>Required Value</span>
+                      <span className={styles.metricValue}>{formatRequiredValue(viewingAchievement.requiredValue)}</span>
                     </div>
                   </div>
 
@@ -862,27 +807,10 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                       <dd>{toDisplayText(viewingAchievement.category)}</dd>
                     </div>
                     <div className={styles.metaItem}>
-                      <dt>Visibility</dt>
-                      <dd>{toDisplayText(viewingAchievement.visibility)}</dd>
-                    </div>
-                    <div className={styles.metaItem}>
-                      <dt>Trigger</dt>
-                      <dd>{toDisplayText(viewingAchievement.triggerType)}</dd>
-                    </div>
-                    <div className={styles.metaItem}>
-                      <dt>Rule</dt>
-                      <dd>{toDisplayText(viewingAchievement.ruleType)}</dd>
-                    </div>
-                    <div className={styles.metaItem}>
-                      <dt>Date Window</dt>
-                      <dd>{formatDateRange(viewingAchievement.startAt, viewingAchievement.endAt)}</dd>
+                      <dt>Required Value</dt>
+                      <dd>{formatRequiredValue(viewingAchievement.requiredValue)}</dd>
                     </div>
                   </dl>
-
-                  <div className={styles.ruleConfigWrap}>
-                    <span className={styles.ruleConfigLabel}>Rule Config</span>
-                    <code className={styles.ruleConfigValue}>{formatRuleConfig(viewingAchievement.ruleConfig)}</code>
-                  </div>
 
                   <div className={styles.cardFooter}>
                     <span>Created: {toFormattedDate(viewingAchievement.createdAt ?? viewingAchievement.createdDate)}</span>
@@ -1021,6 +949,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                           }))
                         }}
                         disabled={isSavingAchievement}
+                        style={{ resize: 'none' }}
                         rows={3}
                         placeholder="Awarded to a supporter who reached 10 donation actions."
                       />
@@ -1057,26 +986,59 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                       ) : null}
                     </div>
 
-                    <label className={styles.fieldLabel}>
-                      <span>Category</span>
-                      <select
-                        className={styles.fieldInput}
-                        value={createForm.category}
-                        onChange={(event) => {
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            category: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement}
-                      >
-                        {CATEGORY_OPTIONS.map((categoryOption) => (
-                          <option key={categoryOption} value={categoryOption}>
-                            {toDisplayText(categoryOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className={`${styles.toggleRow} ${styles.fullWidthField}`}>
+                      <label className={styles.toggleCard}>
+                        <span className={styles.toggleCopy}>
+                          <span className={styles.toggleLabel}>Auto Assign</span>
+                          <span className={styles.toggleHint}>Enable category-based auto evaluation.</span>
+                        </span>
+                        <input
+                          className={styles.toggleInput}
+                          type="checkbox"
+                          checked={isAutoAssignment}
+                          onChange={(event) => {
+                            clearCreateFormError('category')
+                            clearCreateFormError('requiredValue')
+                            const nextIsAuto = event.target.checked
+                            setCreateForm((currentForm) => ({
+                              ...currentForm,
+                              assignmentType: nextIsAuto ? 'AUTO' : 'MANUAL',
+                              category: nextIsAuto
+                                ? currentForm.category || DEFAULT_CREATE_FORM.category
+                                : '',
+                              requiredValue: nextIsAuto
+                                ? currentForm.requiredValue || DEFAULT_CREATE_FORM.requiredValue
+                                : '',
+                            }))
+                          }}
+                          disabled={isSavingAchievement}
+                        />
+                        <span className={styles.toggleTrack} aria-hidden="true">
+                          <span className={styles.toggleThumb} />
+                        </span>
+                      </label>
+                      <label className={styles.toggleCard}>
+                        <span className={styles.toggleCopy}>
+                          <span className={styles.toggleLabel}>Is Active</span>
+                          <span className={styles.toggleHint}>Controls visibility in active listings.</span>
+                        </span>
+                        <input
+                          className={styles.toggleInput}
+                          type="checkbox"
+                          checked={createForm.isActive === 'true'}
+                          onChange={(event) => {
+                            setCreateForm((currentForm) => ({
+                              ...currentForm,
+                              isActive: event.target.checked ? 'true' : 'false',
+                            }))
+                          }}
+                          disabled={isSavingAchievement}
+                        />
+                        <span className={styles.toggleTrack} aria-hidden="true">
+                          <span className={styles.toggleThumb} />
+                        </span>
+                      </label>
+                    </div>
 
                     <label className={styles.fieldLabel}>
                       <span>
@@ -1123,189 +1085,83 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                       </select>
                     </label>
 
-                    <label className={styles.fieldLabel}>
-                      <span>Assignment</span>
-                      <select
-                        className={styles.fieldInput}
-                        value={createForm.assignmentType}
-                        onChange={(event) => {
-                          const nextAssignmentType = event.target.value
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            assignmentType: nextAssignmentType,
-                            ruleConfig: nextAssignmentType === 'MANUAL' ? '' : currentForm.ruleConfig,
-                            ruleType: nextAssignmentType === 'MANUAL' ? 'BOOLEAN_ACTION' : currentForm.ruleType,
-                            triggerType: nextAssignmentType === 'MANUAL' ? 'MANUAL' : currentForm.triggerType,
-                          }))
-                        }}
-                        disabled={isSavingAchievement}
-                      >
-                        {ASSIGNMENT_TYPE_OPTIONS.map((assignmentOption) => (
-                          <option key={assignmentOption} value={assignmentOption}>
-                            {toDisplayText(assignmentOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={styles.fieldLabel}>
-                      <span>Trigger</span>
-                      <select
-                        className={styles.fieldInput}
-                        value={createForm.triggerType}
-                        onChange={(event) => {
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            triggerType: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement || createForm.assignmentType === 'MANUAL'}
-                      >
-                        {TRIGGER_TYPE_OPTIONS.map((triggerOption) => (
-                          <option key={triggerOption} value={triggerOption}>
-                            {toDisplayText(triggerOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={styles.fieldLabel}>
-                      <span>Rule</span>
-                      <select
-                        className={styles.fieldInput}
-                        value={createForm.ruleType}
-                        onChange={(event) => {
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            ruleType: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement || createForm.assignmentType === 'MANUAL'}
-                      >
-                        {RULE_TYPE_OPTIONS.map((ruleOption) => (
-                          <option key={ruleOption} value={ruleOption}>
-                            {toDisplayText(ruleOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={styles.fieldLabel}>
-                      <span>Visibility</span>
-                      <select
-                        className={styles.fieldInput}
-                        value={createForm.visibility}
-                        onChange={(event) => {
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            visibility: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement}
-                      >
-                        {VISIBILITY_OPTIONS.map((visibilityOption) => (
-                          <option key={visibilityOption} value={visibilityOption}>
-                            {toDisplayText(visibilityOption)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={`${styles.fieldLabel} ${styles.fullWidthField}`}>
-                      <span>Rule Config JSON</span>
-                      <textarea
-                        className={`${styles.fieldTextarea} ${createFormErrors.ruleConfig ? styles.fieldInputError : ''}`}
-                        value={createForm.ruleConfig}
-                        onChange={(event) => {
-                          clearCreateFormError('ruleConfig')
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            ruleConfig: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement || createForm.assignmentType === 'MANUAL'}
-                        rows={3}
-                        placeholder='{"statField":"totalDonations","target":10}'
-                      />
-                      {createFormErrors.ruleConfig ? (
-                        <span className={styles.fieldErrorText}>{createFormErrors.ruleConfig}</span>
-                      ) : null}
-                    </label>
-
-                    <label className={styles.fieldLabel}>
-                      <span>Start At</span>
-                      <input
-                        className={`${styles.fieldInput} ${createFormErrors.dateRange ? styles.fieldInputError : ''}`}
-                        type="datetime-local"
-                        value={createForm.startAt}
-                        onChange={(event) => {
-                          clearCreateFormError('dateRange')
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            startAt: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement}
-                      />
-                    </label>
-
-                    <label className={styles.fieldLabel}>
-                      <span>End At</span>
-                      <input
-                        className={`${styles.fieldInput} ${createFormErrors.dateRange ? styles.fieldInputError : ''}`}
-                        type="datetime-local"
-                        value={createForm.endAt}
-                        onChange={(event) => {
-                          clearCreateFormError('dateRange')
-                          setCreateForm((currentForm) => ({
-                            ...currentForm,
-                            endAt: event.target.value,
-                          }))
-                        }}
-                        disabled={isSavingAchievement}
-                      />
-                      {createFormErrors.dateRange ? (
-                        <span className={styles.fieldErrorText}>{createFormErrors.dateRange}</span>
-                      ) : null}
-                    </label>
-
-                    <div className={`${styles.checkboxRow} ${styles.fullWidthField}`}>
-                      <label className={styles.checkboxField}>
-                        <span>Is Active</span>
-                        <select
-                          className={styles.fieldInput}
-                          value={createForm.isActive}
-                          onChange={(event) => {
-                            setCreateForm((currentForm) => ({
-                              ...currentForm,
-                              isActive: event.target.value,
-                            }))
-                          }}
-                          disabled={isSavingAchievement}
-                        >
-                          <option value="true">Yes</option>
-                          <option value="false">No</option>
-                        </select>
-                      </label>
-
-                      <label className={styles.checkboxField}>
-                        <span>Is Repeatable</span>
-                        <select
-                          className={styles.fieldInput}
-                          value={createForm.isRepeatable}
-                          onChange={(event) => {
-                            setCreateForm((currentForm) => ({
-                              ...currentForm,
-                              isRepeatable: event.target.value,
-                            }))
-                          }}
-                          disabled={isSavingAchievement}
-                        >
-                          <option value="false">No</option>
-                          <option value="true">Yes</option>
-                        </select>
-                      </label>
-                    </div>
+                    {isAutoAssignment ? (
+                      <section className={`${styles.autoConfigPanel} ${styles.fullWidthField}`}>
+                        <div className={styles.autoConfigHeader}>
+                          <span className={styles.autoConfigTitle}>Automatic Evaluation</span>
+                          <span className={styles.autoConfigHint}>
+                            Set the category and threshold for auto unlock.
+                          </span>
+                        </div>
+                        <div className={styles.autoConfigGrid}>
+                          <label className={styles.fieldLabel}>
+                            <span>
+                              Category <span className={styles.requiredMark}>*</span>
+                            </span>
+                            <select
+                              className={`${styles.fieldInput} ${createFormErrors.category ? styles.fieldInputError : ''}`}
+                              value={createForm.category}
+                              onChange={(event) => {
+                                clearCreateFormError('category')
+                                clearCreateFormError('requiredValue')
+                                const nextCategory = event.target.value
+                                setCreateForm((currentForm) => ({
+                                  ...currentForm,
+                                  category: nextCategory,
+                                  requiredValue:
+                                    nextCategory === 'REGISTRATION' ? '' : currentForm.requiredValue,
+                                }))
+                              }}
+                              disabled={isSavingAchievement}
+                            >
+                              {CATEGORY_OPTIONS.map((categoryOption) => (
+                                <option key={categoryOption} value={categoryOption}>
+                                  {toDisplayText(categoryOption)}
+                                </option>
+                              ))}
+                            </select>
+                            {createFormErrors.category ? (
+                              <span className={styles.fieldErrorText}>{createFormErrors.category}</span>
+                            ) : null}
+                          </label>
+                          <label className={styles.fieldLabel}>
+                            <span>
+                              Required Value
+                              {createForm.category !== 'REGISTRATION' ? (
+                                <span className={styles.requiredMark}>*</span>
+                              ) : null}
+                            </span>
+                            <input
+                              className={`${styles.fieldInput} ${createFormErrors.requiredValue ? styles.fieldInputError : ''}`}
+                              type="number"
+                              min={0}
+                              step="any"
+                              value={createForm.requiredValue}
+                              onChange={(event) => {
+                                clearCreateFormError('requiredValue')
+                                setCreateForm((currentForm) => ({
+                                  ...currentForm,
+                                  requiredValue: event.target.value,
+                                }))
+                              }}
+                              disabled={isSavingAchievement}
+                              placeholder={
+                                createForm.category === 'REGISTRATION'
+                                  ? 'Optional for registration achievements'
+                                  : 'e.g. 5000'
+                              }
+                            />
+                            {createFormErrors.requiredValue ? (
+                              <span className={styles.fieldErrorText}>{createFormErrors.requiredValue}</span>
+                            ) : null}
+                          </label>
+                        </div>
+                      </section>
+                    ) : (
+                      <div className={`${styles.autoConfigEmpty} ${styles.fullWidthField}`}>
+                        Manual assignment mode is on. Category and required value are hidden.
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.modalActions}>

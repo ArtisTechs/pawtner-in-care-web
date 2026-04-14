@@ -1,0 +1,137 @@
+.row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #e1e7f0;
+  background: #ffffff;
+  min-height: 62px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 24px 26px minmax(140px, 220px) minmax(260px, 1fr) minmax(110px, auto);
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: #f5f9ff;
+}
+
+.rowSelected {
+  background: #eef5ff;
+}
+
+.selectionIcon {
+  width: 20px;
+  height: 20px;
+  color: #6d7f96;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+  transition: color 120ms ease-in-out, transform 120ms ease-in-out;
+}
+
+.selectionIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.selectionIconChecked {
+  color: #1f74ea;
+}
+
+.selectionIcon:hover {
+  color: #4e6580;
+}
+
+.selectionIconChecked:hover {
+  color: #125cc2;
+}
+
+.selectionIcon:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-brand-focus-ring);
+  border-radius: 4px;
+}
+
+.starButton {
+  width: 16px;
+  height: 16px;
+  color: #c7b072;
+  display: grid;
+  place-items: center;
+  outline: none;
+}
+
+.starButton:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-brand-focus-ring);
+  border-radius: 4px;
+}
+
+.participant {
+  color: #2c3b51;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.participantUnread {
+  font-weight: 700;
+}
+
+.preview {
+  color: #3f4d60;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timestamp {
+  color: #71839a;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .row {
+    grid-template-columns: 24px 24px minmax(0, 1fr);
+    grid-template-areas:
+      'check star participant'
+      '. . preview'
+      '. . meta';
+    padding: 10px 12px;
+  }
+
+  .selectionIcon {
+    grid-area: check;
+  }
+
+  .starButton {
+    grid-area: star;
+  }
+
+  .participant {
+    grid-area: participant;
+  }
+
+  .preview {
+    grid-area: preview;
+    margin-top: 2px;
+  }
+
+  .meta {
+    grid-area: meta;
+    justify-self: start;
+  }
+}

@@ -10,6 +10,11 @@ export const DEFAULT_LIST_PAGE = 0
 export const DEFAULT_LIST_SIZE = 100
 
 export const USER_ROLE_OPTIONS: UserRole[] = ['ADMIN', 'USER']
+export type UserRoleFilter = 'ALL' | 'ADMIN' | 'USER'
+export type UserStatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE'
+
+export const USER_ROLE_FILTER_OPTIONS: UserRoleFilter[] = ['ALL', 'ADMIN', 'USER']
+export const USER_STATUS_FILTER_OPTIONS: UserStatusFilter[] = ['ALL', 'ACTIVE', 'INACTIVE']
 
 export interface AddUserForm {
   email: string
