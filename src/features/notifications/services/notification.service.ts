@@ -51,18 +51,20 @@ const toBooleanValue = (value: unknown) => {
   return null
 }
 
-const toNumberValue = (value: unknown) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return null
-  }
-
-  return value
-}
-
 const toNotificationType = (value: unknown): NotificationItem['type'] => {
   const normalizedType = toStringValue(value).toUpperCase()
 
-  if (normalizedType === 'ADOPTION' || normalizedType === 'CHAT' || normalizedType === 'SYSTEM') {
+  if (
+    normalizedType === 'ADOPTION' ||
+    normalizedType === 'DONATION_LOG' ||
+    normalizedType === 'GIFT_LOG' ||
+    normalizedType === 'COMMUNITY_LOG' ||
+    normalizedType === 'SOS_LOG' ||
+    normalizedType === 'ACHIEVEMENT' ||
+    normalizedType === 'TODO' ||
+    normalizedType === 'CHAT' ||
+    normalizedType === 'SYSTEM'
+  ) {
     return normalizedType
   }
 
@@ -74,6 +76,12 @@ const toNotificationReferenceType = (value: unknown): NotificationItem['referenc
 
   if (
     normalizedType === 'ADOPTION_REQUEST' ||
+    normalizedType === 'DONATION_TRANSACTION' ||
+    normalizedType === 'GIFT_ENTRY' ||
+    normalizedType === 'COMMUNITY_POST' ||
+    normalizedType === 'EMERGENCY_SOS' ||
+    normalizedType === 'ACHIEVEMENT' ||
+    normalizedType === 'TODO_ITEM' ||
     normalizedType === 'CHAT_CONVERSATION' ||
     normalizedType === 'SUPPORT_CONVERSATION' ||
     normalizedType === 'PET' ||

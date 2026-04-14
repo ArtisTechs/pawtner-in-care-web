@@ -23,6 +23,7 @@ import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './PaymentModeListPage.module.css'
 
@@ -597,7 +598,7 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                     onChange={(event) => {
                       setAddPaymentModeForm((currentForm) => ({
                         ...currentForm,
-                        name: event.target.value,
+                        name: toTitleCase(event.target.value),
                       }))
                     }}
                     className={styles.fieldInput}

@@ -5,18 +5,38 @@ export interface CompanyAddressPayload {
   name: string
 }
 
+export interface CompanySettingsAdminUser {
+  active?: boolean | null
+  createdDate?: string | null
+  email?: string | null
+  firstName?: string | null
+  id: string
+  lastName?: string | null
+  middleName?: string | null
+  profilePicture?: string | null
+  role?: string | null
+  updatedDate?: string | null
+}
+
 export interface CompanySettingsPayload {
   addresses: CompanyAddressPayload[]
   contactNumber: string
   emailAddress: string
-  linkUrl: string
+  linkUrl?: string
   maxRescuesPerDay: number
-  messageAdminUser?: string
+  messageAdminUserId?: string
   totalAvailableSpaceForPets: number
 }
 
-export interface CompanySettings extends CompanySettingsPayload {
+export interface CompanySettings {
+  addresses: CompanyAddressPayload[]
+  contactNumber: string
+  emailAddress: string
+  linkUrl?: string
+  maxRescuesPerDay: number
+  messageAdminUser?: CompanySettingsAdminUser | null
   createdDate?: string | null
   id: string
+  totalAvailableSpaceForPets: number
   updatedDate?: string | null
 }

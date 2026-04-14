@@ -1,12 +1,12 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { FaBell, FaClock, FaCommentDots, FaEnvelope, FaPaw } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
-import { APP_ROUTES } from '@/app/routes/route-paths'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { chatRealtimeService } from '@/features/chat/services/chat-realtime.service'
 import { NotificationContext } from '@/features/notifications/providers/notification-context'
 import { notificationService } from '@/features/notifications/services/notification.service'
 import type { NotificationItem } from '@/features/notifications/types/notification-api'
+import { resolveNotificationRoute } from '@/features/notifications/utils/notification-route'
 import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems } from '@/layouts/config/navigation'
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
@@ -60,26 +60,6 @@ const formatRelativeTime = (value: string) => {
 
   const days = Math.max(1, Math.floor(diffMs / day))
   return `${days}d ago`
-}
-
-const mapReferenceToRoute = (notification: NotificationItem) => {
-  if (notification.referenceType === 'CHAT_CONVERSATION' || notification.referenceType === 'SUPPORT_CONVERSATION') {
-    if (notification.referenceId) {
-      return `${APP_ROUTES.inbox}/${notification.referenceId}`
-    }
-
-    return APP_ROUTES.inbox
-  }
-
-  if (notification.referenceType === 'ADOPTION_REQUEST') {
-    return APP_ROUTES.adoptionRequests
-  }
-
-  if (notification.referenceType === 'PET') {
-    return APP_ROUTES.petList
-  }
-
-  return null
 }
 
 const NotificationTypeIcon = ({ notification }: { notification: NotificationItem }) => {
@@ -266,21 +246,21 @@ function NotificationPage({ onLogout, session }: NotificationPageProps) {
   const showingTo = totalElements === 0 ? 0 : Math.min(notifications.length, totalElements)
 
   const handleNotificationClick = async (notification: NotificationItem) => {
-    if (!notification.isRead && accessToken) {
-      try {
-        await notificationService.markAsRead(notification.id, accessToken)
-        await Promise.all([loadNotifications({ silent: true }), refreshUnreadCount()])
-      } catch {
-        // Continue with navigation even when read-sync fails.
-      }
-    }
+    const targetRoute = resolveNotificationRoute(notification)
+    navigate(targetRoute)
 
-    const targetRoute = mapReferenceToRoute(notification)
-    if (!targetRoute) {
+    if (notification.isRead || !accessToken) {
       return
     }
 
-    navigate(targetRoute)
+    void notificationService
+      .markAsRead(notification.id, accessToken)
+      .then(async () => {
+        await Promise.all([loadNotifications(0, { replace: true, silent: true }), refreshUnreadCount()])
+      })
+      .catch(() => {
+        // Keep navigation flow uninterrupted even when read-sync fails.
+      })
   }
 
   return (

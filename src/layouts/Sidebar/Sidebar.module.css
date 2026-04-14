@@ -26,6 +26,48 @@
   overflow-x: hidden;
 }
 
+.menuSearchSticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 78%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.menuSearchField {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e3e9f2;
+  border-radius: 10px;
+  background-color: #f7faff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menuSearchIcon {
+  width: 14px;
+  height: 14px;
+  color: #6f7f93;
+  flex-shrink: 0;
+}
+
+.menuSearchInput {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #2f3b4a;
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.menuSearchInput::placeholder {
+  color: #8c9aab;
+}
+
 .sectionList {
   display: grid;
   gap: 12px;
@@ -45,6 +87,18 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.emptyState {
+  margin: 2px 0 0;
+  padding: 10px;
+  border: 1px dashed #d8e0ec;
+  border-radius: 8px;
+  color: #6f7f93;
+  font-family: var(--font-family-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .bottomNav {
@@ -153,6 +207,11 @@
   .sectionList {
     gap: 10px;
   }
+
+  .menuSearchSticky {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -162,5 +221,10 @@
 
   .item {
     border-radius: 7px;
+  }
+
+  .menuSearchField {
+    height: 34px;
+    border-radius: 9px;
   }
 }

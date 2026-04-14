@@ -142,6 +142,22 @@
   padding-block: 24px !important;
 }
 
+.photoThumbnail {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  border: 1px solid #cfdbea;
+  object-fit: cover;
+  background: #f2f6fb;
+  display: block;
+}
+
+.photoPlaceholder {
+  color: #6e7f93;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .statusBadge {
   display: inline-flex;
   align-items: center;
@@ -198,11 +214,14 @@
 
 .modalCard {
   width: min(520px, 100%);
+  max-height: calc(100vh - 36px);
   border-radius: 16px;
   border: 1px solid #d4e0ef;
   background: #ffffff;
   box-shadow: 0 24px 46px rgba(18, 44, 77, 0.33);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -247,12 +266,16 @@
 
 .modalForm {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
 }
 
 .modalFields {
   padding: 14px 16px;
   display: grid;
   gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .modalMeta {
@@ -318,8 +341,32 @@
   word-break: break-word;
 }
 
+.modalPhotoFrame {
+  border-radius: 10px;
+  border: 1px solid #d3dfef;
+  background: #f4f8fd;
+  padding: 10px;
+}
+
+.modalPhoto {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+  background: #ffffff;
+}
+
 .modalActions {
-  padding: 0 16px 16px;
+  padding: 10px 16px 16px;
+}
+
+.modalAddressHint {
+  margin: 0 0 8px;
+  color: #8e5a1f;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .modalIconActions {
@@ -373,30 +420,12 @@
     transform 0.22s ease;
 }
 
-.modalTextButton {
-  width: auto;
-  min-width: 92px;
-  border-radius: 10px;
-}
-
-.modalTextButton .modalIconLabel {
-  max-width: 120px;
-  opacity: 1;
-  margin-left: 0;
-  transform: translateX(0);
-}
-
 .modalIconButton:hover:not(:disabled),
 .modalIconButton:focus-visible:not(:disabled) {
   width: 118px;
   border-radius: 10px;
   box-shadow: 0 8px 18px rgba(18, 44, 77, 0.26);
   transform: translateY(-1px);
-}
-
-.modalTextButton:hover:not(:disabled),
-.modalTextButton:focus-visible:not(:disabled) {
-  width: auto;
 }
 
 .modalIconButton:hover:not(:disabled) .modalIconLabel,
@@ -407,12 +436,6 @@
   transform: translateX(0);
 }
 
-.modalTextButton:hover:not(:disabled) .modalIconLabel,
-.modalTextButton:focus-visible:not(:disabled) .modalIconLabel {
-  max-width: 120px;
-  margin-left: 0;
-}
-
 .modalApproveButton {
   background: linear-gradient(180deg, #4eb88e 0%, #2c9f74 100%);
   color: #ffffff;
@@ -420,6 +443,11 @@
 
 .modalRejectButton {
   background: linear-gradient(180deg, #ea8b5e 0%, #d3663d 100%);
+  color: #ffffff;
+}
+
+.modalOngoingButton {
+  background: linear-gradient(180deg, #5d8ee5 0%, #3f6fc6 100%);
   color: #ffffff;
 }
 
@@ -438,8 +466,124 @@
   cursor: not-allowed;
 }
 
+.addressSelectionCard {
+  width: min(560px, 100%);
+  border-radius: 16px;
+  border: 1px solid #d4e0ef;
+  background: #ffffff;
+  box-shadow: 0 24px 46px rgba(18, 44, 77, 0.33);
+  overflow: hidden;
+  animation: modal-card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.addressSelectionBody {
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.addressSelectionHint {
+  margin: 0;
+  color: #4f6684;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.addressSelectionList {
+  max-height: min(360px, 52vh);
+  overflow: auto;
+  padding-right: 4px;
+  display: grid;
+  gap: 8px;
+}
+
+.addressOption {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: flex-start;
+  border-radius: 10px;
+  border: 1px solid #d6e2f2;
+  background: #f8fbff;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+
+.addressOption input {
+  margin-top: 3px;
+}
+
+.addressOptionActive {
+  border-color: #5d8ee5;
+  background: #edf4ff;
+  box-shadow: inset 0 0 0 1px rgba(93, 142, 229, 0.25);
+}
+
+.addressOptionContent {
+  display: grid;
+  gap: 4px;
+}
+
+.addressOptionName {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #2d4968;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.addressOptionName svg {
+  width: 12px;
+  height: 12px;
+  color: #4d76c8;
+}
+
+.addressOptionValue {
+  margin: 0;
+  color: #395778;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.addressSelectionActions {
+  padding: 0 16px 16px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.addressSelectionCancelButton,
+.addressSelectionConfirmButton {
+  min-height: 38px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.addressSelectionCancelButton {
+  border: 1px solid #cad9eb;
+  background: #ffffff;
+  color: #345479;
+}
+
+.addressSelectionConfirmButton {
+  border: 0;
+  color: #ffffff;
+  background: linear-gradient(180deg, #5d8ee5 0%, #3f6fc6 100%);
+}
+
+.addressSelectionCancelButton:disabled,
+.addressSelectionConfirmButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .footerNav {
-  margin-top: 18px;
+  margin-top: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -554,5 +698,9 @@
 
   .modalIconActions {
     justify-content: center;
+  }
+
+  .addressSelectionActions {
+    grid-template-columns: 1fr;
   }
 }

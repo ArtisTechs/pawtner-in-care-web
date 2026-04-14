@@ -747,7 +747,7 @@ function EventListPage({ onLogout, session }: EventListPageProps) {
                     onChange={(event) =>
                       setAddEventForm((currentForm) => ({
                         ...currentForm,
-                        location: event.target.value,
+                        location: toTitleCase(event.target.value),
                       }))
                     }
                     className={styles.fieldInput}

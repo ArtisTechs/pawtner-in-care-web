@@ -8,12 +8,21 @@ export interface GiftLogItemListing {
   photo?: string | null
 }
 
+export interface GiftLogAddressToSend {
+  address?: string | null
+  latitude?: number | null
+  long?: number | null
+  name?: string | null
+}
+
 export interface GiftLog {
+  addressToSend?: GiftLogAddressToSend | null
   createdAt?: string | null
   createdDate?: string | null
   customItemName?: string | null
   deliveryType?: GiftLogDeliveryType | null
   id: string
+  isCustomGiftBox?: boolean | null
   itemListing?: GiftLogItemListing | null
   itemListingId?: string | null
   itemSelected?: string | null
@@ -40,10 +49,8 @@ export interface GiftLogListQuery {
   status?: GiftLogStatus
 }
 
-export interface CreateGiftLogPayload {
-  customItemName?: string
+interface GiftLogWritePayloadBase {
   deliveryType: GiftLogDeliveryType
-  itemListingId?: string
   message?: string
   photo?: string
   quantity?: number
@@ -52,14 +59,24 @@ export interface CreateGiftLogPayload {
   status: GiftLogStatus
 }
 
-export interface UpdateGiftLogPayload {
-  customItemName?: string
-  deliveryType: GiftLogDeliveryType
-  itemListingId?: string
-  message?: string
-  photo?: string
-  quantity?: number
-  shippingCode?: string
-  shippingCompanyName?: string
-  status: GiftLogStatus
+type GiftLogItemPayload = GiftLogWritePayloadBase & {
+  customItemName?: never
+  isCustomGiftBox?: false
+  itemListingId: string
 }
+
+type GiftLogCustomItemPayload = GiftLogWritePayloadBase & {
+  customItemName: string
+  isCustomGiftBox?: false
+  itemListingId?: never
+}
+
+type GiftLogCustomBoxPayload = GiftLogWritePayloadBase & {
+  customItemName?: never
+  isCustomGiftBox: true
+  itemListingId?: never
+}
+
+export type CreateGiftLogPayload = GiftLogItemPayload | GiftLogCustomItemPayload | GiftLogCustomBoxPayload
+
+export type UpdateGiftLogPayload = GiftLogItemPayload | GiftLogCustomItemPayload | GiftLogCustomBoxPayload

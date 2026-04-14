@@ -30,6 +30,7 @@ type GiftLogRow = {
   deliveryType: GiftLogDeliveryType
   deliveryTypeLabel: string
   giftId: string
+  isCustomGiftBox: boolean
   itemLabel: string
   itemListingId: string
   message: string
@@ -133,6 +134,18 @@ const toSortTime = (value?: string | null) => {
 
 const toNormalizedText = (value?: string | null) => value?.trim() || ''
 
+const toBoolean = (value?: boolean | string | null) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase() === 'true'
+  }
+
+  return false
+}
+
 const toQuantity = (value?: number | string | null) => {
   if (typeof value === 'number' && Number.isFinite(value) && value >= 1) {
     return Math.floor(value)
@@ -171,6 +184,15 @@ const toDeliveryTypeLabel = (deliveryType?: string | null) => {
   return DELIVERY_TYPE_LABELS[normalized] ?? toReadableLabel(normalized)
 }
 
+const toPreviewPhoto = (giftLog: GiftLog) => {
+  const itemPhoto = toNormalizedText(giftLog.itemListing?.photo)
+  if (itemPhoto) {
+    return itemPhoto
+  }
+
+  return toNormalizedText(giftLog.photo)
+}
+
 const resolveStatusUi = (status: GiftLogStatus) => {
   const normalizedStatus = normalizeEnumValue(status)
   return STATUS_UI[normalizedStatus] ?? { badgeClassName: 'statusOnHold', label: toReadableLabel(normalizedStatus) }
@@ -178,21 +200,27 @@ const resolveStatusUi = (status: GiftLogStatus) => {
 
 const toItemLabel = (giftLog: GiftLog) => {
   const customItemName = toNormalizedText(giftLog.customItemName)
+  const itemSelected = toNormalizedText(giftLog.itemSelected)
+  const listedItemName = toNormalizedText(giftLog.itemListing?.itemName)
+  const itemListingId = toNormalizedText(giftLog.itemListingId)
+  const hasItemReference = Boolean(customItemName || itemSelected || listedItemName || itemListingId)
+
+  if (!hasItemReference && toBoolean(giftLog.isCustomGiftBox)) {
+    return 'Custom Box'
+  }
+
   if (customItemName) {
     return customItemName
   }
 
-  const itemSelected = toNormalizedText(giftLog.itemSelected)
   if (itemSelected) {
     return itemSelected
   }
 
-  const listedItemName = toNormalizedText(giftLog.itemListing?.itemName)
   if (listedItemName) {
     return listedItemName
   }
 
-  const itemListingId = toNormalizedText(giftLog.itemListingId)
   if (itemListingId) {
     return itemListingId
   }
@@ -213,10 +241,11 @@ const mapGiftLogRow = (giftLog: GiftLog): GiftLogRow => {
     deliveryType,
     deliveryTypeLabel: toDeliveryTypeLabel(deliveryType),
     giftId: toNormalizedText(giftLog.id),
+    isCustomGiftBox: toBoolean(giftLog.isCustomGiftBox),
     itemLabel: toItemLabel(giftLog),
     itemListingId: toNormalizedText(giftLog.itemListingId) || toNormalizedText(giftLog.itemListing?.id),
     message: toNormalizedText(giftLog.message),
-    photo: toNormalizedText(giftLog.photo),
+    photo: toPreviewPhoto(giftLog),
     quantity: toQuantity(giftLog.quantity),
     shippingCode: toNormalizedText(giftLog.shippingCode),
     shippingCompanyName: toNormalizedText(giftLog.shippingCompanyName),
@@ -631,7 +660,6 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th scope="col">ID</th>
                     <th scope="col">Item</th>
                     <th scope="col">Qty</th>
                     <th scope="col">Delivery</th>
@@ -644,14 +672,14 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
                   {isLoadingLogs ? (
                     Array.from({ length: 8 }, (_, rowIndex) => (
                       <tr key={`gift-log-skeleton-${rowIndex}`} aria-hidden="true">
-                        <td colSpan={7}>
+                        <td colSpan={6}>
                           <div className={styles.rowSkeleton} />
                         </td>
                       </tr>
                     ))
                   ) : filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className={styles.emptyStateCell}>
+                      <td colSpan={6} className={styles.emptyStateCell}>
                         No gift logs found.
                       </td>
                     </tr>
@@ -667,7 +695,6 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
                             setSelectedGiftForAction(row)
                           }}
                         >
-                          <td>{row.giftId}</td>
                           <td>{row.itemLabel}</td>
                           <td>{row.quantity}</td>
                           <td>{row.deliveryTypeLabel}</td>
@@ -749,14 +776,16 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
             <div className={styles.modalForm}>
               <div className={styles.modalFields}>
                 <div className={styles.modalMeta}>
-                  <span className={styles.modalMetaLabel}>Gift Log ID</span>
-                  <span className={styles.modalMetaValue}>{selectedGiftForAction.giftId}</span>
-                </div>
-
-                <div className={styles.modalMeta}>
                   <span className={styles.modalMetaLabel}>Item</span>
                   <span className={styles.modalMetaValue}>{selectedGiftForAction.itemLabel}</span>
                 </div>
+
+                {selectedGiftForAction.isCustomGiftBox ? (
+                  <div className={styles.modalMeta}>
+                    <span className={styles.modalMetaLabel}>Gift Type</span>
+                    <span className={styles.modalMetaValue}>Custom Box</span>
+                  </div>
+                ) : null}
 
                 <div className={styles.modalMeta}>
                   <span className={styles.modalMetaLabel}>Quantity</span>
@@ -820,7 +849,7 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
                 <div className={styles.modalIconActions}>
                   <button
                     type="button"
-                    className={`${styles.modalIconButton} ${styles.modalTextButton} ${styles.modalApproveButton}`}
+                    className={`${styles.modalIconButton} ${styles.modalApproveButton}`}
                     onClick={() => {
                       setPendingConfirmationAction({ kind: 'update-status', status: 'DELIVERED' })
                     }}

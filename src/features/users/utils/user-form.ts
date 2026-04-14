@@ -1,5 +1,6 @@
 import type { AddUserForm } from '@/features/users/constants/user-list.constants'
 import type { User, UserPayload, UserRole, UserRoleValue } from '@/features/users/types/user-api'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 
 const normalizeOptional = (value: string) => {
   const trimmedValue = value.trim()
@@ -19,9 +20,9 @@ export const mapUserToForm = (user: User): AddUserForm => ({
 export const buildUserPayload = (form: AddUserForm, isEditing: boolean): UserPayload => {
   const payload: UserPayload = {
     email: form.email.trim(),
-    firstName: form.firstName.trim(),
-    lastName: form.lastName.trim(),
-    middleName: normalizeOptional(form.middleName),
+    firstName: toTitleCase(form.firstName).trim(),
+    lastName: toTitleCase(form.lastName).trim(),
+    middleName: normalizeOptional(toTitleCase(form.middleName)),
     profilePicture: normalizeOptional(form.profilePicture),
     role: resolveUserRoleValue(form.role),
   }

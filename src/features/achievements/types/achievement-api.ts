@@ -85,3 +85,27 @@ export interface ManualAchievementAssignmentResponse {
   unlockedAt?: string | null
   userId?: string | null
 }
+
+export interface UserAchievement {
+  achievementCode?: string | null
+  achievementId?: string | null
+  id: string
+  isUnlocked?: boolean | null
+  unlockedAt?: string | null
+  userId?: string | null
+}
+
+export interface AchievementUserProfile {
+  displayName?: string | null
+  email?: string | null
+  id?: string | null
+  profilePicture?: string | null
+}
+
+export interface AchievementAssignedUser {
+  createdAt?: string | null
+  unlockedAt?: string | null
+  user?: AchievementUserProfile | null
+  userAchievementId: string
+  userId: string
+}

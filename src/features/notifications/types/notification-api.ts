@@ -1,7 +1,23 @@
-export type NotificationType = 'ADOPTION' | 'CHAT' | 'SYSTEM' | (string & {})
+export type NotificationType =
+  | 'ADOPTION'
+  | 'DONATION_LOG'
+  | 'GIFT_LOG'
+  | 'COMMUNITY_LOG'
+  | 'SOS_LOG'
+  | 'ACHIEVEMENT'
+  | 'TODO'
+  | 'CHAT'
+  | 'SYSTEM'
+  | (string & {})
 
 export type NotificationReferenceType =
   | 'ADOPTION_REQUEST'
+  | 'DONATION_TRANSACTION'
+  | 'GIFT_ENTRY'
+  | 'COMMUNITY_POST'
+  | 'EMERGENCY_SOS'
+  | 'ACHIEVEMENT'
+  | 'TODO_ITEM'
   | 'CHAT_CONVERSATION'
   | 'SUPPORT_CONVERSATION'
   | 'PET'

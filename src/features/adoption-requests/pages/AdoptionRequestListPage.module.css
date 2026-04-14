@@ -362,7 +362,7 @@
 }
 
 .modalActions {
-  padding: 0 16px 16px;
+  padding: 10px 16px 16px;
 }
 
 .modalStatusIndicator {
@@ -476,7 +476,7 @@
 }
 
 .footerNav {
-  margin-top: 18px;
+  margin-top: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;

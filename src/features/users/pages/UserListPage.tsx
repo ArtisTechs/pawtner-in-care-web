@@ -37,6 +37,7 @@ import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 import { isValidEmail } from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './UserListPage.module.css'
@@ -886,7 +887,7 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
                     onChange={(event) => {
                       setAddUserForm((currentForm) => ({
                         ...currentForm,
-                        firstName: event.target.value,
+                        firstName: toTitleCase(event.target.value),
                       }))
                     }}
                     className={styles.fieldInput}
@@ -901,7 +902,7 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
                     onChange={(event) => {
                       setAddUserForm((currentForm) => ({
                         ...currentForm,
-                        middleName: event.target.value,
+                        middleName: toTitleCase(event.target.value),
                       }))
                     }}
                     className={styles.fieldInput}
@@ -916,7 +917,7 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
                     onChange={(event) => {
                       setAddUserForm((currentForm) => ({
                         ...currentForm,
-                        lastName: event.target.value,
+                        lastName: toTitleCase(event.target.value),
                       }))
                     }}
                     className={styles.fieldInput}

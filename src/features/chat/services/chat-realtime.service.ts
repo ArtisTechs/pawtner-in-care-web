@@ -558,7 +558,17 @@ const asUnreadSummary = (value: unknown): UnreadCountSummary | null => {
 const asNotificationType = (value: unknown): NotificationItem['type'] => {
   const normalized = toStringValue(value).toUpperCase()
 
-  if (normalized === 'ADOPTION' || normalized === 'CHAT' || normalized === 'SYSTEM') {
+  if (
+    normalized === 'ADOPTION' ||
+    normalized === 'DONATION_LOG' ||
+    normalized === 'GIFT_LOG' ||
+    normalized === 'COMMUNITY_LOG' ||
+    normalized === 'SOS_LOG' ||
+    normalized === 'ACHIEVEMENT' ||
+    normalized === 'TODO' ||
+    normalized === 'CHAT' ||
+    normalized === 'SYSTEM'
+  ) {
     return normalized
   }
 
@@ -570,6 +580,12 @@ const asNotificationReferenceType = (value: unknown): NotificationItem['referenc
 
   if (
     normalized === 'ADOPTION_REQUEST' ||
+    normalized === 'DONATION_TRANSACTION' ||
+    normalized === 'GIFT_ENTRY' ||
+    normalized === 'COMMUNITY_POST' ||
+    normalized === 'EMERGENCY_SOS' ||
+    normalized === 'ACHIEVEMENT' ||
+    normalized === 'TODO_ITEM' ||
     normalized === 'CHAT_CONVERSATION' ||
     normalized === 'SUPPORT_CONVERSATION' ||
     normalized === 'PET' ||

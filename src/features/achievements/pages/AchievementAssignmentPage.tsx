@@ -21,7 +21,15 @@ import styles from './AchievementAssignmentPage.module.css'
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'achievement-assignment'
 
 const ASSIGNMENT_FILTER_OPTIONS = ['ALL', 'MANUAL', 'AUTO'] as const
+const USER_ASSIGNMENT_FILTER_OPTIONS = ['UNASSIGNED', 'ASSIGNED'] as const
 type AssignmentFilterValue = (typeof ASSIGNMENT_FILTER_OPTIONS)[number]
+type UserAssignmentFilterValue = (typeof USER_ASSIGNMENT_FILTER_OPTIONS)[number]
+type UserAchievementLinkStatus = 'ASSIGNED' | 'UNASSIGNED' | 'UNKNOWN'
+
+type UserAchievementLinkState = {
+  status: UserAchievementLinkStatus
+  userAchievementId: string | null
+}
 
 const normalizeText = (value?: string | null) => value?.trim() || ''
 
@@ -42,6 +50,14 @@ const resolveAchievementTitle = (achievement: Achievement) =>
 
 const resolveAchievementDescription = (achievement: Achievement) =>
   normalizeText(achievement.description) || 'No description available.'
+
+const alphabeticalCollator = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'base',
+})
+
+const compareAlphabetical = (leftValue: string, rightValue: string) =>
+  alphabeticalCollator.compare(leftValue, rightValue)
 
 const resolveAchievementPoints = (achievement: Achievement) => {
   const numericPoints =
@@ -88,6 +104,29 @@ const mapUserToRow = (user: User): UserRow => {
   }
 }
 
+const sortAchievementsAlphabetically = (items: Achievement[]) =>
+  [...items].sort((leftAchievement, rightAchievement) => {
+    const titleResult = compareAlphabetical(
+      resolveAchievementTitle(leftAchievement),
+      resolveAchievementTitle(rightAchievement),
+    )
+    if (titleResult !== 0) {
+      return titleResult
+    }
+
+    return compareAlphabetical(normalizeText(leftAchievement.code), normalizeText(rightAchievement.code))
+  })
+
+const sortUserRowsAlphabetically = (items: UserRow[]) =>
+  [...items].sort((leftRow, rightRow) => {
+    const nameResult = compareAlphabetical(leftRow.name, rightRow.name)
+    if (nameResult !== 0) {
+      return nameResult
+    }
+
+    return compareAlphabetical(leftRow.email, rightRow.email)
+  })
+
 interface AchievementAssignmentPageProps {
   onLogout?: () => void
   session?: AuthSession | null
@@ -99,13 +138,19 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
   const [achievementSearchValue, setAchievementSearchValue] = useState('')
   const [userSearchValue, setUserSearchValue] = useState('')
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilterValue>('ALL')
+  const [userAssignmentFilter, setUserAssignmentFilter] = useState<UserAssignmentFilterValue>('UNASSIGNED')
   const [isLoadingAchievements, setIsLoadingAchievements] = useState(false)
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+  const [isLoadingUserAssignments, setIsLoadingUserAssignments] = useState(false)
   const [isAssigningAchievement, setIsAssigningAchievement] = useState(false)
+  const [isUnassigningAchievement, setIsUnassigningAchievement] = useState(false)
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [userRows, setUserRows] = useState<UserRow[]>([])
   const [selectedAchievementId, setSelectedAchievementId] = useState('')
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [userAssignmentStateByUserId, setUserAssignmentStateByUserId] = useState<
+    Record<string, UserAchievementLinkState>
+  >({})
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const resolvedHeaderProfile = useHeaderProfile({
     fallbackProfile: defaultHeaderProfile,
@@ -129,7 +174,9 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
         sortBy: 'createdAt',
         sortDir: 'desc',
       })
-      const nextAchievements = result.items.filter((achievement) => achievement.isActive !== false)
+      const nextAchievements = sortAchievementsAlphabetically(
+        result.items.filter((achievement) => achievement.isActive !== false),
+      )
       setAchievements(nextAchievements)
       setSelectedAchievementId((currentId) => {
         if (currentId && nextAchievements.some((achievement) => achievement.id === currentId)) {
@@ -164,8 +211,9 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
       const nextRows = users
         .map(mapUserToRow)
         .filter((row) => Boolean(row.id))
-      setUserRows(nextRows)
-      setSelectedUserIds((currentIds) => currentIds.filter((id) => nextRows.some((row) => row.id === id)))
+      const sortedRows = sortUserRowsAlphabetically(nextRows)
+      setUserRows(sortedRows)
+      setSelectedUserIds((currentIds) => currentIds.filter((id) => sortedRows.some((row) => row.id === id)))
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
@@ -185,11 +233,16 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
       setUserRows([])
       setSelectedAchievementId('')
       setSelectedUserIds([])
+      setUserAssignmentStateByUserId({})
       return
     }
 
     void refreshData()
   }, [accessToken, clearToast, refreshData])
+
+  useEffect(() => {
+    setSelectedUserIds([])
+  }, [selectedAchievementId, userAssignmentFilter])
 
   const filteredAchievements = useMemo(() => {
     const normalizedSearch = achievementSearchValue.trim().toLowerCase()
@@ -222,14 +275,105 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
     [achievements, selectedAchievementId],
   )
 
-  const filteredUserRows = useMemo(() => {
-    const normalizedSearch = userSearchValue.trim().toLowerCase()
-    if (!normalizedSearch) {
-      return userRows
+  useEffect(() => {
+    if (!accessToken || !selectedAchievement || userRows.length === 0) {
+      setUserAssignmentStateByUserId({})
+      setIsLoadingUserAssignments(false)
+      return
     }
 
-    return userRows.filter((row) => row.searchableText.includes(normalizedSearch))
-  }, [userRows, userSearchValue])
+    let isCancelled = false
+    setIsLoadingUserAssignments(true)
+    setUserAssignmentStateByUserId({})
+
+    const loadUserAssignmentStates = async () => {
+      try {
+        const assignedUsers = await achievementService.listAssignedUsersByAchievement(selectedAchievement.id, accessToken)
+        if (isCancelled) {
+          return
+        }
+
+        const assignedByUserId = new Map<string, string>()
+        assignedUsers.forEach((assignedUser) => {
+          const userId = normalizeText(assignedUser.userId)
+          const userAchievementId = normalizeText(assignedUser.userAchievementId)
+          if (!userId || !userAchievementId || assignedByUserId.has(userId)) {
+            return
+          }
+
+          assignedByUserId.set(userId, userAchievementId)
+        })
+
+        const nextAssignments: Record<string, UserAchievementLinkState> = {}
+        userRows.forEach((row) => {
+          const userAchievementId = assignedByUserId.get(row.id) || null
+          nextAssignments[row.id] = userAchievementId
+            ? {
+                status: 'ASSIGNED',
+                userAchievementId,
+              }
+            : {
+                status: 'UNASSIGNED',
+                userAchievementId: null,
+              }
+        })
+
+        if (isCancelled) {
+          return
+        }
+
+        setUserAssignmentStateByUserId(nextAssignments)
+      } catch {
+        if (isCancelled) {
+          return
+        }
+
+        const nextAssignments: Record<string, UserAchievementLinkState> = {}
+        userRows.forEach((row) => {
+          nextAssignments[row.id] = {
+            status: 'UNKNOWN',
+            userAchievementId: null,
+          }
+        })
+
+        setUserAssignmentStateByUserId(nextAssignments)
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingUserAssignments(false)
+        }
+      }
+    }
+
+    void loadUserAssignmentStates()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [accessToken, selectedAchievement, userRows])
+
+  const filteredUserRows = useMemo(() => {
+    const normalizedSearch = userSearchValue.trim().toLowerCase()
+    const searchedRows = normalizedSearch
+      ? userRows.filter((row) => row.searchableText.includes(normalizedSearch))
+      : userRows
+
+    if (!selectedAchievement) {
+      return searchedRows
+    }
+
+    return searchedRows.filter((row) => {
+      const assignmentState = userAssignmentStateByUserId[row.id]
+      if (!assignmentState) {
+        return false
+      }
+
+      if (userAssignmentFilter === 'ASSIGNED') {
+        return assignmentState.status === 'ASSIGNED'
+      }
+
+      return assignmentState.status === 'UNASSIGNED'
+    })
+  }, [selectedAchievement, userAssignmentFilter, userAssignmentStateByUserId, userRows, userSearchValue])
 
   const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds])
 
@@ -240,6 +384,11 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
 
     return filteredUserRows.every((row) => selectedUserIdSet.has(row.id))
   }, [filteredUserRows, selectedUserIdSet])
+
+  const hasSomeFilteredUsersSelected = useMemo(
+    () => filteredUserRows.some((row) => selectedUserIdSet.has(row.id)),
+    [filteredUserRows, selectedUserIdSet],
+  )
 
   const toggleUserSelection = (userId: string) => {
     setSelectedUserIds((currentIds) => {
@@ -272,9 +421,25 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
     })
   }
 
-  const clearAllSelectedUsers = () => {
-    setSelectedUserIds([])
-  }
+  const isProcessingAction = isAssigningAchievement || isUnassigningAchievement
+  const isAssignMode = userAssignmentFilter === 'UNASSIGNED'
+
+  const isActionButtonDisabled =
+    !selectedAchievement ||
+    !selectedUserIds.length ||
+    isProcessingAction ||
+    isLoadingUserAssignments
+
+  const actionButtonLabel =
+    isAssignMode
+      ? isAssigningAchievement
+        ? 'Assigning...'
+        : 'Assign Achievement'
+      : isUnassigningAchievement
+        ? 'Unassigning...'
+        : 'Unassign Achievement'
+
+  const actionButtonClassName = isAssignMode ? styles.assignButton : styles.unassignButton
 
   const handleAssignAchievement = () => {
     if (!accessToken) {
@@ -292,22 +457,42 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
       return
     }
 
+    if (isLoadingUserAssignments) {
+      showToast('Checking assigned and unassigned users. Please wait a moment.', { variant: 'info' })
+      return
+    }
+
+    const alreadyAssignedUserIds = selectedUserIds.filter(
+      (userId) => userAssignmentStateByUserId[userId]?.status === 'ASSIGNED',
+    )
+    const userIdsToAssign = selectedUserIds.filter(
+      (userId) => userAssignmentStateByUserId[userId]?.status !== 'ASSIGNED',
+    )
+
+    if (!userIdsToAssign.length) {
+      showToast('All selected users are already assigned to this achievement.', { variant: 'info' })
+      return
+    }
+
     const assignAchievement = async () => {
       setIsAssigningAchievement(true)
       const failedUserIds: string[] = []
       const failureMessages: string[] = []
-      let successCount = 0
+      const successfulAssignments: Array<{ userAchievementId: string | null; userId: string }> = []
 
-      for (const userId of selectedUserIds) {
+      for (const userId of userIdsToAssign) {
         try {
-          await achievementService.assignToUser(
+          const response = await achievementService.assignToUser(
             {
               achievementId: selectedAchievement.id,
               userId,
             },
             accessToken,
           )
-          successCount += 1
+          successfulAssignments.push({
+            userAchievementId: normalizeText(response?.id) || null,
+            userId,
+          })
         } catch (error) {
           failedUserIds.push(userId)
           const message = getErrorMessage(error)
@@ -317,26 +502,49 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
         }
       }
 
+      if (successfulAssignments.length > 0) {
+        setUserAssignmentStateByUserId((currentState) => {
+          const nextState = { ...currentState }
+          successfulAssignments.forEach(({ userAchievementId, userId }) => {
+            nextState[userId] = {
+              status: 'ASSIGNED',
+              userAchievementId: userAchievementId || currentState[userId]?.userAchievementId || null,
+            }
+          })
+          return nextState
+        })
+      }
+
       if (!failedUserIds.length) {
         setSelectedUserIds([])
+        const skippedSummary = alreadyAssignedUserIds.length
+          ? ` ${alreadyAssignedUserIds.length} already assigned and skipped.`
+          : ''
         showToast(
-          `Assigned ${resolveAchievementTitle(selectedAchievement)} to ${successCount} user${successCount === 1 ? '' : 's'}.`,
+          `Assigned ${resolveAchievementTitle(selectedAchievement)} to ${successfulAssignments.length} user${
+            successfulAssignments.length === 1 ? '' : 's'
+          }.${skippedSummary}`,
           { variant: 'success' },
         )
-      } else if (successCount > 0) {
+      } else if (successfulAssignments.length > 0) {
         setSelectedUserIds(failedUserIds)
         const uniqueFailureMessages = Array.from(new Set(failureMessages))
         const failureSummary = uniqueFailureMessages.length
           ? ` API: ${uniqueFailureMessages.slice(0, 2).join(' | ')}`
           : ''
+        const skippedSummary = alreadyAssignedUserIds.length
+          ? ` ${alreadyAssignedUserIds.length} already assigned and skipped.`
+          : ''
         showToast(
-          `Assigned ${successCount} user${successCount === 1 ? '' : 's'}. ${failedUserIds.length} failed and remain selected.${failureSummary}`,
+          `Assigned ${successfulAssignments.length} user${successfulAssignments.length === 1 ? '' : 's'}. ${
+            failedUserIds.length
+          } failed and remain selected.${skippedSummary}${failureSummary}`,
           { variant: 'info' },
         )
       } else {
         const uniqueFailureMessages = Array.from(new Set(failureMessages))
         const failureMessage = uniqueFailureMessages[0] || 'Assignment failed for all selected users.'
-        showToast(`${failureMessage}`, {
+        showToast(failureMessage, {
           variant: 'error',
         })
       }
@@ -345,6 +553,122 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
     }
 
     void assignAchievement()
+  }
+
+  const handleUnassignAchievement = () => {
+    if (!accessToken) {
+      showToast('You need to sign in before unassigning achievements.', { variant: 'error' })
+      return
+    }
+
+    if (!selectedAchievement) {
+      showToast('Select an achievement to continue.', { variant: 'error' })
+      return
+    }
+
+    if (!selectedUserIds.length) {
+      showToast('Select at least one user to unassign this achievement.', { variant: 'error' })
+      return
+    }
+
+    if (isLoadingUserAssignments) {
+      showToast('Checking assigned and unassigned users. Please wait a moment.', { variant: 'info' })
+      return
+    }
+
+    const unassignAchievement = async () => {
+      setIsUnassigningAchievement(true)
+      const failedUserIds: string[] = []
+      const failureMessages: string[] = []
+      const successfullyUnassignedUserIds: string[] = []
+      let skippedUnassignedCount = 0
+
+      for (const userId of selectedUserIds) {
+        const assignmentState = userAssignmentStateByUserId[userId]
+
+        if (!assignmentState || assignmentState.status === 'UNKNOWN') {
+          failedUserIds.push(userId)
+          failureMessages.push('Unable to verify assignment status for one or more users.')
+          continue
+        }
+
+        if (assignmentState.status !== 'ASSIGNED' || !assignmentState.userAchievementId) {
+          skippedUnassignedCount += 1
+          continue
+        }
+
+        try {
+          await achievementService.unassignFromUser(assignmentState.userAchievementId, accessToken)
+          successfullyUnassignedUserIds.push(userId)
+        } catch (error) {
+          failedUserIds.push(userId)
+          const message = getErrorMessage(error)
+          if (message.trim()) {
+            failureMessages.push(message.trim())
+          }
+        }
+      }
+
+      if (successfullyUnassignedUserIds.length > 0) {
+        setUserAssignmentStateByUserId((currentState) => {
+          const nextState = { ...currentState }
+          successfullyUnassignedUserIds.forEach((userId) => {
+            nextState[userId] = {
+              status: 'UNASSIGNED',
+              userAchievementId: null,
+            }
+          })
+          return nextState
+        })
+      }
+
+      if (!failedUserIds.length && successfullyUnassignedUserIds.length > 0) {
+        setSelectedUserIds([])
+        const skippedSummary = skippedUnassignedCount
+          ? ` ${skippedUnassignedCount} already unassigned and skipped.`
+          : ''
+        showToast(
+          `Unassigned ${resolveAchievementTitle(selectedAchievement)} from ${successfullyUnassignedUserIds.length} user${
+            successfullyUnassignedUserIds.length === 1 ? '' : 's'
+          }.${skippedSummary}`,
+          { variant: 'success' },
+        )
+      } else if (successfullyUnassignedUserIds.length > 0) {
+        setSelectedUserIds(failedUserIds)
+        const uniqueFailureMessages = Array.from(new Set(failureMessages))
+        const failureSummary = uniqueFailureMessages.length
+          ? ` API: ${uniqueFailureMessages.slice(0, 2).join(' | ')}`
+          : ''
+        const skippedSummary = skippedUnassignedCount
+          ? ` ${skippedUnassignedCount} already unassigned and skipped.`
+          : ''
+        showToast(
+          `Unassigned ${successfullyUnassignedUserIds.length} user${
+            successfullyUnassignedUserIds.length === 1 ? '' : 's'
+          }. ${failedUserIds.length} failed and remain selected.${skippedSummary}${failureSummary}`,
+          { variant: 'info' },
+        )
+      } else if (skippedUnassignedCount > 0 && failedUserIds.length === 0) {
+        showToast('All selected users are already unassigned for this achievement.', { variant: 'info' })
+      } else {
+        const uniqueFailureMessages = Array.from(new Set(failureMessages))
+        const failureMessage = uniqueFailureMessages[0] || 'Unassignment failed for all selected users.'
+        showToast(failureMessage, { variant: 'error' })
+      }
+
+      setIsUnassigningAchievement(false)
+    }
+
+    void unassignAchievement()
+  }
+
+  const handleActionButtonClick = () => {
+    if (isAssignMode) {
+      handleAssignAchievement()
+      return
+    }
+
+    handleUnassignAchievement()
   }
 
   return (
@@ -388,6 +712,19 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                 <h2 className={styles.panelTitle}>1. Select Achievement</h2>
               </div>
 
+              <label className={styles.searchField}>
+                <span>Find Achievement</span>
+                <input
+                  type="search"
+                  className={styles.fieldInput}
+                  value={achievementSearchValue}
+                  placeholder="Search by title, code, category"
+                  onChange={(event) => {
+                    setAchievementSearchValue(event.target.value)
+                  }}
+                />
+              </label>
+
               <div className={styles.filterRow}>
                 {ASSIGNMENT_FILTER_OPTIONS.map((filterOption) => (
                   <button
@@ -404,19 +741,6 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                   </button>
                 ))}
               </div>
-
-              <label className={styles.searchField}>
-                <span>Find Achievement</span>
-                <input
-                  type="search"
-                  className={styles.fieldInput}
-                  value={achievementSearchValue}
-                  placeholder="Search by title, code, category"
-                  onChange={(event) => {
-                    setAchievementSearchValue(event.target.value)
-                  }}
-                />
-              </label>
 
               <div className={styles.achievementList}>
                 {isLoadingAchievements ? (
@@ -470,8 +794,8 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
 
             <article className={`${styles.panel} ${styles.userPanel}`}>
               <div className={styles.panelHeader}>
-                <h2 className={styles.panelTitle}>2. Select Users And Assign</h2>
-                <p className={styles.panelHint}>Search and select one or more users.</p>
+                <h2 className={styles.panelTitle}>2. Select Users, Assign, Or Unassign</h2>
+                <p className={styles.panelHint}>Filter by assignment status to target assigned or unassigned users.</p>
               </div>
 
               <label className={styles.searchField}>
@@ -487,23 +811,33 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                 />
               </label>
 
-              <div className={styles.userActionRow}>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={toggleSelectAllFilteredUsers}
-                  disabled={!filteredUserRows.length || isLoadingUsers}
-                >
-                  {areAllFilteredUsersSelected ? 'Unselect Filtered' : 'Select Filtered'}
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={clearAllSelectedUsers}
-                  disabled={!selectedUserIds.length}
-                >
-                  Clear Selected
-                </button>
+              <div className={styles.filterRow}>
+                {USER_ASSIGNMENT_FILTER_OPTIONS.map((filterOption) => (
+                  <button
+                    key={filterOption}
+                    type="button"
+                    className={`${styles.filterPill} ${
+                      userAssignmentFilter === filterOption ? styles.filterPillActive : ''
+                    }`}
+                    onClick={() => {
+                      setUserAssignmentFilter(filterOption)
+                    }}
+                    disabled={!selectedAchievement}
+                  >
+                    {toDisplayText(filterOption)}
+                  </button>
+                ))}
+              </div>
+
+              <p className={styles.assignmentStatusHint}>
+                {!selectedAchievement
+                  ? 'Select an achievement to load assigned and unassigned users.'
+                  : isLoadingUserAssignments
+                    ? 'Checking user achievement assignments...'
+                    : 'Choose Unassigned to assign users, or Assigned to unassign users.'}
+              </p>
+
+              <div className={styles.selectionInfoRow}>
                 <span className={styles.selectedCount}>
                   <FaUsers aria-hidden="true" />
                   <strong>{selectedUserIds.length}</strong>
@@ -515,29 +849,65 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th scope="col">Pick</th>
+                      <th scope="col" className={styles.pickColumnHeader}>
+                        <button
+                          type="button"
+                          className={`${styles.checkbox} ${styles.headerCheckbox} ${
+                            areAllFilteredUsersSelected ? styles.checkboxSelected : ''
+                          } ${
+                            hasSomeFilteredUsersSelected && !areAllFilteredUsersSelected ? styles.checkboxPartial : ''
+                          }`}
+                          onClick={toggleSelectAllFilteredUsers}
+                          disabled={!filteredUserRows.length || isLoadingUsers}
+                          aria-label={areAllFilteredUsersSelected ? 'Unselect all filtered users' : 'Select all filtered users'}
+                          title={areAllFilteredUsersSelected ? 'Unselect filtered users' : 'Select filtered users'}
+                        >
+                          {areAllFilteredUsersSelected ? (
+                            <FaCheck aria-hidden="true" />
+                          ) : hasSomeFilteredUsersSelected ? (
+                            <span className={styles.checkboxPartialMark} aria-hidden="true" />
+                          ) : null}
+                        </button>
+                      </th>
                       <th scope="col">User</th>
                       <th scope="col">Email</th>
                       <th scope="col">Role</th>
+                      <th scope="col">Achievement</th>
                       <th scope="col">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoadingUsers ? (
                       <tr>
-                        <td colSpan={5} className={styles.panelStateCell}>
+                        <td colSpan={6} className={styles.panelStateCell}>
                           Loading users...
                         </td>
                       </tr>
                     ) : filteredUserRows.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className={styles.panelStateCell}>
+                        <td colSpan={6} className={styles.panelStateCell}>
                           No users found.
                         </td>
                       </tr>
                     ) : (
                       filteredUserRows.map((row) => {
                         const isSelected = selectedUserIdSet.has(row.id)
+                        const assignmentState = userAssignmentStateByUserId[row.id]
+                        const assignmentLabel = !selectedAchievement
+                          ? 'Select achievement'
+                          : !assignmentState || isLoadingUserAssignments
+                            ? 'Checking...'
+                            : assignmentState.status === 'ASSIGNED'
+                              ? 'Assigned'
+                              : assignmentState.status === 'UNASSIGNED'
+                                ? 'Unassigned'
+                                : 'Unavailable'
+                        const assignmentClassName =
+                          assignmentState?.status === 'ASSIGNED'
+                            ? styles.assignmentAssigned
+                            : assignmentState?.status === 'UNASSIGNED'
+                              ? styles.assignmentUnassigned
+                              : styles.assignmentUnknown
                         return (
                           <tr
                             key={row.id}
@@ -546,7 +916,7 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                               toggleUserSelection(row.id)
                             }}
                           >
-                            <td>
+                            <td className={styles.pickCell}>
                               <span className={`${styles.checkbox} ${isSelected ? styles.checkboxSelected : ''}`}>
                                 {isSelected ? <FaCheck aria-hidden="true" /> : null}
                               </span>
@@ -554,6 +924,9 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                             <td>{row.name}</td>
                             <td>{row.email || 'N/A'}</td>
                             <td>{row.roleLabel}</td>
+                            <td>
+                              <span className={`${styles.statusPill} ${assignmentClassName}`}>{assignmentLabel}</span>
+                            </td>
                             <td>
                               <span className={`${styles.statusPill} ${row.isActive ? styles.statusActive : styles.statusInactive}`}>
                                 {row.isActive ? 'Active' : 'Inactive'}
@@ -571,16 +944,17 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
                 <div className={styles.assignmentSummary}>
                   <strong>{selectedAchievement ? resolveAchievementTitle(selectedAchievement) : 'No achievement selected'}</strong>
                   <span>
-                    {selectedUserIds.length} user{selectedUserIds.length === 1 ? '' : 's'} ready for assignment
+                    {selectedUserIds.length} user{selectedUserIds.length === 1 ? '' : 's'} selected for{' '}
+                    {isAssignMode ? 'assignment' : 'unassignment'}.
                   </span>
                 </div>
                 <button
                   type="button"
-                  className={styles.assignButton}
-                  onClick={handleAssignAchievement}
-                  disabled={!selectedAchievement || !selectedUserIds.length || isAssigningAchievement}
+                  className={actionButtonClassName}
+                  onClick={handleActionButtonClick}
+                  disabled={isActionButtonDisabled}
                 >
-                  {isAssigningAchievement ? 'Assigning...' : 'Assign Achievement'}
+                  {actionButtonLabel}
                 </button>
               </div>
 

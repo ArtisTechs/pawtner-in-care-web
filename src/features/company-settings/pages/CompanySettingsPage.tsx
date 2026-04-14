@@ -3,7 +3,11 @@ import { FaEdit, FaPlus, FaSave, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { getAuthSessionUserId } from '@/features/auth/utils/auth-utils'
 import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
-import type { CompanySettings, CompanySettingsPayload } from '@/features/company-settings/types/company-settings-api'
+import type {
+  CompanySettings,
+  CompanySettingsAdminUser,
+  CompanySettingsPayload,
+} from '@/features/company-settings/types/company-settings-api'
 import { userService } from '@/features/users/services/user.service'
 import type { User } from '@/features/users/types/user-api'
 import { resolveUserDisplayName, resolveUserRoleValue } from '@/features/users/utils/user-form'
@@ -17,6 +21,7 @@ import LocationPickerMap from '@/shared/components/maps/LocationPickerMap/Locati
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 import { isValidContactNumber, isValidEmail, normalizeContactNumber } from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './CompanySettingsPage.module.css'
@@ -82,7 +87,7 @@ const mapSettingsToForm = (settings: CompanySettings) => ({
   emailAddress: settings.emailAddress?.trim() ?? DEFAULT_EMAIL_ADDRESS,
   linkUrl: settings.linkUrl?.trim() ?? DEFAULT_LINK_URL,
   maxRescuesPerDay: Number.isFinite(settings.maxRescuesPerDay) ? String(settings.maxRescuesPerDay) : DEFAULT_MAX_RESCUES_PER_DAY,
-  messageAdminUser: settings.messageAdminUser?.trim() ?? DEFAULT_MESSAGE_ADMIN_USER,
+  messageAdminUser: settings.messageAdminUser?.id?.trim() ?? DEFAULT_MESSAGE_ADMIN_USER,
   totalAvailableSpaceForPets: Number.isFinite(settings.totalAvailableSpaceForPets)
     ? String(settings.totalAvailableSpaceForPets)
     : DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS,
@@ -92,6 +97,24 @@ const parseCoordinate = (value: string) => Number.parseFloat(value.trim())
 const parseWholeNumber = (value: string) => Number.parseInt(value.trim(), 10)
 const isValidLongitude = (value: number) => value >= -180 && value <= 180
 const isValidLatitude = (value: number) => value >= -90 && value <= 90
+const resolveAdminContactSummary = (contact: CompanySettingsAdminUser | null | undefined) => {
+  if (!contact) {
+    return 'No admin contact found.'
+  }
+
+  const fullName = [contact.firstName, contact.middleName, contact.lastName]
+    .map((namePart) => namePart?.trim() ?? '')
+    .filter((namePart) => Boolean(namePart))
+    .join(' ')
+
+  const email = contact.email?.trim() ?? ''
+
+  if (fullName && email) {
+    return `${fullName} (${email})`
+  }
+
+  return fullName || email || contact.id
+}
 const resolveAdminContactLabel = (user: User) => {
   const fullName = resolveUserDisplayName(user)
   const email = user.email?.trim() ?? ''
@@ -197,11 +220,12 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   const selectedAdminContactLabel = useMemo(() => {
     const selectedValue = messageAdminUser.trim()
     if (!selectedValue) {
-      return ''
+      return resolveAdminContactSummary(settingsRecord?.messageAdminUser)
     }
 
-    return adminContactOptions.find((option) => option.value === selectedValue)?.label ?? ''
-  }, [adminContactOptions, messageAdminUser])
+    return adminContactOptions.find((option) => option.value === selectedValue)?.label
+      ?? resolveAdminContactSummary(settingsRecord?.messageAdminUser)
+  }, [adminContactOptions, messageAdminUser, settingsRecord?.messageAdminUser])
 
   const loadAdminContactOptions = useCallback(async () => {
     if (!accessToken) {
@@ -223,14 +247,14 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       const nextAdminOptions = users
         .filter((user) => resolveUserRoleValue(user.role) === 'ADMIN')
         .map((user) => {
-          const userId = user.id?.trim() ?? ''
-          if (!userId) {
+          const nextUserId = user.id?.trim() ?? ''
+          if (!nextUserId) {
             return null
           }
 
           return {
             label: resolveAdminContactLabel(user),
-            value: userId,
+            value: nextUserId,
           }
         })
         .filter((option): option is AdminContactOption => Boolean(option))
@@ -315,22 +339,32 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       return
     }
 
+    const backendContactId = settingsRecord?.messageAdminUser?.id?.trim() ?? ''
+    const hasBackendContactOption = adminContactOptions.some((option) => option.value === backendContactId)
+
+    if (hasBackendContactOption) {
+      setMessageAdminUser(backendContactId)
+      return
+    }
+
     const defaultAdminOption = adminContactOptions[0]
     if (!defaultAdminOption) {
       return
     }
 
     setMessageAdminUser(defaultAdminOption.value)
-  }, [adminContactOptions, messageAdminUser])
+  }, [adminContactOptions, messageAdminUser, settingsRecord?.messageAdminUser?.id])
 
   const handleAddressFieldChange = (
     index: number,
     field: keyof CompanyAddressForm,
     value: string,
   ) => {
+    const normalizedValue = field === 'name' ? toTitleCase(value) : value
+
     setAddresses((currentAddresses) =>
       currentAddresses.map((address, currentIndex) =>
-        currentIndex === index ? { ...address, [field]: value } : address,
+        currentIndex === index ? { ...address, [field]: normalizedValue } : address,
       ),
     )
 
@@ -381,7 +415,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
     const normalizedContactNumber = normalizeContactNumber(trimmedContactNumber)
     const trimmedEmailAddress = emailAddress.trim()
     const trimmedLinkUrl = linkUrl.trim()
-    const trimmedMessageAdminUser = messageAdminUser.trim()
+    const trimmedMessageAdminUserId = messageAdminUser.trim()
     const trimmedTotalAvailableSpaceForPets = totalAvailableSpaceForPets.trim()
     const trimmedMaxRescuesPerDay = maxRescuesPerDay.trim()
     const nextFormErrors: CompanySettingsFormErrors = {
@@ -430,7 +464,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
 
     for (let index = 0; index < addresses.length; index += 1) {
       const address = addresses[index]
-      const trimmedName = address.name.trim()
+      const trimmedName = toTitleCase(address.name).trim()
       const trimmedAddress = address.address.trim()
       const trimmedLongitude = address.long.trim()
       const trimmedLatitude = address.latitude.trim()
@@ -497,9 +531,9 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       addresses: normalizedAddresses,
       contactNumber: normalizedContactNumber,
       emailAddress: trimmedEmailAddress,
-      linkUrl: trimmedLinkUrl,
+      linkUrl: trimmedLinkUrl || undefined,
       maxRescuesPerDay: parsedMaxRescuesPerDay,
-      messageAdminUser: trimmedMessageAdminUser || undefined,
+      messageAdminUserId: trimmedMessageAdminUserId || undefined,
       totalAvailableSpaceForPets: parsedTotalAvailableSpaceForPets,
     }
   }
@@ -689,7 +723,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
             </label>
 
             <label className={styles.fieldLabel}>
-              <span>Default Inbox Admin Contact</span>
+              <span>Default Admin Contact</span>
               {isEditMode ? (
                 <select
                   className={styles.fieldInput}
@@ -697,7 +731,12 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                   onChange={(event) => {
                     setMessageAdminUser(event.target.value)
                   }}
-                  disabled={isSavingSettings || isLoadingSettings || isLoadingAdminContactOptions || adminContactOptions.length === 0}
+                  disabled={
+                    isSavingSettings ||
+                    isLoadingSettings ||
+                    isLoadingAdminContactOptions ||
+                    adminContactOptions.length === 0
+                  }
                 >
                   {isLoadingAdminContactOptions ? <option value="">Loading admin users...</option> : null}
                   {!isLoadingAdminContactOptions && adminContactOptions.length === 0 ? (
@@ -710,7 +749,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                   ))}
                 </select>
               ) : (
-                <span className={styles.detailValue}>{selectedAdminContactLabel || 'N/A'}</span>
+                <span className={styles.detailValue}>{selectedAdminContactLabel}</span>
               )}
             </label>
 

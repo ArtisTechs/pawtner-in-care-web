@@ -20,7 +20,7 @@ export const sidebarMenuItems: SidebarMenuItem[] = [
     path: APP_ROUTES.veterinaryClinicList,
   },
   { key: 'user-list', label: 'User List', icon: 'user-list', path: APP_ROUTES.userList },
-  { key: 'adoption-logs', label: 'Adoption Logs', icon: 'adoption-logs', path: APP_ROUTES.adoptionRequests },
+  { key: 'adoption-logs', label: 'Pet Logs', icon: 'adoption-logs', path: APP_ROUTES.adoptionRequests },
   { key: 'emergency-sos', label: 'Emergency SOS', icon: 'emergency-sos', path: APP_ROUTES.emergencySos },
   {
     key: 'donation-campaign-list',

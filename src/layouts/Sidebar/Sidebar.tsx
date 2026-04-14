@@ -19,6 +19,7 @@ import {
   FaGift,
   FaInbox,
   FaPaw,
+  FaSearch,
   FaSignOutAlt,
   FaTachometerAlt,
   FaTrophy,
@@ -51,33 +52,46 @@ interface SidebarSection {
 
 const SIDEBAR_SECTION_CONFIG: Array<{ keys: SidebarItemKey[]; title: string }> = [
   {
-    title: 'Overview',
+    title: 'Home',
     keys: ['dashboard', 'inbox'],
   },
   {
-    title: 'Animal Care',
-    keys: ['pet-list', 'veterinary-clinic-list', 'adoption-logs', 'emergency-sos'],
+    title: 'Pets',
+    keys: ['pet-list', 'adoption-logs', 'emergency-sos'],
   },
   {
-    title: 'Donations & Rewards',
+    title: 'Veterinary',
+    keys: ['veterinary-clinic-list'],
+  },
+  {
+    title: 'Donations',
     keys: [
       'donation-campaign-list',
       'donation-logs',
       'payment-mode-list',
-      'achievement-list',
-      'achievement-assignment',
-      'heroes-wall',
       'item-listing',
       'gift-logs',
     ],
   },
   {
-    title: 'Community & Events',
-    keys: ['events-list', 'calendar', 'volunteer-list', 'community-listing'],
+    title: 'Achievements',
+    keys: [
+      'achievement-list',
+      'achievement-assignment',
+      'heroes-wall',
+    ],
   },
   {
-    title: 'Management',
-    keys: ['user-list', 'to-do'],
+    title: 'Community',
+    keys: ['events-list', 'volunteer-list', 'community-listing'],
+  },
+  {
+    title: 'Planning',
+    keys: ['calendar', 'to-do'],
+  },
+  {
+    title: 'Admin',
+    keys: ['user-list'],
   },
 ]
 
@@ -113,20 +127,34 @@ function Icon({ name }: { name: SidebarIconName }) {
   return <IconComponent />
 }
 
-function groupSidebarItemsByCategory(items: SidebarMenuItem[]): SidebarSection[] {
+function normalizeSearchValue(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function groupSidebarItemsByCategory(items: SidebarMenuItem[], searchQuery: string): SidebarSection[] {
   const itemByKey = new Map(items.map((item) => [item.key, item]))
   const usedKeys = new Set<SidebarItemKey>()
+  const normalizedSearchQuery = normalizeSearchValue(searchQuery)
 
   const categorizedSections = SIDEBAR_SECTION_CONFIG.map(({ keys, title }) => {
-    const categoryItems = keys.flatMap((key) => {
-      const item = itemByKey.get(key)
-      if (!item) {
-        return []
-      }
+    const categoryItems = keys
+      .flatMap((key) => {
+        const item = itemByKey.get(key)
+        if (!item) {
+          return []
+        }
 
-      usedKeys.add(key)
-      return [item]
-    })
+        usedKeys.add(key)
+        return [item]
+      })
+      .filter((item) => {
+        if (!normalizedSearchQuery) {
+          return true
+        }
+
+        const searchableText = `${item.label} ${item.key.replaceAll('-', ' ')} ${title}`.toLowerCase()
+        return searchableText.includes(normalizedSearchQuery)
+      })
 
     return {
       title,
@@ -136,9 +164,22 @@ function groupSidebarItemsByCategory(items: SidebarMenuItem[]): SidebarSection[]
 
   const uncategorizedItems = items.filter((item) => !usedKeys.has(item.key))
   if (uncategorizedItems.length > 0) {
+    const filteredUncategorizedItems = uncategorizedItems.filter((item) => {
+      if (!normalizedSearchQuery) {
+        return true
+      }
+
+      const searchableText = `${item.label} ${item.key.replaceAll('-', ' ')} other tools`.toLowerCase()
+      return searchableText.includes(normalizedSearchQuery)
+    })
+
+    if (filteredUncategorizedItems.length === 0) {
+      return categorizedSections
+    }
+
     categorizedSections.push({
-      title: 'More',
-      items: uncategorizedItems,
+      title: 'Other Tools',
+      items: filteredUncategorizedItems,
     })
   }
 
@@ -229,10 +270,15 @@ function SidebarSections({
   inboxUnreadCount,
   notificationUnreadCount,
   items,
+  searchQuery,
   onLogout,
   onNavigate,
-}: SidebarListProps) {
-  const sections = groupSidebarItemsByCategory(items)
+}: SidebarListProps & { searchQuery: string }) {
+  const sections = groupSidebarItemsByCategory(items, searchQuery)
+
+  if (sections.length === 0) {
+    return <p className={styles.emptyState}>No menu items match your search.</p>
+  }
 
   return (
     <div className={styles.sectionList}>
@@ -257,6 +303,7 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
   const { totalUnreadCount } = useContext(ChatRealtimeContext)
   const { unreadCount: notificationUnreadCount } = useContext(NotificationContext)
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false)
+  const [menuSearchValue, setMenuSearchValue] = useState('')
   const navRef = useRef<HTMLElement | null>(null)
 
   const persistNavScrollTop = () => {
@@ -319,11 +366,27 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
         </div>
 
         <nav ref={navRef} className={styles.nav} aria-label="Main navigation">
+          <div className={styles.menuSearchSticky}>
+            <label className={styles.menuSearchField} aria-label="Search menu items">
+              <FaSearch aria-hidden="true" className={styles.menuSearchIcon} />
+              <input
+                type="search"
+                value={menuSearchValue}
+                onChange={(event) => {
+                  setMenuSearchValue(event.target.value)
+                }}
+                placeholder="Search menu"
+                className={styles.menuSearchInput}
+              />
+            </label>
+          </div>
+
           <SidebarSections
             activeItem={activeItem}
             inboxUnreadCount={totalUnreadCount}
             notificationUnreadCount={notificationUnreadCount}
             items={menuItems}
+            searchQuery={menuSearchValue}
             onLogout={handleLogoutRequest}
             onNavigate={persistNavScrollTop}
           />

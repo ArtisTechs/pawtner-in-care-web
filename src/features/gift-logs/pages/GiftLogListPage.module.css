@@ -350,7 +350,7 @@
 }
 
 .modalActions {
-  padding: 0 16px 16px;
+  padding: 10px 16px 16px;
 }
 
 .modalIconActions {
@@ -404,19 +404,6 @@
     transform 0.22s ease;
 }
 
-.modalTextButton {
-  width: auto;
-  min-width: 110px;
-  border-radius: 10px;
-}
-
-.modalTextButton .modalIconLabel {
-  max-width: 120px;
-  opacity: 1;
-  margin-left: 0;
-  transform: translateX(0);
-}
-
 .modalIconButton:hover:not(:disabled),
 .modalIconButton:focus-visible:not(:disabled) {
   width: 118px;
@@ -425,23 +412,12 @@
   transform: translateY(-1px);
 }
 
-.modalTextButton:hover:not(:disabled),
-.modalTextButton:focus-visible:not(:disabled) {
-  width: auto;
-}
-
 .modalIconButton:hover:not(:disabled) .modalIconLabel,
 .modalIconButton:focus-visible:not(:disabled) .modalIconLabel {
   max-width: 72px;
   opacity: 1;
   margin-left: 8px;
   transform: translateX(0);
-}
-
-.modalTextButton:hover:not(:disabled) .modalIconLabel,
-.modalTextButton:focus-visible:not(:disabled) .modalIconLabel {
-  max-width: 120px;
-  margin-left: 0;
 }
 
 .modalApproveButton {
@@ -460,7 +436,7 @@
 }
 
 .footerNav {
-  margin-top: 18px;
+  margin-top: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;

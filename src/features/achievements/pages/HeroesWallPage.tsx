@@ -185,10 +185,7 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
   const selectedHeroAchievements = selectedHeroDetails?.achievements ?? []
   const selectedHeroTotalPoints = Math.max(selectedHeroDetails?.totalPoints ?? 0, selectedHero?.points ?? 0)
 
-  const renderPodiumHeroCard = (
-    hero: HeroesWallEntry | null,
-    slot: 'center' | 'left' | 'right',
-  ) => {
+  const renderPodiumHeroCard = (hero: HeroesWallEntry | null) => {
     if (!hero) {
       return (
         <div className={`${styles.podiumCard} ${styles.podiumPlaceholder}`} aria-hidden="true">
@@ -197,11 +194,13 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
       )
     }
 
-    const isChampion = slot === 'center'
+    const isChampion = hero.rank === 1
     const heroAvatarUrl = getHeroAvatarUrl(hero)
 
     return (
-      <div className={`${styles.podiumCard} ${isChampion ? styles.podiumChampion : ''}`}>
+      <div
+        className={`${styles.podiumCard} ${isChampion ? styles.podiumChampion : styles.podiumChallenger}`}
+      >
         <div className={styles.avatarWrap}>
           {isChampion ? <img src={crownIcon} alt="" className={styles.crown} aria-hidden="true" /> : null}
           {heroAvatarUrl ? (
@@ -308,13 +307,13 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
             ) : (
               <div className={styles.podiumGrid}>
                 <div className={`${styles.podiumSlot} ${styles.podiumLeft}`}>
-                  {renderPodiumHeroCard(leftPodiumHero, 'left')}
+                  {renderPodiumHeroCard(leftPodiumHero)}
                 </div>
                 <div className={`${styles.podiumSlot} ${styles.podiumCenter}`}>
-                  {renderPodiumHeroCard(centerPodiumHero, 'center')}
+                  {renderPodiumHeroCard(centerPodiumHero)}
                 </div>
                 <div className={`${styles.podiumSlot} ${styles.podiumRight}`}>
-                  {renderPodiumHeroCard(rightPodiumHero, 'right')}
+                  {renderPodiumHeroCard(rightPodiumHero)}
                 </div>
               </div>
             )}

@@ -80,8 +80,12 @@ export const API_ENDPOINTS = {
   },
   achievements: {
     base: `${GAMIFICATION_BASE_PATH}/admin/achievements`,
+    assignedUsersById: (id: string) => `${GAMIFICATION_BASE_PATH}/achievements/${id}`,
     assign: `${GAMIFICATION_BASE_PATH}/admin/achievements/assign`,
+    assignmentById: (userAchievementId: string) =>
+      `${GAMIFICATION_BASE_PATH}/admin/achievements/assignments/${userAchievementId}`,
     byId: (id: string) => `${GAMIFICATION_BASE_PATH}/admin/achievements/${id}`,
+    byUser: (userId: string) => `${GAMIFICATION_BASE_PATH}/users/${userId}/achievements`,
   },
   heroesWall: {
     base: `${GAMIFICATION_BASE_PATH}/heroes-wall`,

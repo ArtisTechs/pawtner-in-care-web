@@ -14,6 +14,7 @@ import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './ItemListingPage.module.css'
 
@@ -331,7 +332,7 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
       return
     }
 
-    const trimmedItemName = createForm.itemName.trim()
+    const trimmedItemName = toTitleCase(createForm.itemName).trim()
     const trimmedDetails = createForm.details.trim()
     const trimmedPhoto = createForm.photo.trim()
     const categories = normalizeCategoryValues(createForm.categories)
@@ -667,7 +668,10 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
                     value={createForm.itemName}
                     onChange={(event) => {
                       clearCreateFormError('itemName')
-                      setCreateForm((currentForm) => ({ ...currentForm, itemName: event.target.value }))
+                      setCreateForm((currentForm) => ({
+                        ...currentForm,
+                        itemName: toTitleCase(event.target.value),
+                      }))
                     }}
                     disabled={isSavingItemListing}
                     placeholder="Premium Dog Leash"

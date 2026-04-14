@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes, FaTrash } from 'react-icons/fa'
+import {
+  FaCheck,
+  FaChevronLeft,
+  FaChevronRight,
+  FaFilter,
+  FaMapMarkerAlt,
+  FaSpinner,
+  FaSyncAlt,
+  FaTimes,
+  FaTrash,
+} from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
+import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
+import type { CompanyAddressPayload } from '@/features/company-settings/types/company-settings-api'
 import { emergencySosService } from '@/features/emergency-sos/services/emergency-sos.service'
 import type {
   EmergencySos,
@@ -12,7 +24,7 @@ import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
 import Sidebar from '@/layouts/Sidebar/Sidebar'
-import { getErrorMessage } from '@/shared/api/api-error'
+import { ApiError, getErrorMessage } from '@/shared/api/api-error'
 import DateMultiSelectPicker from '@/shared/components/ui/DateMultiSelectPicker/DateMultiSelectPicker'
 import Toast from '@/shared/components/feedback/Toast'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
@@ -25,7 +37,7 @@ import styles from './EmergencySosListPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'emergency-sos'
 const DEFAULT_TYPE_OPTIONS: ReadonlyArray<EmergencySosType> = ['INJURED', 'ACCIDENTS', 'RANDOM_STRAY']
-const DEFAULT_STATUS_OPTIONS: ReadonlyArray<EmergencySosStatus> = ['REQUESTED', 'ONGOING_RESCUE', 'RESCUED']
+const DEFAULT_STATUS_OPTIONS: ReadonlyArray<EmergencySosStatus> = ['REQUESTED', 'REJECTED', 'ONGOING', 'RESCUED']
 
 type EmergencySosRow = {
   addressLocation: string
@@ -35,6 +47,7 @@ type EmergencySosRow = {
   dateKey: string
   description: string
   item: EmergencySos
+  photo: string
   personFilledEmail: string
   personFilledId: string
   reportId: string
@@ -56,6 +69,10 @@ type PendingConfirmationAction =
       status: EmergencySosStatus
     }
 
+type CompanyAddressOption = CompanyAddressPayload & {
+  id: string
+}
+
 const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => {
   if (leftValues.length !== rightValues.length) {
     return false
@@ -71,9 +88,17 @@ const STATUS_UI: Record<
     label: string
   }
 > = {
+  ONGOING: {
+    badgeClassName: 'statusProcessing',
+    label: 'Ongoing',
+  },
   ONGOING_RESCUE: {
     badgeClassName: 'statusProcessing',
-    label: 'Ongoing Rescue',
+    label: 'Ongoing',
+  },
+  REJECTED: {
+    badgeClassName: 'statusCancelled',
+    label: 'Rejected',
   },
   REQUESTED: {
     badgeClassName: 'statusOnHold',
@@ -133,25 +158,40 @@ const toSortTime = (value?: string | null) => {
   return Number.isNaN(parsed) ? 0 : parsed
 }
 
-const toReporterName = (item: EmergencySos) => {
-  const person = item.personFilled
-  if (person) {
-    const fullName = [person.firstName, person.middleName, person.lastName]
-      .map((namePart) => namePart?.trim() || '')
-      .filter(Boolean)
-      .join(' ')
-
-    if (fullName) {
-      return fullName
-    }
-
-    const email = person.email?.trim()
-    if (email) {
-      return email
-    }
+const normalizeText = (value?: string | null) => value?.trim() || ''
+const normalizeStatus = (status?: string | null): EmergencySosStatus => {
+  if (!status) {
+    return 'REQUESTED'
   }
 
-  return item.personFilledEmail?.trim() || 'Unknown Reporter'
+  return status === 'ONGOING_RESCUE' ? 'ONGOING' : (status as EmergencySosStatus)
+}
+
+const toReporterName = (item: EmergencySos) => {
+  const person = item.personFilled
+  const personFullName = normalizeText(person?.fullName)
+  if (personFullName) {
+    return personFullName
+  }
+
+  const composedName = [person?.firstName, person?.middleName, person?.lastName]
+    .map((namePart) => normalizeText(namePart))
+    .filter(Boolean)
+    .join(' ')
+  if (composedName) {
+    return composedName
+  }
+
+  const fallbackName =
+    normalizeText(person?.name) ||
+    normalizeText(person?.userName) ||
+    normalizeText(item.personFilledFullName) ||
+    normalizeText(item.personFilledName)
+  if (fallbackName) {
+    return fallbackName
+  }
+
+  return 'Unknown Reporter'
 }
 
 const toStatusLabel = (status?: string | null) => {
@@ -182,7 +222,7 @@ const toTypeLabel = (type?: string | null) => {
 
 const mapSosRow = (item: EmergencySos): EmergencySosRow => {
   const createdAt = item.createdAt ?? item.updatedAt
-  const status = (item.status as EmergencySosStatus) ?? 'REQUESTED'
+  const status = normalizeStatus(item.status)
   const type = (item.type as EmergencySosType) ?? 'INJURED'
 
   return {
@@ -193,6 +233,7 @@ const mapSosRow = (item: EmergencySos): EmergencySosRow => {
     dateKey: toDateKey(createdAt),
     description: item.description?.trim() || '',
     item,
+    photo: item.photo?.trim() || '',
     personFilledEmail: item.personFilled?.email?.trim() || item.personFilledEmail?.trim() || '',
     personFilledId: item.personFilled?.id?.trim() || item.personFilledId?.trim() || '',
     reportId: item.id,
@@ -223,6 +264,10 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
   const [pendingConfirmationAction, setPendingConfirmationAction] = useState<PendingConfirmationAction | null>(null)
   const [typeOptions, setTypeOptions] = useState<EmergencySosType[]>([...DEFAULT_TYPE_OPTIONS])
   const [statusOptions, setStatusOptions] = useState<EmergencySosStatus[]>([...DEFAULT_STATUS_OPTIONS])
+  const [companyAddressOptions, setCompanyAddressOptions] = useState<CompanyAddressOption[]>([])
+  const [isLoadingCompanyAddresses, setIsLoadingCompanyAddresses] = useState(false)
+  const [isOngoingAddressModalOpen, setIsOngoingAddressModalOpen] = useState(false)
+  const [selectedOngoingAddressId, setSelectedOngoingAddressId] = useState('')
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const lastAutoLoadedTokenRef = useRef<string | null>(null)
   const resolvedHeaderProfile = useHeaderProfile({
@@ -263,13 +308,47 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       )
       setStatusOptions(
         fetchedStatuses.length
-          ? (Array.from(new Set(fetchedStatuses)) as EmergencySosStatus[])
+          ? (Array.from(new Set(fetchedStatuses.map((status) => normalizeStatus(status)))) as EmergencySosStatus[])
           : [...DEFAULT_STATUS_OPTIONS],
       )
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
       setIsLoadingLogs(false)
+    }
+  }, [accessToken, showToast])
+
+  const loadCompanyAddresses = useCallback(async () => {
+    if (!accessToken) {
+      setCompanyAddressOptions([])
+      setIsLoadingCompanyAddresses(false)
+      return
+    }
+
+    setIsLoadingCompanyAddresses(true)
+
+    try {
+      const settings = await companySettingsService.get(accessToken)
+      const nextCompanyAddressOptions = (settings.addresses ?? [])
+        .map((address, index) => ({
+          ...address,
+          id: `company-address-${index + 1}`,
+        }))
+        .filter(
+          (address) =>
+            Boolean(address.address?.trim()) && Number.isFinite(address.latitude) && Number.isFinite(address.long),
+        )
+
+      setCompanyAddressOptions(nextCompanyAddressOptions)
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setCompanyAddressOptions([])
+        return
+      }
+
+      showToast(getErrorMessage(error), { variant: 'error' })
+    } finally {
+      setIsLoadingCompanyAddresses(false)
     }
   }, [accessToken, showToast])
 
@@ -289,6 +368,17 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     lastAutoLoadedTokenRef.current = accessToken
     void loadEmergencySos()
   }, [accessToken, clearToast, loadEmergencySos])
+
+  useEffect(() => {
+    if (!accessToken) {
+      setCompanyAddressOptions([])
+      setIsOngoingAddressModalOpen(false)
+      setSelectedOngoingAddressId('')
+      return
+    }
+
+    void loadCompanyAddresses()
+  }, [accessToken, loadCompanyAddresses])
 
   const dateOptions = useMemo(() => {
     const uniqueDateKeys = Array.from(
@@ -412,6 +502,11 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     applyDateSelection(resetDateKeys)
   }
 
+  const selectedOngoingAddress = useMemo(
+    () => companyAddressOptions.find((address) => address.id === selectedOngoingAddressId) ?? null,
+    [companyAddressOptions, selectedOngoingAddressId],
+  )
+
   const closeModal = () => {
     if (isUpdatingStatus) {
       return
@@ -419,11 +514,14 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
 
     setSelectedSosForAction(null)
     setPendingConfirmationAction(null)
+    setIsOngoingAddressModalOpen(false)
+    setSelectedOngoingAddressId('')
   }
 
   const buildUpdatePayload = (
     selected: EmergencySosRow,
     status: EmergencySosStatus,
+    rescueFromAddress?: CompanyAddressOption | null,
   ): UpdateEmergencySosPayload | null => {
     const source = selected.item
     const personFilledId = selected.personFilledId || source.personFilledId?.trim() || source.personFilled?.id?.trim() || ''
@@ -431,8 +529,22 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     const type = (source.type as EmergencySosType) ?? selected.type
     const latitude = source.latitude
     const longitude = source.long
+    const normalizedStatus = normalizeStatus(status)
+    const nextRescueFromAddress =
+      normalizedStatus === 'ONGOING'
+        ? rescueFromAddress?.address?.trim() || ''
+        : source.rescueFromAddress?.trim() || ''
+    const nextRescueFromLat = normalizedStatus === 'ONGOING' ? rescueFromAddress?.latitude : source.rescueFromLat
+    const nextRescueFromLong = normalizedStatus === 'ONGOING' ? rescueFromAddress?.long : source.rescueFromLong
 
     if (!personFilledId || !addressLocation || typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return null
+    }
+
+    if (
+      normalizedStatus === 'ONGOING' &&
+      (!nextRescueFromAddress || typeof nextRescueFromLat !== 'number' || typeof nextRescueFromLong !== 'number')
+    ) {
       return null
     }
 
@@ -442,13 +554,17 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       description: source.description?.trim() || undefined,
       latitude,
       long: longitude,
+      photo: source.photo?.trim() || undefined,
       personFilledId,
-      status,
+      rescueFromAddress: nextRescueFromAddress || undefined,
+      rescueFromLat: typeof nextRescueFromLat === 'number' ? nextRescueFromLat : undefined,
+      rescueFromLong: typeof nextRescueFromLong === 'number' ? nextRescueFromLong : undefined,
+      status: normalizedStatus,
       type,
     }
   }
 
-  const handleUpdateStatus = (status: EmergencySosStatus) => {
+  const handleUpdateStatus = (status: EmergencySosStatus, rescueFromAddress?: CompanyAddressOption | null) => {
     if (!selectedSosForAction) {
       return
     }
@@ -458,12 +574,13 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       return
     }
 
-    if (selectedSosForAction.status === status) {
+    const normalizedStatus = normalizeStatus(status)
+    if (selectedSosForAction.status === normalizedStatus) {
       showToast('Selected SOS request already has this status.', { variant: 'error' })
       return
     }
 
-    const payload = buildUpdatePayload(selectedSosForAction, status)
+    const payload = buildUpdatePayload(selectedSosForAction, normalizedStatus, rescueFromAddress)
     if (!payload) {
       showToast('Missing required SOS fields for update. Please refresh and try again.', { variant: 'error' })
       return
@@ -475,6 +592,9 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       try {
         await emergencySosService.update(selectedSosForAction.reportId, payload, accessToken)
         setSelectedSosForAction(null)
+        setIsOngoingAddressModalOpen(false)
+        setSelectedOngoingAddressId('')
+        setPendingConfirmationAction(null)
         showToast('Emergency SOS status updated successfully.', { variant: 'success' })
         await loadEmergencySos()
       } catch (error) {
@@ -498,6 +618,9 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       try {
         await emergencySosService.delete(selectedSosForAction.reportId, accessToken)
         setSelectedSosForAction(null)
+        setIsOngoingAddressModalOpen(false)
+        setSelectedOngoingAddressId('')
+        setPendingConfirmationAction(null)
         showToast('Emergency SOS request deleted successfully.', { variant: 'success' })
         await loadEmergencySos()
       } catch (error) {
@@ -508,6 +631,40 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     }
 
     void deleteRequest()
+  }
+
+  const handleOpenOngoingAddressModal = () => {
+    if (!selectedSosForAction) {
+      return
+    }
+
+    if (isLoadingCompanyAddresses) {
+      showToast('Loading company addresses. Please try again.', { variant: 'error' })
+      return
+    }
+
+    if (companyAddressOptions.length === 0) {
+      showToast('No company address found. Please update Company Settings first.', { variant: 'error' })
+      return
+    }
+
+    const preferredAddress = selectedOngoingAddress ?? companyAddressOptions[0]
+    if (!preferredAddress) {
+      showToast('No company address found. Please update Company Settings first.', { variant: 'error' })
+      return
+    }
+
+    setSelectedOngoingAddressId(preferredAddress.id)
+    setIsOngoingAddressModalOpen(true)
+  }
+
+  const handleConfirmOngoingAddress = () => {
+    if (!selectedOngoingAddress) {
+      showToast('Please select where the rescue team will come from.', { variant: 'error' })
+      return
+    }
+
+    handleUpdateStatus('ONGOING', selectedOngoingAddress)
   }
 
   const getConfirmationDialogContent = useCallback(() => {
@@ -550,13 +707,20 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       return
     }
 
+    if (pendingConfirmationAction.status === 'ONGOING') {
+      setPendingConfirmationAction(null)
+      handleOpenOngoingAddressModal()
+      return
+    }
+
     handleUpdateStatus(pendingConfirmationAction.status)
     setPendingConfirmationAction(null)
   }
 
-  const canSetRequested = selectedSosForAction?.status !== 'REQUESTED'
-  const canSetOngoing = selectedSosForAction?.status !== 'ONGOING_RESCUE'
+  const canSetRejected = selectedSosForAction?.status !== 'REJECTED'
+  const canSetOngoing = selectedSosForAction?.status !== 'ONGOING'
   const canSetRescued = selectedSosForAction?.status !== 'RESCUED'
+  const hasCompanyAddressOptions = companyAddressOptions.length > 0
 
   return (
     <MainLayout
@@ -649,7 +813,7 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th scope="col">ID</th>
+                    <th scope="col">Photo</th>
                     <th scope="col">Reporter</th>
                     <th scope="col">Address</th>
                     <th scope="col">Date</th>
@@ -687,7 +851,18 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                             setSelectedSosForAction(row)
                           }}
                         >
-                          <td>{row.reportId}</td>
+                          <td>
+                            {row.photo ? (
+                              <img
+                                src={row.photo}
+                                alt={`SOS ${row.reportId} report`}
+                                className={styles.photoThumbnail}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className={styles.photoPlaceholder}>No photo</span>
+                            )}
+                          </td>
                           <td>{row.reporterName}</td>
                           <td>{row.addressLocation}</td>
                           <td>{row.createdAtLabel}</td>
@@ -770,11 +945,6 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
             <div className={styles.modalForm}>
               <div className={styles.modalFields}>
                 <div className={styles.modalMeta}>
-                  <span className={styles.modalMetaLabel}>SOS ID</span>
-                  <span className={styles.modalMetaValue}>{selectedSosForAction.reportId}</span>
-                </div>
-
-                <div className={styles.modalMeta}>
                   <span className={styles.modalMetaLabel}>Reporter</span>
                   <span className={styles.modalMetaValue}>{selectedSosForAction.reporterName}</span>
                 </div>
@@ -782,6 +952,21 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                 <div className={styles.modalMeta}>
                   <span className={styles.modalMetaLabel}>Type</span>
                   <span className={styles.modalMetaValue}>{selectedSosForAction.typeLabel}</span>
+                </div>
+
+                <div className={styles.fieldLabel}>
+                  <span>Photo</span>
+                  {selectedSosForAction.photo ? (
+                    <div className={styles.modalPhotoFrame}>
+                      <img
+                        src={selectedSosForAction.photo}
+                        alt={`SOS ${selectedSosForAction.reportId} report`}
+                        className={styles.modalPhoto}
+                      />
+                    </div>
+                  ) : (
+                    <div className={styles.fieldDisplay}>No photo provided</div>
+                  )}
                 </div>
 
                 <div className={styles.fieldLabel}>
@@ -812,36 +997,47 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
               </div>
 
               <div className={styles.modalActions}>
+                {!isLoadingCompanyAddresses && !hasCompanyAddressOptions ? (
+                  <p className={styles.modalAddressHint}>
+                    Add at least one company address in Company Settings to set an SOS to ongoing.
+                  </p>
+                ) : null}
+
                 <div className={styles.modalIconActions}>
                   <button
                     type="button"
-                    className={`${styles.modalIconButton} ${styles.modalTextButton} ${styles.modalCancelRequestButton}`}
+                    className={`${styles.modalIconButton} ${styles.modalRejectButton}`}
                     onClick={() => {
-                      setPendingConfirmationAction({ kind: 'update-status', status: 'REQUESTED' })
+                      setPendingConfirmationAction({ kind: 'update-status', status: 'REJECTED' })
                     }}
-                    disabled={isUpdatingStatus || !canSetRequested}
-                    aria-label="Set emergency SOS to requested"
-                    title="Set to Requested"
+                    disabled={isUpdatingStatus || !canSetRejected}
+                    aria-label="Set emergency SOS to rejected"
+                    title="Set to Rejected"
                   >
-                    <span className={styles.modalIconLabel}>Requested</span>
+                    <FaTimes aria-hidden="true" />
+                    <span className={styles.modalIconLabel}>Rejected</span>
                   </button>
 
                   <button
                     type="button"
-                    className={`${styles.modalIconButton} ${styles.modalTextButton} ${styles.modalRejectButton}`}
-                    onClick={() => {
-                      setPendingConfirmationAction({ kind: 'update-status', status: 'ONGOING_RESCUE' })
-                    }}
-                    disabled={isUpdatingStatus || !canSetOngoing}
-                    aria-label="Set emergency SOS to ongoing rescue"
-                    title="Set to Ongoing Rescue"
+                    className={`${styles.modalIconButton} ${styles.modalOngoingButton}`}
+                    onClick={handleOpenOngoingAddressModal}
+                    disabled={
+                      isUpdatingStatus ||
+                      !canSetOngoing ||
+                      isLoadingCompanyAddresses ||
+                      !hasCompanyAddressOptions
+                    }
+                    aria-label="Set emergency SOS to ongoing"
+                    title="Set to Ongoing"
                   >
+                    <FaSpinner aria-hidden="true" />
                     <span className={styles.modalIconLabel}>Ongoing</span>
                   </button>
 
                   <button
                     type="button"
-                    className={`${styles.modalIconButton} ${styles.modalTextButton} ${styles.modalApproveButton}`}
+                    className={`${styles.modalIconButton} ${styles.modalApproveButton}`}
                     onClick={() => {
                       setPendingConfirmationAction({ kind: 'update-status', status: 'RESCUED' })
                     }}
@@ -849,6 +1045,7 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                     aria-label="Set emergency SOS to rescued"
                     title="Set to Rescued"
                   >
+                    <FaCheck aria-hidden="true" />
                     <span className={styles.modalIconLabel}>Rescued</span>
                   </button>
 
@@ -867,6 +1064,104 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isOngoingAddressModalOpen ? (
+        <div
+          className={styles.modalOverlay}
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !isUpdatingStatus) {
+              setIsOngoingAddressModalOpen(false)
+              setSelectedOngoingAddressId('')
+            }
+          }}
+        >
+          <div
+            className={styles.addressSelectionCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ongoing-address-selection-title"
+            onClick={(event) => {
+              event.stopPropagation()
+            }}
+          >
+            <div className={styles.modalHeader}>
+              <h2 id="ongoing-address-selection-title" className={styles.modalTitle}>
+                Rescue Team Origin
+              </h2>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                onClick={() => {
+                  setIsOngoingAddressModalOpen(false)
+                  setSelectedOngoingAddressId('')
+                }}
+                aria-label="Close rescue origin modal"
+                disabled={isUpdatingStatus}
+              >
+                <FaTimes aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className={styles.addressSelectionBody}>
+              <p className={styles.addressSelectionHint}>
+                Choose where the rescue team will come from when setting this SOS to ongoing.
+              </p>
+
+              <div className={styles.addressSelectionList}>
+                {companyAddressOptions.map((addressOption) => {
+                  const isSelected = selectedOngoingAddressId === addressOption.id
+
+                  return (
+                    <label
+                      key={addressOption.id}
+                      className={`${styles.addressOption} ${isSelected ? styles.addressOptionActive : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="ongoing-address-option"
+                        checked={isSelected}
+                        onChange={() => {
+                          setSelectedOngoingAddressId(addressOption.id)
+                        }}
+                        disabled={isUpdatingStatus}
+                      />
+                      <div className={styles.addressOptionContent}>
+                        <div className={styles.addressOptionName}>
+                          <FaMapMarkerAlt aria-hidden="true" />
+                          <span>{addressOption.name?.trim() || 'Company Address'}</span>
+                        </div>
+                        <p className={styles.addressOptionValue}>{addressOption.address}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className={styles.addressSelectionActions}>
+              <button
+                type="button"
+                className={styles.addressSelectionCancelButton}
+                onClick={() => {
+                  setIsOngoingAddressModalOpen(false)
+                  setSelectedOngoingAddressId('')
+                }}
+                disabled={isUpdatingStatus}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.addressSelectionConfirmButton}
+                onClick={handleConfirmOngoingAddress}
+                disabled={isUpdatingStatus || !selectedOngoingAddress}
+              >
+                Set Ongoing
+              </button>
             </div>
           </div>
         </div>

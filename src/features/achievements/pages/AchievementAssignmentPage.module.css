@@ -93,6 +93,13 @@
   font-weight: 700;
 }
 
+.assignmentStatusHint {
+  margin: -2px 0 0;
+  color: #5f7897;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .filterRow {
   display: flex;
   flex-wrap: wrap;
@@ -266,15 +273,13 @@
   padding: 14px;
 }
 
-.userActionRow {
+.selectionInfoRow {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .selectedCount {
-  margin-left: auto;
+  margin-left: 0;
   border-radius: 999px;
   border: 1px solid #c6dcf4;
   background: #eff6ff;
@@ -349,28 +354,83 @@
 }
 
 .selectedUserRow {
-  background: #eaf3ff;
+  background: #d9ebff;
+}
+
+.pickColumnHeader,
+.pickCell {
+  width: 66px;
+  min-width: 66px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.pickColumnHeader {
+  padding: 10px 11px !important;
+}
+
+.pickCell {
+  padding: 10px 11px !important;
 }
 
 .checkbox {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  border: 1px solid #c5d6ea;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 2px solid #b8cee6;
   background: #ffffff;
   color: #ffffff;
-  display: inline-grid;
+  display: grid;
   place-items: center;
+  margin: 0 auto;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 
 .checkboxSelected {
   border-color: #2f80d7;
   background: #2f80d7;
+  box-shadow:
+    0 0 0 2px rgba(47, 128, 215, 0.2),
+    0 4px 10px rgba(25, 88, 163, 0.35);
+}
+
+.checkboxPartial {
+  border-color: #2f80d7;
+  background: #dcecff;
+  color: #2f80d7;
+}
+
+.checkboxPartialMark {
+  width: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.headerCheckbox {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.headerCheckbox:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 2px rgba(47, 128, 215, 0.16),
+    0 4px 10px rgba(25, 88, 163, 0.2);
+}
+
+.headerCheckbox:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .checkbox svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
 }
 
 .statusPill {
@@ -399,6 +459,21 @@
 .statusInactive {
   background: #ffe8e8;
   color: #b63d3d;
+}
+
+.assignmentAssigned {
+  background: #e9f9ef;
+  color: #22833f;
+}
+
+.assignmentUnassigned {
+  background: #ebf3ff;
+  color: #2e67a8;
+}
+
+.assignmentUnknown {
+  background: #f3f5f9;
+  color: #5f7088;
 }
 
 .panelStateCell {
@@ -451,9 +526,29 @@
   cursor: pointer;
 }
 
+.unassignButton {
+  min-width: 220px;
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ff9172 0%, #dd5f3f 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 24px rgba(151, 60, 34, 0.35);
+  cursor: pointer;
+}
+
 .assignButton:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 14px 26px rgba(20, 79, 150, 0.48);
+}
+
+.unassignButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(151, 60, 34, 0.45);
 }
 
 .assignButton:focus-visible {
@@ -461,7 +556,18 @@
   outline-offset: 2px;
 }
 
+.unassignButton:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 2px;
+}
+
 .assignButton:disabled {
+  opacity: 0.62;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.unassignButton:disabled {
   opacity: 0.62;
   box-shadow: none;
   cursor: not-allowed;
@@ -513,7 +619,8 @@
     align-items: stretch;
   }
 
-  .assignButton {
+  .assignButton,
+  .unassignButton {
     width: 100%;
   }
 

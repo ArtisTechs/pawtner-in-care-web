@@ -83,7 +83,7 @@ export const buildEventPayload = (form: AddEventForm): EventPayload => {
     endTime: form.endTime.trim(),
     latitude: hasCoordinatePair ? parsedLatitude : undefined,
     link: parseOptionalText(form.link),
-    location: parseOptionalText(form.location),
+    location: parseOptionalText(toTitleCase(form.location)),
     long: hasCoordinatePair ? parsedLongitude : undefined,
     photo: parseOptionalText(form.photo),
     startDate: form.startDate.trim(),
