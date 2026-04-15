@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { FaEdit, FaPlus, FaSave, FaTimes, FaTrashAlt } from 'react-icons/fa'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
+import { FaEdit, FaPlus, FaSave, FaTimes, FaTrashAlt, FaUpload } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { getAuthSessionUserId } from '@/features/auth/utils/auth-utils'
 import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
@@ -7,6 +17,7 @@ import type {
   CompanySettings,
   CompanySettingsAdminUser,
   CompanySettingsPayload,
+  SupportFlowImportRequest,
 } from '@/features/company-settings/types/company-settings-api'
 import { userService } from '@/features/users/services/user.service'
 import type { User } from '@/features/users/types/user-api'
@@ -18,9 +29,11 @@ import Sidebar from '@/layouts/Sidebar/Sidebar'
 import { ApiError, getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
 import LocationPickerMap from '@/shared/components/maps/LocationPickerMap/LocationPickerMap'
+import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { localStorageService } from '@/shared/lib/storage/local-storage'
 import { toTitleCase } from '@/shared/lib/text/title-case'
 import { isValidContactNumber, isValidEmail, normalizeContactNumber } from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
@@ -34,6 +47,9 @@ const DEFAULT_MESSAGE_ADMIN_USER = ''
 const DEFAULT_TOTAL_AVAILABLE_SPACE_FOR_PETS = ''
 const DEFAULT_MAX_RESCUES_PER_DAY = ''
 const HTTP_URL_PATTERN = /^https?:\/\/.+/i
+const SUPPORT_CHAT_IMPORT_STORAGE_KEY = '@pawtner/company-settings/support-chat-import'
+const MAX_SUPPORT_CHAT_IMPORT_FILE_SIZE_BYTES = 1_000_000
+const SUPPORT_CHAT_IMPORT_ACCEPTED_EXTENSIONS = ['.json'] as const
 
 type CompanyAddressForm = {
   address: string
@@ -62,6 +78,12 @@ type CompanySettingsFormErrors = {
 type AdminContactOption = {
   label: string
   value: string
+}
+
+type SupportChatImportRecord = {
+  fileName: string
+  importedAt: string
+  size: number
 }
 
 const createEmptyAddress = (): CompanyAddressForm => ({
@@ -97,6 +119,67 @@ const parseCoordinate = (value: string) => Number.parseFloat(value.trim())
 const parseWholeNumber = (value: string) => Number.parseInt(value.trim(), 10)
 const isValidLongitude = (value: number) => value >= -180 && value <= 180
 const isValidLatitude = (value: number) => value >= -90 && value <= 90
+const hasAcceptedSupportChatImportExtension = (fileName: string) =>
+  SUPPORT_CHAT_IMPORT_ACCEPTED_EXTENSIONS.some((extension) => fileName.toLowerCase().endsWith(extension))
+const isSupportFlowImportRequest = (value: unknown): value is SupportFlowImportRequest =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+const formatFileSize = (sizeInBytes: number) => {
+  if (!Number.isFinite(sizeInBytes) || sizeInBytes < 0) {
+    return '0 B'
+  }
+
+  if (sizeInBytes < 1024) {
+    return `${sizeInBytes} B`
+  }
+
+  const sizeInKilobytes = sizeInBytes / 1024
+
+  if (sizeInKilobytes < 1024) {
+    return `${sizeInKilobytes.toFixed(1)} KB`
+  }
+
+  return `${(sizeInKilobytes / 1024).toFixed(1)} MB`
+}
+const formatImportedAt = (value: string) => {
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) {
+    return 'N/A'
+  }
+
+  return new Date(timestamp).toLocaleString()
+}
+const normalizeSupportChatImportRecord = (value: unknown): SupportChatImportRecord | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const typedValue = value as Partial<SupportChatImportRecord>
+
+  if (
+    typeof typedValue.fileName !== 'string' ||
+    typeof typedValue.importedAt !== 'string' ||
+    typeof typedValue.size !== 'number'
+  ) {
+    return null
+  }
+
+  const normalizedFileName = typedValue.fileName.trim()
+  const normalizedImportedAt = typedValue.importedAt.trim()
+
+  if (!normalizedFileName || !normalizedImportedAt) {
+    return null
+  }
+
+  if (!Number.isFinite(typedValue.size) || typedValue.size < 0) {
+    return null
+  }
+
+  return {
+    fileName: normalizedFileName,
+    importedAt: normalizedImportedAt,
+    size: typedValue.size,
+  }
+}
 const resolveAdminContactSummary = (contact: CompanySettingsAdminUser | null | undefined) => {
   if (!contact) {
     return 'No admin contact found.'
@@ -154,8 +237,15 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [settingsRecord, setSettingsRecord] = useState<CompanySettings | null>(null)
   const [formErrors, setFormErrors] = useState<CompanySettingsFormErrors>(createEmptyFormErrors())
+  const [supportChatImportFile, setSupportChatImportFile] = useState<File | null>(null)
+  const [lastSupportChatImport, setLastSupportChatImport] = useState<SupportChatImportRecord | null>(null)
+  const [isSupportImportConfirmOpen, setIsSupportImportConfirmOpen] = useState(false)
+  const [isImportingSupportChats, setIsImportingSupportChats] = useState(false)
+  const [isSupportImportDragOver, setIsSupportImportDragOver] = useState(false)
   const accessToken = session?.accessToken?.trim() ?? ''
   const userId = getAuthSessionUserId(session?.user)
+  const supportChatImportInputRef = useRef<HTMLInputElement | null>(null)
+  const supportChatImportDragDepthRef = useRef(0)
 
   const clearFormErrors = useCallback(() => {
     setFormErrors(createEmptyFormErrors())
@@ -324,6 +414,30 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   }, [clearToast, loadCompanySettings])
 
   useEffect(() => {
+    const rawStoredValue = localStorageService.get(SUPPORT_CHAT_IMPORT_STORAGE_KEY)
+    if (!rawStoredValue) {
+      setLastSupportChatImport(null)
+      return
+    }
+
+    try {
+      const parsedValue = JSON.parse(rawStoredValue) as unknown
+      const normalizedRecord = normalizeSupportChatImportRecord(parsedValue)
+
+      if (!normalizedRecord) {
+        localStorageService.remove(SUPPORT_CHAT_IMPORT_STORAGE_KEY)
+        setLastSupportChatImport(null)
+        return
+      }
+
+      setLastSupportChatImport(normalizedRecord)
+    } catch {
+      localStorageService.remove(SUPPORT_CHAT_IMPORT_STORAGE_KEY)
+      setLastSupportChatImport(null)
+    }
+  }, [])
+
+  useEffect(() => {
     void loadAdminContactOptions()
   }, [loadAdminContactOptions])
 
@@ -408,6 +522,185 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         addressItems: currentErrors.addressItems.filter((_, currentIndex) => currentIndex !== index),
       }
     })
+  }
+
+  const clearSupportChatImportSelection = () => {
+    setSupportChatImportFile(null)
+
+    if (supportChatImportInputRef.current) {
+      supportChatImportInputRef.current.value = ''
+    }
+  }
+
+  const trySetSupportChatImportFile = (nextFile: File | null) => {
+    if (!nextFile) {
+      setSupportChatImportFile(null)
+      return false
+    }
+
+    if (!hasAcceptedSupportChatImportExtension(nextFile.name)) {
+      showToast('Only .json files are supported for support flow import.', { variant: 'error' })
+      clearSupportChatImportSelection()
+      return false
+    }
+
+    if (nextFile.size > MAX_SUPPORT_CHAT_IMPORT_FILE_SIZE_BYTES) {
+      showToast('Selected file exceeds the 1 MB upload limit for support flow import.', { variant: 'error' })
+      clearSupportChatImportSelection()
+      return false
+    }
+
+    setSupportChatImportFile(nextFile)
+    return true
+  }
+
+  const handleSupportChatImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null
+
+    trySetSupportChatImportFile(nextFile)
+  }
+
+  const clearSupportChatImportDragState = () => {
+    supportChatImportDragDepthRef.current = 0
+    setIsSupportImportDragOver(false)
+  }
+
+  const handleSupportImportDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (isImportingSupportChats) {
+      return
+    }
+
+    supportChatImportDragDepthRef.current += 1
+    setIsSupportImportDragOver(true)
+  }
+
+  const handleSupportImportDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (isImportingSupportChats) {
+      return
+    }
+
+    event.dataTransfer.dropEffect = 'copy'
+    setIsSupportImportDragOver(true)
+  }
+
+  const handleSupportImportDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (isImportingSupportChats) {
+      clearSupportChatImportDragState()
+      return
+    }
+
+    supportChatImportDragDepthRef.current -= 1
+
+    if (supportChatImportDragDepthRef.current <= 0) {
+      clearSupportChatImportDragState()
+    }
+  }
+
+  const handleSupportImportDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    clearSupportChatImportDragState()
+
+    if (isImportingSupportChats) {
+      return
+    }
+
+    const droppedFiles = Array.from(event.dataTransfer.files ?? [])
+    const nextFile = droppedFiles[0] ?? null
+
+    if (!nextFile) {
+      showToast('No file detected. Drag and drop a support flow file to import.', { variant: 'error' })
+      return
+    }
+
+    if (droppedFiles.length > 1) {
+      showToast('Multiple files detected. Using the first dropped file.', { variant: 'info' })
+    }
+
+    trySetSupportChatImportFile(nextFile)
+  }
+
+  const handleSupportImportDropZoneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (isImportingSupportChats) {
+      return
+    }
+
+    supportChatImportInputRef.current?.click()
+  }
+
+  const handleConfirmSupportChatImport = () => {
+    const selectedFile = supportChatImportFile
+
+    if (!accessToken) {
+      showToast('You need to sign in before importing support flow.', { variant: 'error' })
+      setIsSupportImportConfirmOpen(false)
+      return
+    }
+
+    if (!userId) {
+      showToast('Your session is missing user ID required by the API header.', { variant: 'error' })
+      setIsSupportImportConfirmOpen(false)
+      return
+    }
+
+    if (!selectedFile) {
+      showToast('Select a support flow file before importing.', { variant: 'error' })
+      setIsSupportImportConfirmOpen(false)
+      return
+    }
+
+    const importSupportChatFile = async () => {
+      setIsImportingSupportChats(true)
+
+      try {
+        const rawContent = await selectedFile.text()
+        const normalizedContent = rawContent.trim()
+
+        if (!normalizedContent) {
+          throw new Error('Selected file is empty. Please choose a file with support flow content.')
+        }
+
+        const parsedPayload = JSON.parse(normalizedContent) as unknown
+        if (!isSupportFlowImportRequest(parsedPayload)) {
+          throw new Error('Support flow import file must contain a valid JSON object.')
+        }
+
+        await companySettingsService.importSupportFlow(parsedPayload, accessToken, userId)
+
+        const nextImportRecord: SupportChatImportRecord = {
+          fileName: selectedFile.name.trim(),
+          importedAt: new Date().toISOString(),
+          size: selectedFile.size,
+        }
+
+        localStorageService.set(SUPPORT_CHAT_IMPORT_STORAGE_KEY, JSON.stringify(nextImportRecord))
+        setLastSupportChatImport(nextImportRecord)
+        clearSupportChatImportSelection()
+        setIsSupportImportConfirmOpen(false)
+        showToast('Support flow imported successfully.', { variant: 'success' })
+      } catch (error) {
+        showToast(getErrorMessage(error, 'Unable to import support flow.'), { variant: 'error' })
+      } finally {
+        setIsImportingSupportChats(false)
+      }
+    }
+
+    void importSupportChatFile()
   }
 
   const buildPayload = (): CompanySettingsPayload | null => {
@@ -619,9 +912,9 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         <section className={styles.container}>
           <header className={styles.pageHeader}>
             <h1 className={styles.pageTitle}>Company Settings</h1>
-            <p className={styles.pageSubtitle}>
+            {/* <p className={styles.pageSubtitle}>
               Configure contact details, rescue capacity, and mapped company addresses for all users.
-            </p>
+            </p> */}
           </header>
 
           <form className={styles.formPanel} onSubmit={handleSave} noValidate>
@@ -989,8 +1282,136 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
               )}
             </div>
           </form>
+
+          <section className={styles.importPanel} aria-labelledby="support-chat-import-title">
+            <header className={styles.importPanelHeader}>
+              <h2 id="support-chat-import-title" className={styles.importPanelTitle}>Support Flow Import</h2>
+              <p className={styles.importPanelDescription}>
+                Upload or drag and drop a support flow JSON file, then confirm import.
+              </p>
+            </header>
+
+            <input
+              ref={supportChatImportInputRef}
+              id="support-chat-import-file"
+              type="file"
+              accept=".json,application/json"
+              className={styles.importFileInput}
+              onChange={handleSupportChatImportFileChange}
+              disabled={isImportingSupportChats}
+            />
+
+            <div
+              role="button"
+              tabIndex={isImportingSupportChats ? -1 : 0}
+              aria-disabled={isImportingSupportChats}
+              className={`${styles.importDropZone} ${
+                isSupportImportDragOver ? styles.importDropZoneActive : ''
+              } ${isImportingSupportChats ? styles.importDropZoneDisabled : ''}`}
+              onClick={() => {
+                if (isImportingSupportChats) {
+                  return
+                }
+
+                supportChatImportInputRef.current?.click()
+              }}
+              onKeyDown={handleSupportImportDropZoneKeyDown}
+              onDragEnter={handleSupportImportDragEnter}
+              onDragOver={handleSupportImportDragOver}
+              onDragLeave={handleSupportImportDragLeave}
+              onDrop={handleSupportImportDrop}
+            >
+              <p className={styles.importDropZoneTitle}>Drag and drop your support flow JSON file here</p>
+              <p className={styles.importDropZoneHint}>or click this area to browse files</p>
+            </div>
+
+            <div className={styles.importActionRow}>
+              <button
+                type="button"
+                className={styles.uploadImportButton}
+                onClick={() => {
+                  if (!supportChatImportFile) {
+                    showToast('Select a support flow file before importing.', { variant: 'error' })
+                    return
+                  }
+
+                  setIsSupportImportConfirmOpen(true)
+                }}
+                disabled={!supportChatImportFile || isImportingSupportChats}
+              >
+                <FaUpload aria-hidden="true" />
+                {isImportingSupportChats ? 'Importing...' : 'Upload & Import'}
+              </button>
+
+              {supportChatImportFile ? (
+                <button
+                  type="button"
+                  className={styles.removeImportButton}
+                  onClick={() => {
+                    clearSupportChatImportSelection()
+                  }}
+                  disabled={isImportingSupportChats}
+                >
+                  Remove Selected File
+                </button>
+              ) : null}
+            </div>
+
+            {supportChatImportFile ? (
+              <div className={styles.importMetaCard}>
+                <p className={styles.importMetaText}>
+                  <strong>Selected file:</strong> {supportChatImportFile.name}
+                </p>
+                <p className={styles.importMetaText}>
+                  <strong>Size:</strong> {formatFileSize(supportChatImportFile.size)}
+                </p>
+                <p className={styles.importMetaText}>
+                  <strong>Last modified:</strong> {new Date(supportChatImportFile.lastModified).toLocaleString()}
+                </p>
+              </div>
+            ) : (
+              <p className={styles.importHint}>
+                Accepted file type: {SUPPORT_CHAT_IMPORT_ACCEPTED_EXTENSIONS.join(', ')} (max 1 MB).
+              </p>
+            )}
+
+            {lastSupportChatImport ? (
+              <div className={styles.importMetaCard}>
+                <p className={styles.importMetaText}>
+                  <strong>Last imported:</strong> {lastSupportChatImport.fileName}
+                </p>
+                <p className={styles.importMetaText}>
+                  <strong>Imported at:</strong> {formatImportedAt(lastSupportChatImport.importedAt)}
+                </p>
+                <p className={styles.importMetaText}>
+                  <strong>Stored size:</strong> {formatFileSize(lastSupportChatImport.size)}
+                </p>
+              </div>
+            ) : null}
+          </section>
         </section>
       </div>
+
+      <ConfirmModal
+        ariaLabel="Support flow import confirmation dialog"
+        cancelLabel="Cancel"
+        confirmLabel={isImportingSupportChats ? 'Uploading...' : 'Upload & Import'}
+        confirmTone="success"
+        isBusy={isImportingSupportChats}
+        isOpen={isSupportImportConfirmOpen}
+        message={
+          supportChatImportFile
+            ? `Upload and import "${supportChatImportFile.name}" to support flow?`
+            : 'Upload and import this file to support flow?'
+        }
+        onCancel={() => {
+          if (!isImportingSupportChats) {
+            setIsSupportImportConfirmOpen(false)
+          }
+        }}
+        onConfirm={handleConfirmSupportChatImport}
+        title="Confirm Support Flow Import"
+      />
     </MainLayout>
   )
 }

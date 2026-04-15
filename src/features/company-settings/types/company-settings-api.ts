@@ -40,3 +40,5 @@ export interface CompanySettings {
   totalAvailableSpaceForPets: number
   updatedDate?: string | null
 }
+
+export type SupportFlowImportRequest = Record<string, unknown>

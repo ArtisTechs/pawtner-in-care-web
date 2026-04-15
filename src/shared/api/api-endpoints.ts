@@ -18,6 +18,7 @@ const TODO_BASE_PATH = '/todos'
 const ITEM_LISTING_BASE_PATH = '/item-listings'
 const GIFT_LOG_BASE_PATH = '/gift-logs'
 const NOTIFICATION_BASE_PATH = '/notifications'
+const SUPPORT_BASE_PATH = '/support'
 
 export const API_ENDPOINTS = {
   auth: {
@@ -93,7 +94,9 @@ export const API_ENDPOINTS = {
   communityPosts: {
     base: COMMUNITY_POST_BASE_PATH,
     byId: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}`,
+    comments: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}/comments`,
     hidden: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}/hidden`,
+    likes: (id: string) => `${COMMUNITY_POST_BASE_PATH}/${id}/likes`,
   },
   companySettings: {
     base: COMPANY_SETTINGS_BASE_PATH,
@@ -158,5 +161,11 @@ export const API_ENDPOINTS = {
     markUnread: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}/unread`,
     readAll: `${NOTIFICATION_BASE_PATH}/my/read-all`,
     unreadCount: `${NOTIFICATION_BASE_PATH}/my/unread-count`,
+  },
+  support: {
+    base: SUPPORT_BASE_PATH,
+    flow: `${SUPPORT_BASE_PATH}/flow`,
+    adminFlow: `${SUPPORT_BASE_PATH}/admin/flow`,
+    adminImportFlow: `${SUPPORT_BASE_PATH}/admin/flow/import`,
   },
 } as const

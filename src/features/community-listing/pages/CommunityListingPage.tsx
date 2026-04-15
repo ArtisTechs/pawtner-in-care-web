@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { FaEdit, FaPlus, FaTimes, FaTrashAlt } from 'react-icons/fa'
+import { FaEdit, FaHeart, FaPlus, FaRegHeart, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import communityFallbackImage from '@/assets/events-icon.png'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { isAdminAuthSession } from '@/features/auth/utils/auth-utils'
@@ -12,7 +12,7 @@ import {
   type AddCommunityPostForm,
 } from '@/features/community-listing/constants/community-listing.constants'
 import { communityListingService } from '@/features/community-listing/services/community-listing.service'
-import type { CommunityPost } from '@/features/community-listing/types/community-listing-api'
+import type { CommunityPost, CommunityPostComment } from '@/features/community-listing/types/community-listing-api'
 import {
   buildCommunityPostPayload,
   formatDateLabel,
@@ -43,6 +43,7 @@ import styles from './CommunityListingPage.module.css'
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'community-listing'
 const MAX_POST_IMAGES = 5
 const MIN_POST_IMAGE_SLOTS = 1
+const MAX_COMMENT_LENGTH = 500
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === 'object'
@@ -110,6 +111,56 @@ const resolvePostImage = (post: CommunityPost) => {
   return photoUrl || communityFallbackImage
 }
 
+const toTimestamp = (value?: string | null) => {
+  if (!value) {
+    return 0
+  }
+
+  const parsedValue = new Date(value).getTime()
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
+const resolveCommentId = (comment: CommunityPostComment, index: number) => {
+  const commentId = comment.commentId?.trim() || comment.id?.trim() || ''
+  if (commentId) {
+    return commentId
+  }
+
+  return `comment-${index}`
+}
+
+const resolveCommentAuthorName = (comment: CommunityPostComment) => {
+  const user = comment.user
+  if (!user) {
+    return comment.userId?.trim() || 'Unknown User'
+  }
+
+  const fullName = [user.firstName, user.middleName, user.lastName]
+    .map((namePart) => namePart?.trim() || '')
+    .filter(Boolean)
+    .join(' ')
+
+  return fullName || user.id || comment.userId?.trim() || 'Unknown User'
+}
+
+const sortPostComments = (comments: CommunityPostComment[]) =>
+  [...comments].sort((commentA, commentB) => {
+    const commentATimestamp = toTimestamp(commentA.updatedAt || commentA.createdAt)
+    const commentBTimestamp = toTimestamp(commentB.updatedAt || commentB.createdAt)
+    return commentBTimestamp - commentATimestamp
+  })
+
+const resolvePostComments = (post: CommunityPost | null | undefined) => {
+  if (!post || !Array.isArray(post.comments)) {
+    return []
+  }
+
+  const normalizedComments = post.comments.filter(
+    (comment): comment is CommunityPostComment => Boolean(comment && typeof comment === 'object'),
+  )
+  return sortPostComments(normalizedComments)
+}
+
 interface CommunityListingPageProps {
   onLogout?: () => void
   session?: AuthSession | null
@@ -139,13 +190,20 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
   const [contentError, setContentError] = useState('')
   const [photoError, setPhotoError] = useState('')
   const [videoError, setVideoError] = useState('')
+  const [postComments, setPostComments] = useState<CommunityPostComment[]>([])
+  const [isLoadingPostComments, setIsLoadingPostComments] = useState(false)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [commentError, setCommentError] = useState('')
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [isUpdatingReaction, setIsUpdatingReaction] = useState(false)
   const [visiblePostCount, setVisiblePostCount] = useState(LIST_INITIAL_BATCH_SIZE)
   const tableScrollRef = useRef<HTMLDivElement | null>(null)
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null)
   const accessToken = session?.accessToken?.trim() ?? ''
   const currentUserIds = useMemo(() => resolveSessionUserIds(session?.user), [session?.user])
   const currentUserId = currentUserIds[0] ?? ''
-  const isAdminUser = isAdminAuthSession(session)
+  const isAdminUser = isAdminAuthSession(session ?? null)
+  const viewingPostId = viewingPost ? resolvePostId(viewingPost) : ''
 
   const isOwnPost = useCallback(
     (post: CommunityPost) => {
@@ -183,6 +241,80 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
     clearToast()
     void loadPosts()
   }, [clearToast, loadPosts])
+
+  const syncPostSnapshot = useCallback((postId: string, nextPost: CommunityPost) => {
+    setPosts((currentPosts) =>
+      currentPosts.map((post) => (resolvePostId(post) === postId ? { ...post, ...nextPost } : post)),
+    )
+
+    setViewingPost((currentPost) => {
+      if (!currentPost || resolvePostId(currentPost) !== postId) {
+        return currentPost
+      }
+
+      return {
+        ...currentPost,
+        ...nextPost,
+      }
+    })
+  }, [])
+
+  const refreshViewingPostInteractions = useCallback(
+    async (
+      postId: string,
+      options?: {
+        showCommentsLoader?: boolean
+        showPostLoader?: boolean
+      },
+    ) => {
+      if (!accessToken || !postId) {
+        return
+      }
+
+      const shouldShowPostLoader = Boolean(options?.showPostLoader)
+      const shouldShowCommentsLoader = options?.showCommentsLoader ?? true
+
+      if (shouldShowPostLoader) {
+        setIsLoadingPostDetails(true)
+      }
+      if (shouldShowCommentsLoader) {
+        setIsLoadingPostComments(true)
+      }
+
+      let resolvedPost: CommunityPost | null = null
+
+      try {
+        const [postResult, commentsResult] = await Promise.allSettled([
+          communityListingService.getOne(postId, accessToken, currentUserId || undefined),
+          communityListingService.listComments(postId, accessToken, currentUserId || undefined),
+        ])
+
+        if (postResult.status === 'fulfilled') {
+          resolvedPost = postResult.value
+          syncPostSnapshot(postId, postResult.value)
+        } else {
+          showToast(getErrorMessage(postResult.reason), { variant: 'error' })
+        }
+
+        if (commentsResult.status === 'fulfilled') {
+          setPostComments(sortPostComments(commentsResult.value))
+        } else {
+          if (resolvedPost) {
+            setPostComments(resolvePostComments(resolvedPost))
+          }
+          showToast(getErrorMessage(commentsResult.reason), { variant: 'error' })
+        }
+      } finally {
+        if (shouldShowPostLoader) {
+          setIsLoadingPostDetails(false)
+        }
+        if (shouldShowCommentsLoader) {
+          setIsLoadingPostComments(false)
+        }
+      }
+    },
+    [accessToken, currentUserId, showToast, syncPostSnapshot],
+  )
 
   const filteredPosts = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
@@ -256,6 +388,12 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
   const closeViewModal = useCallback(() => {
     setViewingPost(null)
     setIsLoadingPostDetails(false)
+    setIsLoadingPostComments(false)
+    setPostComments([])
+    setCommentDraft('')
+    setCommentError('')
+    setIsSubmittingComment(false)
+    setIsUpdatingReaction(false)
   }, [])
 
   const handlePhotoChangeAt = (photoIndex: number, nextPhoto: string) => {
@@ -388,29 +526,15 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
 
   const handleViewPost = (post: CommunityPost) => {
     setViewingPost(post)
+    setPostComments(resolvePostComments(post))
+    setCommentDraft('')
+    setCommentError('')
     const postId = resolvePostId(post)
     if (!accessToken || !postId) {
       return
     }
 
-    const loadPostDetails = async () => {
-      setIsLoadingPostDetails(true)
-      try {
-        const postDetails = await communityListingService.getOne(postId, accessToken, currentUserId || undefined)
-        setViewingPost((currentPost) => {
-          if (!currentPost || resolvePostId(currentPost) !== postId) {
-            return currentPost
-          }
-          return postDetails
-        })
-      } catch (error) {
-        showToast(getErrorMessage(error), { variant: 'error' })
-      } finally {
-        setIsLoadingPostDetails(false)
-      }
-    }
-
-    void loadPostDetails()
+    void refreshViewingPostInteractions(postId, { showCommentsLoader: true, showPostLoader: true })
   }
 
   const handleDeletePost = (postId: string) => {
@@ -550,7 +674,7 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
     setPendingHiddenPost({
       id: postId,
       label: post.content?.trim() || 'this post',
-      nextHidden: !Boolean(post.hidden),
+      nextHidden: !post.hidden,
     })
   }
 
@@ -582,6 +706,110 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
     handleDeletePostRequest(viewingPost)
     closeViewModal()
   }
+
+  const handleToggleReaction = () => {
+    if (!isAdminUser) {
+      showToast('Only admins can react to posts from this page.', { variant: 'error' })
+      return
+    }
+
+    if (!viewingPost || !viewingPostId) {
+      return
+    }
+
+    if (!accessToken) {
+      showToast('You need to sign in before reacting to posts.', { variant: 'error' })
+      return
+    }
+
+    if (!currentUserId) {
+      showToast('Unable to identify the current user for this action.', { variant: 'error' })
+      return
+    }
+
+    const toggleReaction = async () => {
+      setIsUpdatingReaction(true)
+      try {
+        if (viewingPost.likedByCurrentUser) {
+          await communityListingService.removeReaction(viewingPostId, accessToken, currentUserId)
+        } else {
+          await communityListingService.addReaction(viewingPostId, accessToken, currentUserId)
+        }
+
+        await refreshViewingPostInteractions(viewingPostId, {
+          showCommentsLoader: false,
+          showPostLoader: false,
+        })
+      } catch (error) {
+        showToast(getErrorMessage(error), { variant: 'error' })
+      } finally {
+        setIsUpdatingReaction(false)
+      }
+    }
+
+    void toggleReaction()
+  }
+
+  const handleAddComment = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!isAdminUser) {
+      showToast('Only admins can comment on posts from this page.', { variant: 'error' })
+      return
+    }
+
+    if (!viewingPostId || !viewingPost) {
+      return
+    }
+
+    if (!accessToken) {
+      showToast('You need to sign in before adding a comment.', { variant: 'error' })
+      return
+    }
+
+    if (!currentUserId) {
+      showToast('Unable to identify the current user for this action.', { variant: 'error' })
+      return
+    }
+
+    const normalizedComment = commentDraft.trim()
+    if (!normalizedComment) {
+      setCommentError('Comment is required.')
+      return
+    }
+
+    if (normalizedComment.length > MAX_COMMENT_LENGTH) {
+      setCommentError(`Comment cannot exceed ${MAX_COMMENT_LENGTH} characters.`)
+      return
+    }
+
+    const submitComment = async () => {
+      setCommentError('')
+      setIsSubmittingComment(true)
+      try {
+        await communityListingService.addComment(
+          viewingPostId,
+          { content: normalizedComment },
+          accessToken,
+          currentUserId,
+        )
+        setCommentDraft('')
+        await refreshViewingPostInteractions(viewingPostId, {
+          showCommentsLoader: true,
+          showPostLoader: false,
+        })
+        showToast('Comment added successfully.', { variant: 'success' })
+      } catch (error) {
+        showToast(getErrorMessage(error), { variant: 'error' })
+      } finally {
+        setIsSubmittingComment(false)
+      }
+    }
+
+    void submitComment()
+  }
+
+  const normalizedCommentDraft = commentDraft.trim()
 
   return (
     <MainLayout
@@ -809,6 +1037,84 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
                 <div className={styles.viewDetailItem}><span className={styles.viewDetailLabel}>Updated Date</span><span className={styles.viewDetailValue}>{formatDateLabel(viewingPost.updatedAt)}</span></div>
                 <div className={styles.viewDetailItem}><span className={styles.viewDetailLabel}>Hashtags</span><span className={styles.viewDetailValue}>{resolveHashtags(viewingPost).join(', ') || 'N/A'}</span></div>
                 <div className={`${styles.viewDetailItem} ${styles.viewDetailItemWide}`}><span className={styles.viewDetailLabel}>Content</span><p className={styles.viewDescription}>{viewingPost.content || 'N/A'}</p></div>
+              </div>
+
+              <div className={styles.viewInteractionPanel}>
+                <div className={styles.viewReactionRow}>
+                  <button
+                    type="button"
+                    className={styles.viewReactionButton}
+                    onClick={handleToggleReaction}
+                    disabled={!isAdminUser || isUpdatingReaction || !viewingPostId}
+                  >
+                    {viewingPost.likedByCurrentUser ? <FaHeart aria-hidden="true" /> : <FaRegHeart aria-hidden="true" />}
+                    <span>{isUpdatingReaction ? 'Updating...' : viewingPost.likedByCurrentUser ? 'Unlike' : 'React'}</span>
+                  </button>
+                  <span className={styles.viewReactionMeta}>
+                    {toCountLabel(viewingPost.likeCount)} likes / {toCountLabel(viewingPost.commentCount)} comments
+                  </span>
+                </div>
+
+                {isAdminUser ? (
+                  <form className={styles.viewCommentComposer} onSubmit={handleAddComment}>
+                    <textarea
+                      value={commentDraft}
+                      onChange={(event) => {
+                        setCommentError('')
+                        setCommentDraft(event.target.value)
+                      }}
+                      className={`${styles.viewCommentInput}${commentError ? ` ${styles.fieldInputError}` : ''}`}
+                      placeholder="Write a comment..."
+                      maxLength={MAX_COMMENT_LENGTH}
+                      rows={2}
+                    />
+                    <div className={styles.viewCommentFooter}>
+                      {commentError ? (
+                        <span className={styles.fieldErrorText}>{commentError}</span>
+                      ) : (
+                        <span className={styles.viewCommentCounter}>
+                          {normalizedCommentDraft.length}/{MAX_COMMENT_LENGTH}
+                        </span>
+                      )}
+                      <button
+                        type="submit"
+                        className={styles.viewCommentSubmitButton}
+                        disabled={isSubmittingComment || !normalizedCommentDraft || !viewingPostId}
+                      >
+                        {isSubmittingComment ? 'Posting...' : 'Comment'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className={styles.viewCommentReadOnlyHint}>
+                    You can view comments in this post detail page.
+                  </p>
+                )}
+
+                <section className={styles.viewCommentsSection} aria-live="polite">
+                  <h3 className={styles.viewCommentsTitle}>Comments</h3>
+                  {isLoadingPostComments ? (
+                    <p className={styles.viewCommentStateText}>Loading comments...</p>
+                  ) : postComments.length === 0 ? (
+                    <p className={styles.viewCommentStateText}>No comments on this post yet.</p>
+                  ) : (
+                    <ul className={styles.viewCommentList}>
+                      {postComments.map((comment, commentIndex) => (
+                        <li key={resolveCommentId(comment, commentIndex)} className={styles.viewCommentItem}>
+                          <div className={styles.viewCommentHeader}>
+                            <span className={styles.viewCommentAuthor}>{resolveCommentAuthorName(comment)}</span>
+                            <span className={styles.viewCommentDate}>
+                              {formatDateLabel(comment.updatedAt || comment.createdAt)}
+                            </span>
+                          </div>
+                          <p className={styles.viewCommentContent}>
+                            {comment.content?.trim() || 'No comment content provided.'}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
               </div>
             </div>
 

@@ -29,6 +29,21 @@ export interface CommunityPostMediaPayload {
   sortOrder: number
 }
 
+export interface CommunityPostComment {
+  commentId?: string
+  content?: string | null
+  createdAt?: string | null
+  id?: string
+  postId?: string | null
+  updatedAt?: string | null
+  user?: CommunityUserSummary | null
+  userId?: string | null
+}
+
+export interface CommunityPostCommentPayload {
+  content: string
+}
+
 export interface CommunityPostPayload {
   content?: string
   hashtags?: string[]
@@ -56,6 +71,7 @@ export interface CommunityPost {
   userId?: string | null
   visibility?: CommunityPostVisibility | string | null
   hashtags?: Array<CommunityPostHashtag | string> | null
+  comments?: CommunityPostComment[] | null
 }
 
 export type CommunityPostListSortBy = 'commentCount' | 'createdAt' | 'likeCount' | 'updatedAt'

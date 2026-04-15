@@ -44,6 +44,161 @@
   gap: 14px;
 }
 
+.importPanel {
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px solid #c9d7ea;
+  background: #ffffff;
+  box-shadow: 0 16px 30px rgba(16, 66, 127, 0.16);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.importPanelHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.importPanelTitle {
+  margin: 0;
+  color: #2a4463;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.importPanelDescription {
+  margin: 0;
+  color: #587195;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.importFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.importActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.importDropZone {
+  border-radius: 12px;
+  border: 1px dashed #a9c3e2;
+  background: linear-gradient(180deg, #f7fbff 0%, #eef5ff 100%);
+  padding: 16px 14px;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.importDropZone:hover {
+  border-color: #7aa8d8;
+  background: linear-gradient(180deg, #f4f9ff 0%, #e8f2ff 100%);
+}
+
+.importDropZone:focus-visible {
+  outline: none;
+  border-color: #4f90d7;
+  box-shadow: 0 0 0 2px rgba(79, 144, 215, 0.2);
+}
+
+.importDropZoneActive {
+  border-color: #3e8fdb;
+  background: linear-gradient(180deg, #edf6ff 0%, #dcecff 100%);
+  box-shadow: 0 0 0 2px rgba(62, 143, 219, 0.2);
+}
+
+.importDropZoneTitle {
+  margin: 0;
+  color: #35587f;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.importDropZoneHint {
+  margin: 0;
+  color: #5a799f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.uploadImportButton {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.removeImportButton {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 14px;
+  border: 1px solid #d4e0ef;
+  background: #f8fbff;
+  color: #496283;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.uploadImportButton {
+  color: #ffffff;
+  background: linear-gradient(180deg, #3d98e8 0%, #2f80d7 100%);
+}
+
+.uploadImportButton svg {
+  width: 13px;
+  height: 13px;
+}
+
+.importMetaCard {
+  border-radius: 10px;
+  border: 1px solid #dce7f5;
+  background: #f8fbff;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.importMetaText {
+  margin: 0;
+  color: #2d4a6c;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.importHint {
+  margin: 0;
+  color: #587195;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .metaRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -295,7 +450,10 @@
 .addAddressButton:disabled,
 .removeAddressButton:disabled,
 .resetButton:disabled,
-.saveButton:disabled {
+.saveButton:disabled,
+.uploadImportButton:disabled,
+.removeImportButton:disabled,
+.importDropZoneDisabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -325,6 +483,20 @@
 
   .formPanel {
     padding: 12px;
+  }
+
+  .importPanel {
+    padding: 12px;
+  }
+
+  .importActionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .uploadImportButton,
+  .removeImportButton {
+    width: 100%;
   }
 
   .addressHeader {

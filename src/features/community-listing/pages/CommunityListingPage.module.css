@@ -443,6 +443,178 @@
   word-break: break-word;
 }
 
+.viewInteractionPanel {
+  border: 1px solid #dbe5f3;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.viewReactionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.viewReactionButton {
+  min-height: 34px;
+  border: 1px solid #d3ddec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2e4662;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.viewReactionButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.viewReactionButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.viewReactionMeta {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5f728b;
+}
+
+.viewCommentComposer {
+  display: grid;
+  gap: 8px;
+}
+
+.viewCommentInput {
+  width: 100%;
+  min-height: 74px;
+  border: 1px solid #d5ddea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  color: #25364a;
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.viewCommentFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.viewCommentCounter {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5f728b;
+}
+
+.viewCommentSubmitButton {
+  min-width: 90px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #3f92e5 0%, #2b78cd 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.viewCommentSubmitButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.viewCommentReadOnlyHint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f728b;
+}
+
+.viewCommentsSection {
+  border-top: 1px solid #dbe5f3;
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.viewCommentsTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #29405a;
+}
+
+.viewCommentStateText {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f728b;
+}
+
+.viewCommentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.viewCommentItem {
+  border: 1px solid #dbe5f3;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.viewCommentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.viewCommentAuthor {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2c4159;
+}
+
+.viewCommentDate {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6f8199;
+}
+
+.viewCommentContent {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #324860;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .modalForm {
   margin-top: 14px;
   flex: 1;
@@ -747,5 +919,16 @@
 
   .viewMedia {
     grid-template-columns: 1fr;
+  }
+
+  .viewReactionRow,
+  .viewCommentFooter,
+  .viewCommentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .viewCommentSubmitButton {
+    width: 100%;
   }
 }

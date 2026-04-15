@@ -721,6 +721,10 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
   const canSetOngoing = selectedSosForAction?.status !== 'ONGOING'
   const canSetRescued = selectedSosForAction?.status !== 'RESCUED'
   const hasCompanyAddressOptions = companyAddressOptions.length > 0
+  const shouldShowRejectedAction = selectedSosForAction?.status !== 'ONGOING'
+  const shouldShowDeleteAction = selectedSosForAction?.status !== 'ONGOING'
+  const shouldShowStatusActions =
+    selectedSosForAction?.status !== 'RESCUED' && selectedSosForAction?.status !== 'REJECTED'
 
   return (
     <MainLayout
@@ -997,72 +1001,84 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
               </div>
 
               <div className={styles.modalActions}>
-                {!isLoadingCompanyAddresses && !hasCompanyAddressOptions ? (
+                {shouldShowStatusActions ? (
+                  <>
+                    {!isLoadingCompanyAddresses && !hasCompanyAddressOptions ? (
+                      <p className={styles.modalAddressHint}>
+                        Add at least one company address in Company Settings to set an SOS to ongoing.
+                      </p>
+                    ) : null}
+
+                    <div className={styles.modalIconActions}>
+                      {shouldShowRejectedAction ? (
+                        <button
+                          type="button"
+                          className={`${styles.modalIconButton} ${styles.modalRejectButton}`}
+                          onClick={() => {
+                            setPendingConfirmationAction({ kind: 'update-status', status: 'REJECTED' })
+                          }}
+                          disabled={isUpdatingStatus || !canSetRejected}
+                          aria-label="Set emergency SOS to rejected"
+                          title="Set to Rejected"
+                        >
+                          <FaTimes aria-hidden="true" />
+                          <span className={styles.modalIconLabel}>Rejected</span>
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className={`${styles.modalIconButton} ${styles.modalOngoingButton}`}
+                        onClick={handleOpenOngoingAddressModal}
+                        disabled={
+                          isUpdatingStatus ||
+                          !canSetOngoing ||
+                          isLoadingCompanyAddresses ||
+                          !hasCompanyAddressOptions
+                        }
+                        aria-label="Set emergency SOS to ongoing"
+                        title="Set to Ongoing"
+                      >
+                        <FaSpinner aria-hidden="true" />
+                        <span className={styles.modalIconLabel}>Ongoing</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`${styles.modalIconButton} ${styles.modalApproveButton}`}
+                        onClick={() => {
+                          setPendingConfirmationAction({ kind: 'update-status', status: 'RESCUED' })
+                        }}
+                        disabled={isUpdatingStatus || !canSetRescued}
+                        aria-label="Set emergency SOS to rescued"
+                        title="Set to Rescued"
+                      >
+                        <FaCheck aria-hidden="true" />
+                        <span className={styles.modalIconLabel}>Rescued</span>
+                      </button>
+
+                      {shouldShowDeleteAction ? (
+                        <button
+                          type="button"
+                          className={`${styles.modalIconButton} ${styles.modalDeleteButton}`}
+                          onClick={() => {
+                            setPendingConfirmationAction({ kind: 'delete-request', request: selectedSosForAction })
+                          }}
+                          disabled={isUpdatingStatus}
+                          aria-label="Delete emergency SOS"
+                          title="Delete SOS"
+                        >
+                          <FaTrash aria-hidden="true" />
+                          <span className={styles.modalIconLabel}>Delete</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
                   <p className={styles.modalAddressHint}>
-                    Add at least one company address in Company Settings to set an SOS to ongoing.
+                    No actions available for {selectedSosForAction?.statusLabel.toLowerCase()} SOS.
                   </p>
-                ) : null}
-
-                <div className={styles.modalIconActions}>
-                  <button
-                    type="button"
-                    className={`${styles.modalIconButton} ${styles.modalRejectButton}`}
-                    onClick={() => {
-                      setPendingConfirmationAction({ kind: 'update-status', status: 'REJECTED' })
-                    }}
-                    disabled={isUpdatingStatus || !canSetRejected}
-                    aria-label="Set emergency SOS to rejected"
-                    title="Set to Rejected"
-                  >
-                    <FaTimes aria-hidden="true" />
-                    <span className={styles.modalIconLabel}>Rejected</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`${styles.modalIconButton} ${styles.modalOngoingButton}`}
-                    onClick={handleOpenOngoingAddressModal}
-                    disabled={
-                      isUpdatingStatus ||
-                      !canSetOngoing ||
-                      isLoadingCompanyAddresses ||
-                      !hasCompanyAddressOptions
-                    }
-                    aria-label="Set emergency SOS to ongoing"
-                    title="Set to Ongoing"
-                  >
-                    <FaSpinner aria-hidden="true" />
-                    <span className={styles.modalIconLabel}>Ongoing</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`${styles.modalIconButton} ${styles.modalApproveButton}`}
-                    onClick={() => {
-                      setPendingConfirmationAction({ kind: 'update-status', status: 'RESCUED' })
-                    }}
-                    disabled={isUpdatingStatus || !canSetRescued}
-                    aria-label="Set emergency SOS to rescued"
-                    title="Set to Rescued"
-                  >
-                    <FaCheck aria-hidden="true" />
-                    <span className={styles.modalIconLabel}>Rescued</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`${styles.modalIconButton} ${styles.modalDeleteButton}`}
-                    onClick={() => {
-                      setPendingConfirmationAction({ kind: 'delete-request', request: selectedSosForAction })
-                    }}
-                    disabled={isUpdatingStatus}
-                    aria-label="Delete emergency SOS"
-                    title="Delete SOS"
-                  >
-                    <FaTrash aria-hidden="true" />
-                    <span className={styles.modalIconLabel}>Delete</span>
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
