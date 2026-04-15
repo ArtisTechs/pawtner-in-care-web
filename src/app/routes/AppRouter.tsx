@@ -35,6 +35,8 @@ type AppRouterProps = {
   session: AuthSession | null
 }
 
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
+
 function AppRouter({
   defaultRoute,
   isAuthenticated,
@@ -43,7 +45,7 @@ function AppRouter({
   session,
 }: AppRouterProps) {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <Routes>
         <Route path={APP_ROUTES.root} element={<Navigate to={defaultRoute} replace />} />
 

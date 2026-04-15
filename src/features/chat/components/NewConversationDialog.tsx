@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { FaTimes } from 'react-icons/fa'
 import UserSearchDropdown, { type UserSearchOption } from './UserSearchDropdown'
@@ -24,12 +24,15 @@ function NewConversationDialog({
   const [selectedUser, setSelectedUser] = useState<UserSearchOption | null>(null)
   const [showSelectionError, setShowSelectionError] = useState(false)
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedUser(null)
-      setShowSelectionError(false)
-    }
-  }, [isOpen])
+  const resetDialogState = useCallback(() => {
+    setSelectedUser(null)
+    setShowSelectionError(false)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    resetDialogState()
+    onClose()
+  }, [onClose, resetDialogState])
 
   useEffect(() => {
     if (!isOpen) {
@@ -38,7 +41,7 @@ function NewConversationDialog({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !isSubmitting) {
-        onClose()
+        handleClose()
       }
     }
 
@@ -47,7 +50,7 @@ function NewConversationDialog({
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, isSubmitting, onClose])
+  }, [isOpen, isSubmitting, handleClose])
 
   if (!isOpen) {
     return null
@@ -63,6 +66,7 @@ function NewConversationDialog({
 
     setShowSelectionError(false)
     await onCreate(selectedUser)
+    resetDialogState()
   }
 
   const dialogContent = (
@@ -70,7 +74,7 @@ function NewConversationDialog({
       className={styles.overlay}
       onClick={(event) => {
         if (event.target === event.currentTarget && !isSubmitting) {
-          onClose()
+          handleClose()
         }
       }}
     >
@@ -84,7 +88,7 @@ function NewConversationDialog({
           <button
             type="button"
             className={styles.closeButton}
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close create conversation dialog"
             disabled={isSubmitting}
           >
@@ -106,7 +110,7 @@ function NewConversationDialog({
           ) : null}
 
           <div className={styles.actions}>
-            <button type="button" className={styles.cancelButton} onClick={onClose} disabled={isSubmitting}>
+            <button type="button" className={styles.cancelButton} onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </button>
             <button

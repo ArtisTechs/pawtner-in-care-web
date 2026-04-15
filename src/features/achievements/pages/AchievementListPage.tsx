@@ -551,7 +551,10 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
 
     if (isAutoAssign && !isRegistrationCategory && !trimmedRequiredValue) {
       nextErrors.requiredValue = REQUIRED_FIELDS_ERROR_MESSAGE
-    } else if (trimmedRequiredValue && (!Number.isFinite(parsedRequiredValue) || parsedRequiredValue < 0)) {
+    } else if (
+      parsedRequiredValue !== null &&
+      (!Number.isFinite(parsedRequiredValue) || parsedRequiredValue < 0)
+    ) {
       nextErrors.requiredValue = 'Required value must be a valid positive number or zero.'
     }
 

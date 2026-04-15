@@ -494,7 +494,7 @@ function InboxPage({ onLogout, session }: InboxPageProps) {
       return
     }
 
-    const nextIsStarred = !Boolean(targetConversation.isStarred)
+    const nextIsStarred = !targetConversation.isStarred
 
     setConversationPage((currentPage) => ({
       ...currentPage,

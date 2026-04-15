@@ -78,7 +78,12 @@ const formatScheduleLabel = (eventRecord: EventRecord) => {
 const MAP_PREVIEW_DELTA = 0.008
 
 const buildReadOnlyMapPreviewUrl = (latitude?: number | null, longitude?: number | null) => {
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (
+    typeof latitude !== 'number' ||
+    typeof longitude !== 'number' ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
     return ''
   }
 

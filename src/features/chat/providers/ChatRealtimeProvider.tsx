@@ -14,15 +14,19 @@ function ChatRealtimeProvider({ children, session }: ChatRealtimeProviderProps) 
   const [connectionState, setConnectionState] = useState<ChatRealtimeConnectionState>(
     chatRealtimeService.getConnectionState(),
   )
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0)
+  const [unreadCountState, setUnreadCountState] = useState({
+    token: '',
+    totalUnreadCount: 0,
+  })
   const latestAccessTokenRef = useRef('')
 
   const accessToken = session?.accessToken?.trim() ?? ''
   const userId = getAuthSessionUserId(session?.user)
+  const totalUnreadCount =
+    unreadCountState.token === accessToken ? unreadCountState.totalUnreadCount : 0
 
   const syncUnreadCount = useCallback(async (token: string) => {
     if (!token) {
-      setTotalUnreadCount(0)
       return
     }
 
@@ -31,7 +35,10 @@ function ChatRealtimeProvider({ children, session }: ChatRealtimeProviderProps) 
       if (token !== latestAccessTokenRef.current) {
         return
       }
-      setTotalUnreadCount(summary.totalUnreadCount)
+      setUnreadCountState({
+        token,
+        totalUnreadCount: summary.totalUnreadCount,
+      })
     } catch {
       // Keep existing value and wait for the next successful sync.
     }
@@ -63,11 +70,16 @@ function ChatRealtimeProvider({ children, session }: ChatRealtimeProviderProps) 
 
   useEffect(() => {
     if (!accessToken) {
-      setTotalUnreadCount(0)
       return
     }
 
-    void syncUnreadCount(accessToken)
+    const timeoutId = window.setTimeout(() => {
+      void syncUnreadCount(accessToken)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
   }, [accessToken, syncUnreadCount])
 
   useEffect(() => {
@@ -77,7 +89,10 @@ function ChatRealtimeProvider({ children, session }: ChatRealtimeProviderProps) 
 
     const unsubscribe = chatRealtimeService.subscribe((event) => {
       if (event.type === 'UNREAD_COUNT_UPDATED') {
-        setTotalUnreadCount(event.payload.totalUnreadCount)
+        setUnreadCountState({
+          token: accessToken,
+          totalUnreadCount: event.payload.totalUnreadCount,
+        })
         return
       }
 
