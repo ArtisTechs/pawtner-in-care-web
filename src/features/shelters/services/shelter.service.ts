@@ -98,6 +98,25 @@ const toggleShelterActive = async (shelterId: string, active: boolean, token: st
   const payload: ShelterUpdatePayload = {
     active,
     approved: shelter.approved === true,
+    hidden: shelter.hidden === true,
+    name,
+  }
+
+  return apiClient.put<Shelter, ShelterUpdatePayload>(API_ENDPOINTS.shelters.byId(shelterId), payload, { token })
+}
+
+const toggleShelterHidden = async (shelterId: string, hidden: boolean, token: string) => {
+  const shelter = await apiClient.get<Shelter>(API_ENDPOINTS.shelters.byId(shelterId), { token })
+  const name = shelter.name?.trim()
+
+  if (!name) {
+    throw new Error('Unable to update shelter visibility because shelter name is missing.')
+  }
+
+  const payload: ShelterUpdatePayload = {
+    active: shelter.active === true,
+    approved: shelter.approved === true,
+    hidden,
     name,
   }
 
@@ -120,6 +139,7 @@ export const shelterService = {
   list: listShelters,
   listPublic: listPublicShelters,
   toggleActive: toggleShelterActive,
+  toggleHidden: toggleShelterHidden,
   update: (shelterId: string, payload: ShelterUpdatePayload, token: string) =>
     apiClient.put<Shelter, ShelterUpdatePayload>(API_ENDPOINTS.shelters.byId(shelterId), payload, { token }),
 }

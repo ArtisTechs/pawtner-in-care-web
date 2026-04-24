@@ -3,6 +3,7 @@ export interface Shelter {
   approved?: boolean | null
   createdAt?: string | null
   createdDate?: string | null
+  hidden?: boolean | null
   id: string
   name?: string | null
   updatedAt?: string | null
@@ -16,6 +17,7 @@ export interface ShelterPayload {
 export interface ShelterUpdatePayload {
   active: boolean
   approved: boolean
+  hidden?: boolean
   name: string
 }
 

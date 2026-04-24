@@ -197,6 +197,16 @@
   background: linear-gradient(180deg, #f76969 0%, #e84e4e 100%);
 }
 
+.hideActionButton {
+  border-color: #6a89ab;
+  background: linear-gradient(180deg, #7f9fc1 0%, #6a89ab 100%);
+}
+
+.unhideActionButton {
+  border-color: #2f80d7;
+  background: linear-gradient(180deg, #3f92e5 0%, #2b78cd 100%);
+}
+
 .floatingAddButton {
   position: absolute;
   right: 22px;
@@ -442,6 +452,80 @@
   color: #d94c4c;
 }
 
+.toggleCard {
+  border-radius: 12px;
+  border: 1px solid #d6e3f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+  min-height: 52px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.toggleCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.toggleLabel {
+  color: #2b4768;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.toggleHint {
+  color: #6a7f98;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.toggleInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleTrack {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #c7d7eb;
+  background: #dce6f4;
+  position: relative;
+  flex-shrink: 0;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.toggleThumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  box-shadow: 0 2px 6px rgba(40, 72, 110, 0.3);
+  transition: transform 160ms ease;
+}
+
+.toggleInput:checked + .toggleTrack {
+  background: #2f80d7;
+  border-color: #2f80d7;
+}
+
+.toggleInput:checked + .toggleTrack .toggleThumb {
+  transform: translateX(20px);
+}
+
+.toggleInput:disabled + .toggleTrack {
+  opacity: 0.6;
+}
+
 .modalActions {
   margin-top: auto;
   display: flex;
@@ -494,6 +578,14 @@
 
 .viewDisableButton {
   background: linear-gradient(180deg, #ff9172 0%, #dd5f3f 100%);
+}
+
+.viewHideButton {
+  background: linear-gradient(180deg, #7f9fc1 0%, #6a89ab 100%);
+}
+
+.viewUnhideButton {
+  background: linear-gradient(180deg, #2f8ef1 0%, #1f6fce 100%);
 }
 
 @keyframes modal-overlay-enter {
