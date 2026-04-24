@@ -243,6 +243,7 @@ const getMyNotification = async (notificationId: string, token: string) => {
 }
 
 export const notificationService = {
+  clearAll: (token: string) => apiClient.delete<unknown>(API_ENDPOINTS.notifications.clearAll, { token }),
   delete: (notificationId: string, token: string) =>
     apiClient.delete<null>(API_ENDPOINTS.notifications.byId(notificationId), { token }),
   getMyNotification,

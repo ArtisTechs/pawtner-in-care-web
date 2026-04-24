@@ -1,10 +1,13 @@
 import { API_CONFIG } from '@/config/env'
 import { emitAuthSessionInvalid } from './auth-session-events'
 import { ApiError, isInvalidBearerTokenError, NETWORK_API_ERROR_MESSAGE } from './api-error'
+import { startFullScreenLoaderRequest } from './full-screen-loader-store'
+import { wasRecentlyTriggeredByUserAction } from './user-action-tracker'
 
 type RequestOptions<TBody> = {
   body?: TBody
   headers?: Record<string, string>
+  loader?: 'always' | 'auto' | 'never'
   method?: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT'
   token?: string
 }
@@ -55,37 +58,45 @@ async function request<TResponse, TBody = undefined>(
   }
 
   const hasBearerAuth = hasBearerAuthHeader(headers)
-
-  let response: Response
+  const loaderMode = options.loader ?? 'auto'
+  const shouldShowFullScreenLoader =
+    loaderMode === 'always' || (loaderMode === 'auto' && wasRecentlyTriggeredByUserAction())
+  const stopLoaderRequest = shouldShowFullScreenLoader ? startFullScreenLoaderRequest() : null
 
   try {
-    response = await fetch(buildUrl(path), {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    })
-  } catch (error) {
-    throw new ApiError(0, NETWORK_API_ERROR_MESSAGE, error)
-  }
+    let response: Response
 
-  const rawBody = await response.text()
-  const payload = parseResponseBody(rawBody)
-
-  if (!response.ok) {
-    const apiError = ApiError.fromResponse(response.status, payload)
-
-    if (hasBearerAuth && isInvalidBearerTokenError(apiError)) {
-      emitAuthSessionInvalid({
-        message: apiError.message,
-        path,
-        status: apiError.status,
+    try {
+      response = await fetch(buildUrl(path), {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
       })
+    } catch (error) {
+      throw new ApiError(0, NETWORK_API_ERROR_MESSAGE, error)
     }
 
-    throw apiError
-  }
+    const rawBody = await response.text()
+    const payload = parseResponseBody(rawBody)
 
-  return payload as TResponse
+    if (!response.ok) {
+      const apiError = ApiError.fromResponse(response.status, payload)
+
+      if (hasBearerAuth && isInvalidBearerTokenError(apiError)) {
+        emitAuthSessionInvalid({
+          message: apiError.message,
+          path,
+          status: apiError.status,
+        })
+      }
+
+      throw apiError
+    }
+
+    return payload as TResponse
+  } finally {
+    stopLoaderRequest?.()
+  }
 }
 
 export const apiClient = {

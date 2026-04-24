@@ -17,6 +17,7 @@ type PhotoUploadFieldProps = {
   onNotify?: (message: string, variant: ToastVariant) => void
   previewAlt?: string
   removeButtonLabel?: string
+  required?: boolean
   subtitle?: string
   title?: string
   uploadFolder?: string
@@ -34,6 +35,26 @@ const notifyFallback = () => {}
 const DEFAULT_CROP_RATIO = 3 / 4
 const SQUARE_CROP_RATIO = 1
 const JPEG_QUALITY = 0.92
+
+const normalizeHttpLikeUrl = (value: string) => {
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) {
+    return ''
+  }
+
+  const protocolIndex = normalizedValue.search(/https?:\/\//i)
+
+  if (protocolIndex > 0) {
+    return normalizedValue.slice(protocolIndex)
+  }
+
+  if (normalizedValue.startsWith('//')) {
+    return `https:${normalizedValue}`
+  }
+
+  return normalizedValue
+}
 
 const resolveCenteredCrop = (sourceWidth: number, sourceHeight: number, targetRatio: number): CropRect => {
   const sourceRatio = sourceWidth / sourceHeight
@@ -116,12 +137,14 @@ function PhotoUploadField({
   onChange,
   onNotify = notifyFallback,
   previewAlt = 'Uploaded image preview',
+  required = false,
   removeButtonLabel = 'Remove Photo',
   subtitle = 'Upload from your device or camera.',
   title = 'Photo',
   uploadFolder,
   value,
 }: PhotoUploadFieldProps) {
+  const previewUrl = normalizeHttpLikeUrl(value)
   const usesSquareCrop = Math.abs(cropAspectRatio - SQUARE_CROP_RATIO) < 0.001
   const resolvedHelperText =
     helperText ??
@@ -238,8 +261,9 @@ function PhotoUploadField({
         type: croppedBlob.type || 'image/jpeg',
       })
       await uploadSelectedFile(croppedFile)
-    } catch (error) {
-      onNotify(getErrorMessage(error, 'Unable to crop selected image.'), 'error')
+    } catch {
+      onNotify('Unable to crop selected image. Uploading original photo instead.', 'info')
+      await uploadSelectedFile(selectedFile)
     }
   }
 
@@ -350,13 +374,16 @@ function PhotoUploadField({
   return (
     <section className={styles.root} aria-label={title}>
       <div className={styles.header}>
-        <h3 className={styles.title}>{title}</h3>
+        <h3 className={styles.title}>
+          {title}
+          {required ? <span className={styles.requiredAsterisk}>*</span> : null}
+        </h3>
         <p className={styles.subtitle}>{subtitle}</p>
       </div>
 
-      {value ? (
+      {previewUrl ? (
         <div className={`${styles.previewBox} ${usesSquareCrop ? styles.previewBoxSquare : ''}`}>
-          <img src={value} alt={previewAlt} className={styles.previewImage} />
+          <img src={previewUrl} alt={previewAlt} className={styles.previewImage} />
           <button
             type="button"
             className={styles.previewRemoveButton}

@@ -2,6 +2,7 @@ import type { AuthSession, SendOtpResponse } from '@/features/auth/types/auth-ap
 
 export const DEFAULT_OTP_RESEND_COOLDOWN_SECONDS = 60
 export const LOGIN_SUCCESS_DELAY_MS = 900
+export type DashboardAccessRole = 'ADMIN' | 'SYSTEM_ADMIN'
 
 export const getOtpResendCooldownSeconds = (response: SendOtpResponse | null) => {
   const candidates = [
@@ -48,6 +49,17 @@ const getStringField = (value: unknown, keys: string[]) => {
   return ''
 }
 
+const normalizeRoleToken = (value: string) =>
+  value.trim().toUpperCase().replace(/[\s-]+/g, '_')
+
+const resolveRoleTokenFromUser = (user: AuthSession['user']) => {
+  const role =
+    getStringField(user, ['role', 'userRole', 'userType']) ||
+    (isRecord(user) ? getStringField(user.role, ['name', 'label', 'title']) : '')
+
+  return normalizeRoleToken(role)
+}
+
 export const getAuthSessionUserId = (user: AuthSession['user']) => {
   const directUserId = getStringField(user, ['id', 'userId', 'uuid', 'sub'])
   if (directUserId) {
@@ -66,14 +78,23 @@ export const resolveAuthSessionRole = (session: AuthSession | null) => {
     return ''
   }
 
-  const role =
-    getStringField(session.user, ['role', 'userRole', 'userType']) ||
-    (isRecord(session.user) ? getStringField(session.user.role, ['name', 'label', 'title']) : '')
+  return resolveRoleTokenFromUser(session.user).toLowerCase()
+}
 
-  return role.trim().toLowerCase()
+export const resolveDashboardAccessRole = (session: AuthSession | null): DashboardAccessRole | '' => {
+  if (!session) {
+    return ''
+  }
+
+  const roleToken = resolveRoleTokenFromUser(session.user)
+
+  if (roleToken === 'ADMIN' || roleToken === 'SYSTEM_ADMIN') {
+    return roleToken
+  }
+
+  return ''
 }
 
 export const isAdminAuthSession = (session: AuthSession | null) => {
-  const normalizedRole = resolveAuthSessionRole(session)
-  return normalizedRole.includes('admin')
+  return resolveDashboardAccessRole(session) !== ''
 }

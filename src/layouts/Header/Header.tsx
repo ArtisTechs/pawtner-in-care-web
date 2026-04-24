@@ -23,6 +23,7 @@ function Header({ profile, searchValue, onSearchChange, isMenuOpen, onMenuToggle
   const isNotificationPage =
     location.pathname === APP_ROUTES.notifications ||
     location.pathname.startsWith(`${APP_ROUTES.notifications}/`)
+  const isProfileSettingsPage = location.pathname === APP_ROUTES.profileSettings
 
   const shouldShowAvatarImage = avatarSrc.length > 0 && failedAvatarSrc !== avatarSrc
 
@@ -78,7 +79,15 @@ function Header({ profile, searchValue, onSearchChange, isMenuOpen, onMenuToggle
           </span>
         </button>
 
-        <button type="button" className={styles.profileButton} aria-label="Open profile menu">
+        <button
+          type="button"
+          className={`${styles.profileButton} ${isProfileSettingsPage ? styles.profileButtonActive : ''}`}
+          aria-label="Open profile settings"
+          aria-current={isProfileSettingsPage ? 'page' : undefined}
+          onClick={() => {
+            navigate(APP_ROUTES.profileSettings)
+          }}
+        >
           {shouldShowAvatarImage ? (
             <img
               src={avatarSrc}

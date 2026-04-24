@@ -59,6 +59,16 @@ export interface EmergencySosCountResponse {
   total: number
 }
 
+export interface EmergencySosListResult {
+  isFirst: boolean
+  isLast: boolean
+  items: EmergencySos[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface CreateEmergencySosPayload {
   additionalLocationMessage?: string
   addressLocation: string

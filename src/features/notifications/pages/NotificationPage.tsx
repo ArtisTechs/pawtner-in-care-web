@@ -86,6 +86,9 @@ function NotificationPage({ onLogout, session }: NotificationPageProps) {
   const [totalElements, setTotalElements] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [allTotalCount, setAllTotalCount] = useState(0)
+  const [markingReadIds, setMarkingReadIds] = useState<Set<string>>(new Set())
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [isClearingAll, setIsClearingAll] = useState(false)
   const { unreadCount, refreshUnreadCount } = useContext(NotificationContext)
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
   const listWrapRef = useRef<HTMLDivElement | null>(null)
@@ -263,6 +266,68 @@ function NotificationPage({ onLogout, session }: NotificationPageProps) {
       })
   }
 
+  const handleMarkAsRead = async (notification: NotificationItem) => {
+    if (!accessToken || notification.isRead || markingReadIds.has(notification.id)) {
+      return
+    }
+
+    setMarkingReadIds((previous) => new Set(previous).add(notification.id))
+
+    try {
+      await notificationService.markAsRead(notification.id, accessToken)
+      await Promise.all([loadNotifications(0, { replace: true, silent: true }), refreshUnreadCount()])
+    } catch (error) {
+      showToast(getErrorMessage(error), { variant: 'error' })
+    } finally {
+      setMarkingReadIds((previous) => {
+        const nextSet = new Set(previous)
+        nextSet.delete(notification.id)
+        return nextSet
+      })
+    }
+  }
+
+  const handleDeleteNotification = async (notification: NotificationItem) => {
+    if (!accessToken || deletingIds.has(notification.id)) {
+      return
+    }
+
+    setDeletingIds((previous) => new Set(previous).add(notification.id))
+
+    try {
+      await notificationService.delete(notification.id, accessToken)
+      await Promise.all([loadNotifications(0, { replace: true, silent: true }), refreshUnreadCount()])
+      showToast('Notification deleted.', { variant: 'success' })
+    } catch (error) {
+      showToast(getErrorMessage(error), { variant: 'error' })
+    } finally {
+      setDeletingIds((previous) => {
+        const nextSet = new Set(previous)
+        nextSet.delete(notification.id)
+        return nextSet
+      })
+    }
+  }
+
+  const handleClearAllNotifications = async () => {
+    if (!accessToken || isClearingAll) {
+      return
+    }
+
+    setIsClearingAll(true)
+
+    try {
+      await notificationService.clearAll(accessToken)
+      await Promise.all([loadNotifications(0, { replace: true, silent: true }), refreshUnreadCount()])
+      setAllTotalCount(0)
+      showToast('Notifications cleared.', { variant: 'success' })
+    } catch (error) {
+      showToast(getErrorMessage(error), { variant: 'error' })
+    } finally {
+      setIsClearingAll(false)
+    }
+  }
+
   return (
     <MainLayout
       isSidebarOpen={isSidebarOpen}
@@ -298,28 +363,41 @@ function NotificationPage({ onLogout, session }: NotificationPageProps) {
 
           <div className={styles.panel}>
             <div className={styles.toolbar}>
-              <button
-                type="button"
-                className={`${styles.filterTab} ${activeFilter === 'ALL' ? styles.filterTabActive : ''}`}
-                onClick={() => {
-                  setActiveFilter('ALL')
-                }}
-              >
-                <FaBell aria-hidden="true" />
-                <span>Updates</span>
-                <span className={styles.filterCount}>{allTotalCount}</span>
-              </button>
+              <div className={styles.toolbarTabs}>
+                <button
+                  type="button"
+                  className={`${styles.filterTab} ${activeFilter === 'ALL' ? styles.filterTabActive : ''}`}
+                  onClick={() => {
+                    setActiveFilter('ALL')
+                  }}
+                >
+                  <FaBell aria-hidden="true" />
+                  <span>Updates</span>
+                  <span className={styles.filterCount}>{allTotalCount}</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.filterTab} ${activeFilter === 'UNREAD' ? styles.filterTabActive : ''}`}
+                  onClick={() => {
+                    setActiveFilter('UNREAD')
+                  }}
+                >
+                  <FaEnvelope aria-hidden="true" />
+                  <span>Unread</span>
+                  <span className={styles.filterCount}>{unreadCount}</span>
+                </button>
+              </div>
 
               <button
                 type="button"
-                className={`${styles.filterTab} ${activeFilter === 'UNREAD' ? styles.filterTabActive : ''}`}
+                className={styles.clearAllButton}
+                disabled={isClearingAll || totalElements === 0}
                 onClick={() => {
-                  setActiveFilter('UNREAD')
+                  void handleClearAllNotifications()
                 }}
               >
-                <FaEnvelope aria-hidden="true" />
-                <span>Unread</span>
-                <span className={styles.filterCount}>{unreadCount}</span>
+                {isClearingAll ? 'Clearing...' : 'Clear notifications'}
               </button>
             </div>
 
@@ -352,6 +430,34 @@ function NotificationPage({ onLogout, session }: NotificationPageProps) {
                         <FaClock aria-hidden="true" />
                         <span>{formatRelativeTime(notification.createdAt)}</span>
                       </span>
+
+                      <div className={styles.itemActions}>
+                        {!notification.isRead ? (
+                          <button
+                            type="button"
+                            className={styles.actionButton}
+                            disabled={markingReadIds.has(notification.id) || deletingIds.has(notification.id)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void handleMarkAsRead(notification)
+                            }}
+                          >
+                            {markingReadIds.has(notification.id) ? 'Marking...' : 'Mark as read'}
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          className={`${styles.actionButton} ${styles.deleteButton}`}
+                          disabled={deletingIds.has(notification.id)}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void handleDeleteNotification(notification)
+                          }}
+                        >
+                          {deletingIds.has(notification.id) ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))

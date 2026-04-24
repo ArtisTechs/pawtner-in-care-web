@@ -1,6 +1,7 @@
 import titleLogo from '@/assets/title-logo.png'
 import { APP_ROUTES } from '@/app/routes/route-paths'
-import type { HeaderProfile, SidebarMenuItem } from '@/shared/types/layout'
+import type { DashboardAccessRole } from '@/features/auth/utils/auth-utils'
+import type { HeaderProfile, SidebarItemKey, SidebarMenuItem } from '@/shared/types/layout'
 
 export const sidebarLogo = titleLogo
 
@@ -20,6 +21,18 @@ export const sidebarMenuItems: SidebarMenuItem[] = [
     path: APP_ROUTES.veterinaryClinicList,
   },
   { key: 'user-list', label: 'User List', icon: 'user-list', path: APP_ROUTES.userList },
+  {
+    key: 'shelter-list',
+    label: 'Shelter Management',
+    icon: 'shelter-list',
+    path: APP_ROUTES.shelterList,
+  },
+  {
+    key: 'shelter-association',
+    label: 'Shelter Association',
+    icon: 'shelter-association',
+    path: APP_ROUTES.shelterAssociation,
+  },
   { key: 'adoption-logs', label: 'Pet Logs', icon: 'adoption-logs', path: APP_ROUTES.adoptionRequests },
   { key: 'emergency-sos', label: 'Emergency SOS', icon: 'emergency-sos', path: APP_ROUTES.emergencySos },
   {
@@ -83,6 +96,35 @@ export const sidebarMenuItems: SidebarMenuItem[] = [
 ]
 
 export const sidebarBottomItems: SidebarMenuItem[] = [
-  { key: 'settings', label: 'Settings', icon: 'settings', path: APP_ROUTES.companySettings },
+  { key: 'settings', label: 'Shelter Settings', icon: 'settings', path: APP_ROUTES.companySettings },
   { key: 'logout', label: 'Logout', icon: 'logout' },
 ]
+
+const SYSTEM_ADMIN_MENU_ITEM_KEYS = new Set<SidebarItemKey>([
+  'user-list',
+  'shelter-list',
+  'shelter-association',
+])
+const SYSTEM_ADMIN_BOTTOM_ITEM_KEYS = new Set<SidebarItemKey>(['settings', 'logout'])
+
+export const resolveSidebarMenuItemsByRole = (
+  role: DashboardAccessRole | '',
+  items: SidebarMenuItem[] = sidebarMenuItems,
+) => {
+  if (role === 'SYSTEM_ADMIN') {
+    return items.filter((item) => SYSTEM_ADMIN_MENU_ITEM_KEYS.has(item.key))
+  }
+
+  return items.filter((item) => item.key !== 'shelter-list' && item.key !== 'shelter-association')
+}
+
+export const resolveSidebarBottomItemsByRole = (
+  role: DashboardAccessRole | '',
+  items: SidebarMenuItem[] = sidebarBottomItems,
+) => {
+  if (role !== 'SYSTEM_ADMIN') {
+    return items
+  }
+
+  return items.filter((item) => SYSTEM_ADMIN_BOTTOM_ITEM_KEYS.has(item.key))
+}

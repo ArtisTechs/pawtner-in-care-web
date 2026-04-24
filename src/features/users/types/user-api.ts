@@ -43,6 +43,14 @@ export interface User {
   middleName?: string | null
   profilePicture?: string | null
   role?: UserRoleValue
+  shelter?:
+    | {
+        id?: string | null
+        name?: string | null
+      }
+    | string
+    | null
+  shelterId?: string | null
   updatedAt?: string | null
   updatedDate?: string | null
 }

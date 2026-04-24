@@ -5,6 +5,7 @@ export type NotificationRealtimeEventType =
   | 'NOTIFICATION_UPDATED'
   | 'NOTIFICATION_DELETED'
   | 'NOTIFICATION_READ_ALL'
+  | 'NOTIFICATION_CLEARED_ALL'
 
 export interface NotificationRealtimeEvent {
   eventType: NotificationRealtimeEventType

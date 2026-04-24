@@ -479,6 +479,10 @@
   font-weight: 700;
 }
 
+.requiredMark {
+  color: #d45050;
+}
+
 .fieldInput {
   height: 40px;
   border: 1px solid #d6e0ee;

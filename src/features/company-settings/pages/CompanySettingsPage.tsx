@@ -11,7 +11,7 @@ import {
 } from 'react'
 import { FaEdit, FaPlus, FaSave, FaTimes, FaTrashAlt, FaUpload } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
-import { getAuthSessionUserId } from '@/features/auth/utils/auth-utils'
+import { getAuthSessionUserId, resolveDashboardAccessRole } from '@/features/auth/utils/auth-utils'
 import { companySettingsService } from '@/features/company-settings/services/company-settings.service'
 import type {
   CompanySettings,
@@ -84,6 +84,38 @@ type SupportChatImportRecord = {
   fileName: string
   importedAt: string
   size: number
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object'
+
+const getStringField = (value: unknown, keys: string[]) => {
+  if (!isRecord(value)) {
+    return ''
+  }
+
+  for (const key of keys) {
+    const candidate = value[key]
+
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim()
+    }
+  }
+
+  return ''
+}
+
+const resolveShelterName = (user: unknown) => {
+  const directShelterName = getStringField(user, ['shelterName'])
+  if (directShelterName) {
+    return directShelterName
+  }
+
+  if (!isRecord(user)) {
+    return ''
+  }
+
+  return getStringField(user.shelter, ['name', 'shelterName'])
 }
 
 const createEmptyAddress = (): CompanyAddressForm => ({
@@ -244,6 +276,9 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   const [isSupportImportDragOver, setIsSupportImportDragOver] = useState(false)
   const accessToken = session?.accessToken?.trim() ?? ''
   const userId = getAuthSessionUserId(session?.user)
+  const resolvedRole = resolveDashboardAccessRole(session ?? null)
+  const canManageCompanySettings = resolvedRole === 'ADMIN' || resolvedRole === 'SYSTEM_ADMIN'
+  const canImportSupportFlow = resolvedRole === 'SYSTEM_ADMIN'
   const supportChatImportInputRef = useRef<HTMLInputElement | null>(null)
   const supportChatImportDragDepthRef = useRef(0)
 
@@ -307,6 +342,8 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       })
   }, [addresses, searchValue])
 
+  const shelterName = useMemo(() => resolveShelterName(session?.user), [session?.user])
+
   const selectedAdminContactLabel = useMemo(() => {
     const selectedValue = messageAdminUser.trim()
     if (!selectedValue) {
@@ -335,7 +372,10 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       })
 
       const nextAdminOptions = users
-        .filter((user) => resolveUserRoleValue(user.role) === 'ADMIN')
+        .filter((user) => {
+          const roleValue = resolveUserRoleValue(user.role)
+          return roleValue === 'ADMIN' || roleValue === 'SYSTEM_ADMIN'
+        })
         .map((user) => {
           const nextUserId = user.id?.trim() ?? ''
           if (!nextUserId) {
@@ -367,7 +407,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       setMaxRescuesPerDay(DEFAULT_MAX_RESCUES_PER_DAY)
       setAddresses([createEmptyAddress()])
       setSettingsRecord(null)
-      setIsEditMode(true)
+      setIsEditMode(canManageCompanySettings)
       clearFormErrors()
       return
     }
@@ -397,7 +437,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         setMaxRescuesPerDay(DEFAULT_MAX_RESCUES_PER_DAY)
         setAddresses([createEmptyAddress()])
         setSettingsRecord(null)
-        setIsEditMode(true)
+        setIsEditMode(canManageCompanySettings)
         clearFormErrors()
         return
       }
@@ -406,7 +446,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
     } finally {
       setIsLoadingSettings(false)
     }
-  }, [accessToken, clearFormErrors, showToast])
+  }, [accessToken, canManageCompanySettings, clearFormErrors, showToast])
 
   useEffect(() => {
     clearToast()
@@ -646,6 +686,12 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
   const handleConfirmSupportChatImport = () => {
     const selectedFile = supportChatImportFile
 
+    if (!canImportSupportFlow) {
+      showToast('Only system admins can import support flow.', { variant: 'error' })
+      setIsSupportImportConfirmOpen(false)
+      return
+    }
+
     if (!accessToken) {
       showToast('You need to sign in before importing support flow.', { variant: 'error' })
       setIsSupportImportConfirmOpen(false)
@@ -835,7 +881,12 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
     event.preventDefault()
 
     if (!accessToken) {
-      showToast('You need to sign in before updating company settings.', { variant: 'error' })
+      showToast('You need to sign in before updating shelter settings.', { variant: 'error' })
+      return
+    }
+
+    if (!canManageCompanySettings) {
+      showToast('Only admins and system admins can update shelter settings.', { variant: 'error' })
       return
     }
 
@@ -866,7 +917,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
         setIsEditMode(false)
         clearFormErrors()
         showToast(
-          settingsRecord ? 'Company settings updated successfully.' : 'Company settings created successfully.',
+          settingsRecord ? 'Shelter settings updated successfully.' : 'Shelter settings created successfully.',
           { variant: 'success' },
         )
       } catch (error) {
@@ -911,13 +962,19 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       <div className={styles.page}>
         <section className={styles.container}>
           <header className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Company Settings</h1>
+            <h1 className={styles.pageTitle}>Shelter Settings</h1>
             {/* <p className={styles.pageSubtitle}>
-              Configure contact details, rescue capacity, and mapped company addresses for all users.
+              Configure contact details, rescue capacity, and mapped shelter addresses for all users.
             </p> */}
           </header>
 
-          <form className={styles.formPanel} onSubmit={handleSave} noValidate>
+          {canManageCompanySettings ? (
+            <form className={styles.formPanel} onSubmit={handleSave} noValidate>
+            <label className={styles.fieldLabel}>
+              <span>Shelter Name</span>
+              <span className={styles.detailValue}>{shelterName || 'N/A'}</span>
+            </label>
+
             <label className={styles.fieldLabel}>
               <span>
                 Contact Number <span className={styles.requiredMark}>*</span>
@@ -1114,7 +1171,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
 
             <div className={styles.addressHeader}>
               <h2 className={styles.sectionTitle}>
-                Company Addresses <span className={styles.requiredMark}>*</span>
+                Shelter Addresses <span className={styles.requiredMark}>*</span>
               </h2>
               {isEditMode ? (
                 <button
@@ -1230,60 +1287,62 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
               </div>
             )}
 
-            <div className={styles.footerActions}>
-              {isEditMode ? (
-                <>
+              <div className={styles.footerActions}>
+                {isEditMode ? (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.resetButton}
+                      onClick={() => {
+                        if (settingsRecord) {
+                          const nextForm = mapSettingsToForm(settingsRecord)
+                          setContactNumber(nextForm.contactNumber)
+                          setEmailAddress(nextForm.emailAddress)
+                          setLinkUrl(nextForm.linkUrl)
+                          setMessageAdminUser(nextForm.messageAdminUser)
+                          setTotalAvailableSpaceForPets(nextForm.totalAvailableSpaceForPets)
+                          setMaxRescuesPerDay(nextForm.maxRescuesPerDay)
+                          setAddresses(nextForm.addresses.length > 0 ? nextForm.addresses : [createEmptyAddress()])
+                          setIsEditMode(false)
+                          clearFormErrors()
+                        } else {
+                          void loadCompanySettings()
+                        }
+                      }}
+                      disabled={isSavingSettings || isLoadingSettings}
+                    >
+                      <FaTimes aria-hidden="true" />
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className={styles.saveButton}
+                      disabled={isSavingSettings || isLoadingSettings}
+                    >
+                      <FaSave aria-hidden="true" />
+                      {isSavingSettings ? 'Saving...' : 'Save Shelter Settings'}
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    className={styles.resetButton}
-                    onClick={() => {
-                      if (settingsRecord) {
-                        const nextForm = mapSettingsToForm(settingsRecord)
-                        setContactNumber(nextForm.contactNumber)
-                        setEmailAddress(nextForm.emailAddress)
-                        setLinkUrl(nextForm.linkUrl)
-                        setMessageAdminUser(nextForm.messageAdminUser)
-                        setTotalAvailableSpaceForPets(nextForm.totalAvailableSpaceForPets)
-                        setMaxRescuesPerDay(nextForm.maxRescuesPerDay)
-                        setAddresses(nextForm.addresses.length > 0 ? nextForm.addresses : [createEmptyAddress()])
-                        setIsEditMode(false)
-                        clearFormErrors()
-                      } else {
-                        void loadCompanySettings()
-                      }
-                    }}
-                    disabled={isSavingSettings || isLoadingSettings}
-                  >
-                    <FaTimes aria-hidden="true" />
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
                     className={styles.saveButton}
-                    disabled={isSavingSettings || isLoadingSettings}
+                    onClick={() => {
+                      clearFormErrors()
+                      setIsEditMode(true)
+                    }}
+                    disabled={isLoadingSettings}
                   >
-                    <FaSave aria-hidden="true" />
-                    {isSavingSettings ? 'Saving...' : 'Save Company Settings'}
+                    <FaEdit aria-hidden="true" />
+                    Edit
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.saveButton}
-                  onClick={() => {
-                    clearFormErrors()
-                    setIsEditMode(true)
-                  }}
-                  disabled={isLoadingSettings}
-                >
-                  <FaEdit aria-hidden="true" />
-                  Edit
-                </button>
-              )}
-            </div>
-          </form>
+                )}
+              </div>
+            </form>
+          ) : null}
 
-          <section className={styles.importPanel} aria-labelledby="support-chat-import-title">
+          {canImportSupportFlow ? (
+            <section className={styles.importPanel} aria-labelledby="support-chat-import-title">
             <header className={styles.importPanelHeader}>
               <h2 id="support-chat-import-title" className={styles.importPanelTitle}>Support Flow Import</h2>
               <p className={styles.importPanelDescription}>
@@ -1388,7 +1447,8 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                 </p>
               </div>
             ) : null}
-          </section>
+            </section>
+          ) : null}
         </section>
       </div>
 

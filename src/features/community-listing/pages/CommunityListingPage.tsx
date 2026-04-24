@@ -34,6 +34,7 @@ import Toast from '@/shared/components/feedback/Toast'
 import PhotoUploadField from '@/shared/components/media/PhotoUploadField/PhotoUploadField'
 import VideoUploadField from '@/shared/components/media/VideoUploadField/VideoUploadField'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
+import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/StatusBadge/StatusBadge'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
@@ -97,13 +98,13 @@ const resolveStatusLabel = (post: CommunityPost) => {
   return normalizedStatus === 'DELETED' ? 'Deleted' : 'Active'
 }
 
-const resolveStatusClassName = (post: CommunityPost) => {
+const resolveStatusTone = (post: CommunityPost): StatusBadgeTone => {
   if (post.hidden) {
-    return styles.statusHidden
+    return 'warning'
   }
 
   const normalizedStatus = post.status?.trim().toUpperCase() || ''
-  return normalizedStatus === 'DELETED' ? styles.statusDeleted : styles.statusActive
+  return normalizedStatus === 'DELETED' ? 'danger' : 'positive'
 }
 
 const resolvePostImage = (post: CommunityPost) => {
@@ -887,9 +888,7 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
                           <td>{post.content?.trim() || 'N/A'}</td>
                           <td>{`${toCountLabel(post.likeCount)} / ${toCountLabel(post.commentCount)}`}</td>
                           <td>
-                            <span className={`${styles.statusBadge} ${resolveStatusClassName(post)}`}>
-                              {resolveStatusLabel(post)}
-                            </span>
+                            <StatusBadge label={resolveStatusLabel(post)} tone={resolveStatusTone(post)} />
                           </td>
                           <td>{formatDateLabel(post.updatedAt || post.createdAt)}</td>
                           <td>

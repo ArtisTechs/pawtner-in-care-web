@@ -1,4 +1,6 @@
 import { CLOUDINARY_CONFIG, isCloudinaryConfigured } from '@/config/env'
+import { startFullScreenLoaderRequest } from '@/shared/api/full-screen-loader-store'
+import { wasRecentlyTriggeredByUserAction } from '@/shared/api/user-action-tracker'
 
 interface CloudinaryUploadResponse {
   error?: {
@@ -8,19 +10,27 @@ interface CloudinaryUploadResponse {
   url?: string
 }
 
-type UploadPhotoOptions = {
+type UploadAssetOptions = {
   folder?: string
 }
 
-type CloudinaryResourceType = 'image' | 'video'
+type CloudinaryResourceType = 'image' | 'video' | 'raw' | 'auto'
 
 const buildCloudinaryUploadUrl = (resourceType: CloudinaryResourceType) =>
   `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/${resourceType}/upload`
 
+const parseUploadPayload = async (response: Response) => {
+  try {
+    return (await response.json()) as CloudinaryUploadResponse
+  } catch {
+    return null
+  }
+}
+
 const uploadAsset = async (
   file: File,
   resourceType: CloudinaryResourceType,
-  options?: UploadPhotoOptions,
+  options?: UploadAssetOptions,
 ) => {
   if (!isCloudinaryConfigured) {
     throw new Error(
@@ -37,45 +47,77 @@ const uploadAsset = async (
     formData.append('folder', resolvedFolder)
   }
 
-  let response: Response
+  const stopLoaderRequest = wasRecentlyTriggeredByUserAction() ? startFullScreenLoaderRequest() : null
 
   try {
-    response = await fetch(buildCloudinaryUploadUrl(resourceType), {
-      body: formData,
-      method: 'POST',
-    })
-  } catch {
-    throw new Error('Unable to reach Cloudinary. Check your internet connection and try again.')
-  }
+    const attemptedResourceTypes = Array.from(
+      new Set<CloudinaryResourceType>([resourceType, 'auto']),
+    )
+    let lastUploadErrorMessage = 'Cloudinary upload failed.'
 
-  let payload: CloudinaryUploadResponse | null = null
-  try {
-    payload = (await response.json()) as CloudinaryUploadResponse
-  } catch {
-    payload = null
-  }
+    for (const resourceTypeToTry of attemptedResourceTypes) {
+      let response: Response
 
-  if (!response.ok) {
-    throw new Error(payload?.error?.message?.trim() || 'Cloudinary upload failed.')
-  }
+      try {
+        response = await fetch(buildCloudinaryUploadUrl(resourceTypeToTry), {
+          body: formData,
+          method: 'POST',
+        })
+      } catch {
+        throw new Error('Unable to reach Cloudinary. Check your internet connection and try again.')
+      }
 
-  const uploadedUrl = payload?.secure_url?.trim() || payload?.url?.trim()
-  if (!uploadedUrl) {
-    throw new Error('Upload completed but Cloudinary did not return a media URL.')
-  }
+      const payload = await parseUploadPayload(response)
 
-  return uploadedUrl
+      if (!response.ok) {
+        lastUploadErrorMessage = payload?.error?.message?.trim() || 'Cloudinary upload failed.'
+        continue
+      }
+
+      const uploadedUrl = payload?.secure_url?.trim() || payload?.url?.trim()
+      if (!uploadedUrl) {
+        lastUploadErrorMessage = 'Upload completed but Cloudinary did not return a media URL.'
+        continue
+      }
+
+      return uploadedUrl
+    }
+
+    throw new Error(lastUploadErrorMessage)
+  } finally {
+    stopLoaderRequest?.()
+  }
 }
 
-const uploadPhoto = async (file: File, options?: UploadPhotoOptions) => {
+const uploadPhoto = async (file: File, options?: UploadAssetOptions) => {
   return uploadAsset(file, 'image', options)
 }
 
-const uploadVideo = async (file: File, options?: UploadPhotoOptions) => {
+const uploadVideo = async (file: File, options?: UploadAssetOptions) => {
   return uploadAsset(file, 'video', options)
 }
 
+const uploadRaw = async (file: File, options?: UploadAssetOptions) => {
+  return uploadAsset(file, 'raw', options)
+}
+
+const uploadFile = async (file: File, options?: UploadAssetOptions) => {
+  const mimeType = file.type.toLowerCase()
+
+  if (mimeType.startsWith('image/')) {
+    return uploadPhoto(file, options)
+  }
+
+  if (mimeType.startsWith('video/')) {
+    return uploadVideo(file, options)
+  }
+
+  return uploadRaw(file, options)
+}
+
 export const cloudinaryService = {
+  uploadFile,
   uploadPhoto,
+  uploadRaw,
   uploadVideo,
 }

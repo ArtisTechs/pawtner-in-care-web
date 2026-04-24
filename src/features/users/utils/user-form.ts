@@ -60,6 +60,10 @@ export const resolveUserRoleLabel = (role: UserRoleValue) => {
     return 'Admin'
   }
 
+  if (roleValue === 'SYSTEM_ADMIN') {
+    return 'System Admin'
+  }
+
   if (roleValue === 'USER') {
     return 'User'
   }

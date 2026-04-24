@@ -1,5 +1,7 @@
 import { authStorage } from '@/features/auth/services/auth.storage'
 import type { AuthSession } from '@/features/auth/types/auth-api'
+import { getAuthSessionUserId } from '@/features/auth/utils/auth-utils'
+import { userService } from '@/features/users/services/user.service'
 import { userStorage } from '@/shared/services/user.storage'
 
 type UserWithId = {
@@ -24,6 +26,12 @@ const persistSessionSnapshot = async (session: AuthSession) => {
   }
 }
 
+type PreloadSessionOptions = {
+  refetchCurrentUser?: boolean
+}
+
+const inFlightSessionPreloadRequests = new Map<string, Promise<AuthSession>>()
+
 export const sessionPreloadService = {
   async clearSessionCache(userId?: string) {
     authStorage.clearSession()
@@ -33,8 +41,41 @@ export const sessionPreloadService = {
     }
   },
 
-  async preloadSessionData(session: AuthSession) {
-    await persistSessionSnapshot(session)
-    return session
+  async preloadSessionData(
+    session: AuthSession,
+    options: PreloadSessionOptions = {},
+  ) {
+    const shouldRefetchCurrentUser = options.refetchCurrentUser !== false
+    const accessToken = session.accessToken
+    const currentUserId = getAuthSessionUserId(session.user)
+
+    if (!shouldRefetchCurrentUser || !accessToken || !currentUserId) {
+      await persistSessionSnapshot(session)
+      return session
+    }
+
+    const requestKey = `${accessToken}:${currentUserId}`
+    const inFlightRequest = inFlightSessionPreloadRequests.get(requestKey)
+    if (inFlightRequest) {
+      return inFlightRequest
+    }
+
+    const request = (async () => {
+      const currentUser = await userService.getOne(currentUserId, accessToken)
+      const hydratedSession: AuthSession = {
+        ...session,
+        user: currentUser,
+      }
+
+      await persistSessionSnapshot(hydratedSession)
+      return hydratedSession
+    })()
+
+    inFlightSessionPreloadRequests.set(requestKey, request)
+    void request.finally(() => {
+      inFlightSessionPreloadRequests.delete(requestKey)
+    })
+
+    return request
   },
 }

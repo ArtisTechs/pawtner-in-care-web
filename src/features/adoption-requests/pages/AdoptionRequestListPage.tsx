@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { FaBan, FaCheck, FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes, FaTrash } from 'react-icons/fa'
 import catAnimalIcon from '@/assets/cat-icon.png'
 import dogAnimalIcon from '@/assets/dog-icon.png'
@@ -25,6 +25,7 @@ import { getStringField, getUserIdFromUnknownUser } from '@/shared/lib/profile/h
 import type { SidebarItemKey } from '@/shared/types/layout'
 import DateMultiSelectPicker from '@/shared/components/ui/DateMultiSelectPicker/DateMultiSelectPicker'
 import PillMultiSelectDropdown from '@/shared/components/ui/PillMultiSelectDropdown/PillMultiSelectDropdown'
+import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/StatusBadge/StatusBadge'
 import styles from './AdoptionRequestListPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'adoption-logs'
@@ -34,11 +35,12 @@ const REQUEST_STATUS_FILTER_OPTIONS = ['PENDING', 'APPROVED', 'REJECTED', 'CANCE
 type RequestStatusFilter = (typeof REQUEST_STATUS_FILTER_OPTIONS)[number]
 
 const REQUEST_STATUS_FILTER_LABELS: Record<RequestStatusFilter, string> = {
-  APPROVED: 'APPROVED',
-  CANCELLED: 'CANCELLED',
-  PENDING: 'PENDING',
-  REJECTED: 'REJECTED',
+  APPROVED: 'Approved',
+  CANCELLED: 'Cancelled',
+  PENDING: 'Pending',
+  REJECTED: 'Rejected',
 }
+const LIST_PAGE_SIZE = 20
 
 type AdoptionLogRow = {
   createdAt?: string | null
@@ -78,24 +80,24 @@ const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => 
 const REQUEST_STATUS_UI: Record<
   AdoptionRequestStatus,
   {
-    badgeClassName: string
+    tone: StatusBadgeTone
     label: string
   }
 > = {
   APPROVED: {
-    badgeClassName: 'statusCompleted',
+    tone: 'positive',
     label: 'Approved',
   },
   CANCELLED: {
-    badgeClassName: 'statusOnHold',
+    tone: 'warning',
     label: 'Cancelled',
   },
   PENDING: {
-    badgeClassName: 'statusProcessing',
-    label: 'In Progress',
+    tone: 'info',
+    label: 'Pending',
   },
   REJECTED: {
-    badgeClassName: 'statusCancelled',
+    tone: 'danger',
     label: 'Rejected',
   },
 }
@@ -227,6 +229,9 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([])
   const [selectedRaceValues, setSelectedRaceValues] = useState<string[]>([])
   const [selectedStatusValues, setSelectedStatusValues] = useState<RequestStatusFilter[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreRows, setHasMoreRows] = useState(false)
+  const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false)
   const [selectedRequestForStatusUpdate, setSelectedRequestForStatusUpdate] = useState<AdoptionLogRow | null>(
     null,
   )
@@ -243,28 +248,58 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
   const sessionRole = resolveUserRole(session?.user).toLowerCase()
   const isAdminUser = sessionRole.includes('admin')
 
-  const loadAdoptionLogs = useCallback(async () => {
+  const isLoadingMoreRowsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadAdoptionLogs = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setRows([])
+      setCurrentPage(0)
+      setHasMoreRows(false)
       return
     }
 
-    setIsLoadingLogs(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreRows(true)
+    } else {
+      setIsLoadingLogs(true)
+    }
 
     try {
-      const requests = await adoptionRequestService.list(accessToken, {
-        ignorePagination: true,
+      const result = await adoptionRequestService.list(accessToken, {
+        page: targetPage,
+        size: LIST_PAGE_SIZE,
         sortBy: 'createdAt',
         sortDir: 'desc',
       })
 
-      const nextRows = requests.map(mapLogRow)
+      const nextRows = result.items.map(mapLogRow)
       const sortedRows = [...nextRows].sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
-      setRows(sortedRows)
+      setRows((currentRows) => {
+        if (!shouldAppend) {
+          return sortedRows
+        }
+
+        const rowMap = new Map(currentRows.map((row) => [row.requestId, row]))
+        sortedRows.forEach((row) => {
+          rowMap.set(row.requestId, row)
+        })
+
+        return Array.from(rowMap.values()).sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
+      })
+      setCurrentPage(result.page)
+      setHasMoreRows(!result.isLast && result.page + 1 < result.totalPages)
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingLogs(false)
+      if (shouldAppend) {
+        setIsLoadingMoreRows(false)
+      } else {
+        setIsLoadingLogs(false)
+      }
     }
   }, [accessToken, showToast])
 
@@ -350,6 +385,35 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
       )
     })
   }, [rows, searchValue, selectedDateKeys, selectedRaceValues, selectedStatusValues])
+  const handleTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreRows || isLoadingLogs || isLoadingMoreRows || isLoadingMoreRowsRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreRowsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadAdoptionLogs({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreRowsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const primarySelectedDateKey = selectedDateKeys[0] || ''
 
@@ -667,7 +731,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleTableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -721,9 +785,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
                             </span>
                           </td>
                           <td>
-                            <span className={`${styles.statusBadge} ${styles[statusUi.badgeClassName]}`}>
-                              {statusUi.label}
-                            </span>
+                            <StatusBadge label={statusUi.label} tone={statusUi.tone} />
                           </td>
                         </tr>
                       )
@@ -848,11 +910,10 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
               <div className={styles.modalActions}>
                 {showResolvedIndicator ? (
                   <div className={styles.modalStatusIndicator}>
-                    <span
-                      className={`${styles.statusBadge} ${styles[REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].badgeClassName]}`}
-                    >
-                      {REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label}
-                    </span>
+                    <StatusBadge
+                      label={REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label}
+                      tone={REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].tone}
+                    />
                     <span className={styles.modalStatusIndicatorText}>
                       This request is already {REQUEST_STATUS_UI[selectedRequestForStatusUpdate.requestStatus].label}.
                     </span>

@@ -1,12 +1,24 @@
 import type {
   AdoptionRequest,
+  AdoptionRequestListResult,
   CreateAdoptionRequestPayload,
   UpdateAdoptionRequestStatusPayload,
 } from '@/features/adoption-requests/types/adoption-request-api'
 import { apiClient } from '@/shared/api/api-client'
 import { API_ENDPOINTS } from '@/shared/api/api-endpoints'
 
-type AdoptionRequestListResponse = AdoptionRequest[] | { content?: AdoptionRequest[] | null }
+type AdoptionRequestListResponse =
+  | AdoptionRequest[]
+  | {
+      content?: AdoptionRequest[] | null
+      first?: boolean | null
+      last?: boolean | null
+      number?: number | null
+      page?: number | null
+      size?: number | null
+      totalElements?: number | null
+      totalPages?: number | null
+    }
 type AdoptionRequestSortBy =
   | 'requestNumber'
   | 'status'
@@ -35,20 +47,53 @@ type AdoptionRequestListQuery = {
   status?: AdoptionRequest['status']
 }
 
-const inFlightListRequests = new Map<string, Promise<AdoptionRequest[]>>()
+const inFlightListRequests = new Map<string, Promise<AdoptionRequestListResult>>()
 const inFlightByPetRequests = new Map<string, Promise<AdoptionRequest[]>>()
 const inFlightByUserRequests = new Map<string, Promise<AdoptionRequest[]>>()
 
-const normalizeAdoptionRequestListResponse = (value: AdoptionRequestListResponse): AdoptionRequest[] => {
-  if (Array.isArray(value)) {
+const normalizeNumeric = (value: number | null | undefined, fallbackValue: number) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value
   }
 
-  if (value && Array.isArray(value.content)) {
-    return value.content
+  return fallbackValue
+}
+
+const normalizeAdoptionRequestListResponse = (
+  value: AdoptionRequestListResponse,
+  fallbackPage: number,
+  fallbackSize: number,
+): AdoptionRequestListResult => {
+  if (Array.isArray(value)) {
+    return {
+      isFirst: true,
+      isLast: true,
+      items: value,
+      page: 0,
+      size: value.length,
+      totalElements: value.length,
+      totalPages: value.length ? 1 : 0,
+    }
   }
 
-  return []
+  const items = value && Array.isArray(value.content) ? value.content : []
+  const page = normalizeNumeric(value?.number ?? value?.page, fallbackPage)
+  const size = normalizeNumeric(value?.size, fallbackSize)
+  const totalElements = normalizeNumeric(value?.totalElements, items.length)
+  const totalPages = normalizeNumeric(
+    value?.totalPages,
+    size > 0 ? Math.max(1, Math.ceil(totalElements / size)) : items.length ? 1 : 0,
+  )
+
+  return {
+    isFirst: Boolean(value?.first ?? page <= 0),
+    isLast: Boolean(value?.last ?? page >= totalPages - 1),
+    items,
+    page,
+    size,
+    totalElements,
+    totalPages,
+  }
 }
 
 const buildByPetCacheKey = (petId: string, token: string) => `${token}::pet::${petId}`
@@ -95,9 +140,11 @@ const list = (token: string, query?: AdoptionRequestListQuery) => {
     return inFlightRequest
   }
 
+  const fallbackPage = query?.page ?? 0
+  const fallbackSize = query?.size ?? 20
   const request = apiClient
     .get<AdoptionRequestListResponse>(`${API_ENDPOINTS.adoptionRequests.base}${queryString}`, { token })
-    .then(normalizeAdoptionRequestListResponse)
+    .then((response) => normalizeAdoptionRequestListResponse(response, fallbackPage, fallbackSize))
 
   inFlightListRequests.set(cacheKey, request)
 
@@ -117,7 +164,7 @@ const listByPet = (petId: string, token: string) => {
 
   const request = apiClient
     .get<AdoptionRequestListResponse>(API_ENDPOINTS.pets.adoptionRequests(petId), { token })
-    .then(normalizeAdoptionRequestListResponse)
+    .then((response) => normalizeAdoptionRequestListResponse(response, 0, 0).items)
 
   inFlightByPetRequests.set(cacheKey, request)
 
@@ -137,7 +184,7 @@ const listByUser = (userId: string, token: string) => {
 
   const request = apiClient
     .get<AdoptionRequestListResponse>(API_ENDPOINTS.adoptionRequests.byUser(userId), { token })
-    .then(normalizeAdoptionRequestListResponse)
+    .then((response) => normalizeAdoptionRequestListResponse(response, 0, 0).items)
 
   inFlightByUserRequests.set(cacheKey, request)
 

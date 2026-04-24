@@ -9,18 +9,75 @@ interface MessageBubbleProps {
 }
 
 const IMAGE_PATH_PATTERN = /\.(apng|avif|bmp|gif|jfif|jpe?g|png|svg|tiff?|webp)(\?.*)?$/i
+const CLOUDINARY_IMAGE_PATH_PATTERN = /\/image\/upload(?:\/|$)/i
+const URL_PATTERN = /https?:\/\/[^\s]+/i
+
+const normalizeHttpLikeUrl = (value: string) => {
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) {
+    return ''
+  }
+
+  const protocolIndex = normalizedValue.search(/https?:\/\//i)
+
+  if (protocolIndex > 0) {
+    return normalizedValue.slice(protocolIndex)
+  }
+
+  if (normalizedValue.startsWith('//')) {
+    return `https:${normalizedValue}`
+  }
+
+  return normalizedValue
+}
 
 const isImageUrl = (value: string) => {
-  const normalized = value.trim()
+  const normalized = normalizeHttpLikeUrl(value)
   if (!normalized) {
     return false
   }
 
   try {
     const parsedUrl = new URL(normalized)
-    return IMAGE_PATH_PATTERN.test(parsedUrl.pathname)
+    return IMAGE_PATH_PATTERN.test(parsedUrl.pathname) || CLOUDINARY_IMAGE_PATH_PATTERN.test(parsedUrl.pathname)
   } catch {
-    return IMAGE_PATH_PATTERN.test(normalized)
+    return IMAGE_PATH_PATTERN.test(normalized) || CLOUDINARY_IMAGE_PATH_PATTERN.test(normalized)
+  }
+}
+
+const extractImageUrlFromText = (value: string) => {
+  const normalizedValue = value.trim()
+  if (!normalizedValue) {
+    return {
+      imageUrl: '',
+      text: '',
+    }
+  }
+
+  const matchedUrl = normalizedValue.match(URL_PATTERN)
+  if (!matchedUrl || matchedUrl.index === undefined) {
+    return {
+      imageUrl: '',
+      text: normalizedValue,
+    }
+  }
+
+  const rawUrl = matchedUrl[0]
+  const imageUrl = normalizeHttpLikeUrl(rawUrl)
+  if (!isImageUrl(imageUrl)) {
+    return {
+      imageUrl: '',
+      text: normalizedValue,
+    }
+  }
+
+  const before = normalizedValue.slice(0, matchedUrl.index).trim()
+  const after = normalizedValue.slice(matchedUrl.index + rawUrl.length).trim()
+
+  return {
+    imageUrl,
+    text: [before, after].filter(Boolean).join(' ').trim(),
   }
 }
 
@@ -41,21 +98,20 @@ const formatMessageTimestamp = (value: string) => {
 function MessageBubble({ animateOnEnter = false, message, showSeenStatus = true }: MessageBubbleProps) {
   const isOutgoing = message.direction === 'OUTGOING'
   const normalizedBody = message.body?.trim() ?? ''
-  const bodyIsImageUrl = isImageUrl(normalizedBody)
-  const attachmentUrl = message.attachment?.url?.trim() ?? ''
+  const { imageUrl: bodyImageUrl, text: bodyText } = extractImageUrlFromText(normalizedBody)
+  const attachmentUrl = normalizeHttpLikeUrl(message.attachment?.url?.trim() ?? '')
   const attachmentIsImage =
     Boolean(attachmentUrl) &&
     (Boolean(message.attachment?.mimeType?.toLowerCase().startsWith('image/')) || isImageUrl(attachmentUrl))
-  const imageUrl = attachmentIsImage ? attachmentUrl : bodyIsImageUrl ? normalizedBody : ''
-  const isImageOnlyMessage = Boolean(imageUrl && !message.attachment && bodyIsImageUrl)
-  const shouldRenderBody = Boolean(normalizedBody) && !isImageOnlyMessage
+  const imageUrl = attachmentIsImage ? attachmentUrl : bodyImageUrl
+  const shouldRenderBody = Boolean(bodyText)
 
   return (
     <div className={`${styles.row} ${isOutgoing ? styles.rowOutgoing : styles.rowIncoming}`}>
       <article
         className={`${styles.bubble} ${isOutgoing ? styles.bubbleOutgoing : styles.bubbleIncoming} ${imageUrl ? styles.bubbleWithImage : ''} ${animateOnEnter ? styles.bubbleEnter : ''}`}
       >
-        {shouldRenderBody ? <p className={styles.body}>{normalizedBody}</p> : null}
+        {shouldRenderBody ? <p className={styles.body}>{bodyText}</p> : null}
 
         {imageUrl ? (
           <a href={imageUrl} target="_blank" rel="noreferrer" className={styles.imageLink}>
@@ -65,8 +121,8 @@ function MessageBubble({ animateOnEnter = false, message, showSeenStatus = true 
 
         {message.attachment ? (
           <div className={styles.attachmentWrap}>
-            {message.attachment.url && !attachmentIsImage ? (
-              <a href={message.attachment.url} target="_blank" rel="noreferrer" className={styles.attachmentLink}>
+            {attachmentUrl && !attachmentIsImage ? (
+              <a href={attachmentUrl} target="_blank" rel="noreferrer" className={styles.attachmentLink}>
                 {message.attachment.name}
               </a>
             ) : !attachmentIsImage ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { FaTimes, FaUserCircle } from 'react-icons/fa'
 import crownIcon from '@/assets/crown-icon.png'
 import type { AuthSession } from '@/features/auth/types/auth-api'
@@ -28,6 +28,7 @@ const PERIOD_OPTIONS: Array<{ label: string; value: HeroesWallPeriod }> = [
   { label: 'Monthly', value: 'MONTHLY' },
   { label: 'All time', value: 'ALL_TIME' },
 ]
+const HERO_LIST_PAGE_SIZE = 20
 
 const formatPoints = (value: number) => value.toLocaleString('en-PH')
 const formatDateTime = (value: string | null | undefined) => {
@@ -80,6 +81,9 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
   const [activePeriod, setActivePeriod] = useState<HeroesWallPeriod>('WEEKLY')
   const [isLoadingHeroes, setIsLoadingHeroes] = useState(false)
   const [heroes, setHeroes] = useState<HeroesWallEntry[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreHeroes, setHasMoreHeroes] = useState(false)
+  const [isLoadingMoreHeroes, setIsLoadingMoreHeroes] = useState(false)
   const [selectedHero, setSelectedHero] = useState<HeroesWallEntry | null>(null)
   const [selectedHeroDetails, setSelectedHeroDetails] = useState<HeroUserDetails | null>(null)
   const [isLoadingHeroDetails, setIsLoadingHeroDetails] = useState(false)
@@ -91,25 +95,54 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
   })
   const accessToken = session?.accessToken?.trim() ?? ''
 
-  const loadHeroes = useCallback(async () => {
+  const isLoadingMoreHeroesRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadHeroes = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setHeroes([])
+      setCurrentPage(0)
+      setHasMoreHeroes(false)
       return
     }
 
-    setIsLoadingHeroes(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreHeroes(true)
+    } else {
+      setIsLoadingHeroes(true)
+    }
 
     try {
       const result = await heroesWallService.list(accessToken, {
-        page: 0,
+        page: targetPage,
         period: activePeriod,
-        size: 100,
+        size: HERO_LIST_PAGE_SIZE,
       })
-      setHeroes(result.items)
+      setHeroes((currentHeroes) => {
+        if (!shouldAppend) {
+          return result.items
+        }
+
+        const heroMap = new Map(currentHeroes.map((hero) => [hero.id, hero]))
+        result.items.forEach((hero) => {
+          heroMap.set(hero.id, hero)
+        })
+
+        return Array.from(heroMap.values())
+      })
+      setCurrentPage(result.page)
+      setHasMoreHeroes(!result.isLast && result.page + 1 < result.totalPages)
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingHeroes(false)
+      if (shouldAppend) {
+        setIsLoadingMoreHeroes(false)
+      } else {
+        setIsLoadingHeroes(false)
+      }
     }
   }, [accessToken, activePeriod, showToast])
 
@@ -129,6 +162,35 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
 
   const topThreeHeroes = useMemo(() => filteredHeroes.slice(0, 3), [filteredHeroes])
   const remainingHeroes = useMemo(() => filteredHeroes.slice(3), [filteredHeroes])
+  const handleTableBodyScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreHeroes || isLoadingHeroes || isLoadingMoreHeroes || isLoadingMoreHeroesRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreHeroesRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadHeroes({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreHeroesRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const leftPodiumHero = topThreeHeroes[2] ?? null
   const centerPodiumHero = topThreeHeroes[0] ?? null
@@ -326,7 +388,7 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
               <span className={styles.alignEnd}>Total Points</span>
             </div>
 
-            <div className={styles.tableBody}>
+            <div className={styles.tableBody} onScroll={handleTableBodyScroll}>
               {isLoadingHeroes ? (
                 Array.from({ length: 6 }, (_, rowIndex) => (
                   <div key={`hero-row-skeleton-${rowIndex}`} className={styles.rowSkeleton} aria-hidden="true" />

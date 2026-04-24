@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type UIEvent } from 'react'
 import { FaBoxOpen, FaEdit, FaPlus, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { itemListingService } from '@/features/item-listings/services/item-listing.service'
@@ -11,6 +11,7 @@ import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
 import PhotoUploadField from '@/shared/components/media/PhotoUploadField/PhotoUploadField'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
+import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/StatusBadge/StatusBadge'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
@@ -20,6 +21,7 @@ import styles from './ItemListingPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'item-listing'
 const REQUIRED_FIELDS_ERROR_MESSAGE = 'Please complete all required fields.'
+const ITEM_LIST_PAGE_SIZE = 20
 
 type CreateItemListingForm = {
   categories: string[]
@@ -114,6 +116,14 @@ const resolveItemName = (itemListing: ItemListing) => normalizeText(itemListing.
 const resolveItemDetails = (itemListing: ItemListing) =>
   normalizeText(itemListing.details) || 'No details provided.'
 
+const resolveVisibilityStatusUi = (isVisible: boolean): { label: string; tone: StatusBadgeTone } => {
+  if (isVisible) {
+    return { label: 'Visible', tone: 'positive' }
+  }
+
+  return { label: 'Hidden', tone: 'warning' }
+}
+
 interface ItemListingPageProps {
   onLogout?: () => void
   session?: AuthSession | null
@@ -125,6 +135,9 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isLoadingItemListings, setIsLoadingItemListings] = useState(false)
   const [itemListings, setItemListings] = useState<ItemListing[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreItemListings, setHasMoreItemListings] = useState(false)
+  const [isLoadingMoreItemListings, setIsLoadingMoreItemListings] = useState(false)
   const [viewingItemListing, setViewingItemListing] = useState<ItemListing | null>(null)
   const [isLoadingItemDetails, setIsLoadingItemDetails] = useState(false)
   const [editingItemListingId, setEditingItemListingId] = useState<string | null>(null)
@@ -145,25 +158,56 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
     return () => window.clearTimeout(timer)
   }, [searchValue])
 
-  const loadItemListings = useCallback(async () => {
+  const isLoadingMoreItemListingsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadItemListings = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setItemListings([])
+      setCurrentPage(0)
+      setHasMoreItemListings(false)
       return
     }
 
-    setIsLoadingItemListings(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreItemListings(true)
+    } else {
+      setIsLoadingItemListings(true)
+    }
+
     try {
       const result = await itemListingService.list(accessToken, {
-        ignorePagination: true,
+        page: targetPage,
         search: debouncedSearch || undefined,
+        size: ITEM_LIST_PAGE_SIZE,
         sortBy: 'itemName',
         sortDir: 'asc',
       })
-      setItemListings(result.items)
+      setItemListings((currentItems) => {
+        if (!shouldAppend) {
+          return result.items
+        }
+
+        const itemMap = new Map(currentItems.map((item) => [item.id, item]))
+        result.items.forEach((item) => {
+          itemMap.set(item.id, item)
+        })
+
+        return Array.from(itemMap.values())
+      })
+      setCurrentPage(result.page)
+      setHasMoreItemListings(!result.isLast && result.page + 1 < result.totalPages)
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingItemListings(false)
+      if (shouldAppend) {
+        setIsLoadingMoreItemListings(false)
+      } else {
+        setIsLoadingItemListings(false)
+      }
     }
   }, [accessToken, debouncedSearch, showToast])
 
@@ -398,6 +442,40 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
   }
 
   const skeletonCardIndexes = useMemo(() => Array.from({ length: 6 }, (_, index) => index), [])
+  const handleTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (
+      !hasMoreItemListings ||
+      isLoadingItemListings ||
+      isLoadingMoreItemListings ||
+      isLoadingMoreItemListingsRef.current
+    ) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreItemListingsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadItemListings({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreItemListingsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   return (
     <MainLayout
@@ -435,7 +513,7 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleTableScroll}>
               {isLoadingItemListings ? (
                 <div className={styles.cardGrid}>
                   {skeletonCardIndexes.map((skeletonIndex) => (
@@ -458,6 +536,7 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
                     const categoriesLabel =
                       (itemListing.categories ?? []).map((value) => normalizeText(value)).filter(Boolean).join(', ') || 'N/A'
                     const itemTypeLabel = toItemListingTypeLabel(itemListing.type)
+                    const visibilityStatus = resolveVisibilityStatusUi(itemListing.isShow !== false)
 
                     return (
                       <article key={itemListing.id} className={styles.card}>
@@ -495,6 +574,12 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
                             <div className={styles.cardCompactMetaRow}>
                               <span className={styles.cardCompactMetaLabel}>Type</span>
                               <span className={styles.cardCompactMetaValue}>{itemTypeLabel}</span>
+                            </div>
+                            <div className={styles.cardCompactMetaRow}>
+                              <span className={styles.cardCompactMetaLabel}>Status</span>
+                              <span className={styles.cardCompactMetaValue}>
+                                <StatusBadge label={visibilityStatus.label} tone={visibilityStatus.tone} />
+                              </span>
                             </div>
                           </div>
 
@@ -576,7 +661,12 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
                 </div>
                 <div className={styles.metaItem}>
                   <dt>Visible</dt>
-                  <dd>{viewingItemListing.isShow === false ? 'No' : 'Yes'}</dd>
+                  <dd>
+                    <StatusBadge
+                      label={resolveVisibilityStatusUi(viewingItemListing.isShow !== false).label}
+                      tone={resolveVisibilityStatusUi(viewingItemListing.isShow !== false).tone}
+                    />
+                  </dd>
                 </div>
               </dl>
 
@@ -813,6 +903,7 @@ function ItemListingPage({ onLogout, session }: ItemListingPageProps) {
 }
 
 export default ItemListingPage
+
 
 
 

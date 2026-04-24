@@ -46,3 +46,13 @@ export interface TodoListQuery {
   startDateTo?: string
   text?: string
 }
+
+export interface TodoListResult {
+  isFirst: boolean
+  isLast: boolean
+  items: TodoItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}

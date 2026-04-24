@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type UIEvent } from 'react'
 import { FaCheck, FaPlus, FaRegStar, FaStar, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { todoService } from '@/features/todos/services/todo.service'
@@ -19,6 +19,7 @@ import styles from './ToDoListPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'to-do'
 const SEARCH_DEBOUNCE_MS = 300
+const TODO_LIST_PAGE_SIZE = 20
 
 type TodoDateFilter = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'THIS_YEAR'
 type TodoPriorityFilter = 'ALL' | 'FAVORITES'
@@ -202,6 +203,9 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
   const [activeDateFilter, setActiveDateFilter] = useState<TodoDateFilter>('THIS_WEEK')
   const [activePriorityFilter, setActivePriorityFilter] = useState<TodoPriorityFilter>('ALL')
   const [todos, setTodos] = useState<TodoItem[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreTodos, setHasMoreTodos] = useState(false)
+  const [isLoadingMoreTodos, setIsLoadingMoreTodos] = useState(false)
   const [isLoadingTodos, setIsLoadingTodos] = useState(false)
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false)
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null)
@@ -214,6 +218,8 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
   const [viewingTodo, setViewingTodo] = useState<TodoItem | null>(null)
   const [pendingDeleteTodo, setPendingDeleteTodo] = useState<{ id: string; text: string } | null>(null)
   const activeLoadRequestRef = useRef(0)
+  const canTriggerLoadMoreRef = useRef(true)
+  const isLoadingMoreTodosRef = useRef(false)
   const skeletonCardIndexes = useMemo(() => Array.from({ length: 6 }, (_, index) => index), [])
 
   const { clearToast, showToast, toast } = useToast()
@@ -235,23 +241,33 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
   }, [])
 
   const loadTodos = useCallback(
-    async (searchTerm: string) => {
+    async (options: { append?: boolean; page?: number; searchTerm: string }) => {
       if (!accessToken) {
         setTodos([])
         setViewingTodo(null)
+        setCurrentPage(0)
+        setHasMoreTodos(false)
         return
       }
 
       const requestId = activeLoadRequestRef.current + 1
       activeLoadRequestRef.current = requestId
-      setIsLoadingTodos(true)
+      const shouldAppend = Boolean(options.append)
+      const targetPage = Math.max(0, options.page ?? 0)
+
+      if (shouldAppend) {
+        setIsLoadingMoreTodos(true)
+      } else {
+        setIsLoadingTodos(true)
+      }
 
       try {
         const dateRangeQuery = resolveDateFilterRange(activeDateFilter)
-        const todoList = await todoService.list(accessToken, {
-          ignorePagination: true,
+        const result = await todoService.list(accessToken, {
+          page: targetPage,
+          size: TODO_LIST_PAGE_SIZE,
           ...dateRangeQuery,
-          search: searchTerm.trim() || undefined,
+          search: options.searchTerm.trim() || undefined,
           starred: activePriorityFilter === 'FAVORITES' ? true : undefined,
           sortBy: 'createdDate',
           sortDir: 'desc',
@@ -261,7 +277,21 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
           return
         }
 
-        setTodos(sortTodosByPriority(Array.isArray(todoList) ? todoList : []))
+        setTodos((currentTodos) => {
+          const nextTodos = sortTodosByPriority(Array.isArray(result.items) ? result.items : [])
+          if (!shouldAppend) {
+            return nextTodos
+          }
+
+          const todoMap = new Map(currentTodos.map((todo) => [todo.id, todo]))
+          nextTodos.forEach((todo) => {
+            todoMap.set(todo.id, todo)
+          })
+
+          return sortTodosByPriority(Array.from(todoMap.values()))
+        })
+        setCurrentPage(result.page)
+        setHasMoreTodos(!result.isLast && result.page + 1 < result.totalPages)
       } catch (error) {
         if (requestId !== activeLoadRequestRef.current) {
           return
@@ -270,7 +300,11 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
         showToast(getErrorMessage(error), { variant: 'error' })
       } finally {
         if (requestId === activeLoadRequestRef.current) {
-          setIsLoadingTodos(false)
+          if (shouldAppend) {
+            setIsLoadingMoreTodos(false)
+          } else {
+            setIsLoadingTodos(false)
+          }
         }
       }
     },
@@ -283,7 +317,7 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      void loadTodos(searchValue)
+      void loadTodos({ page: 0, searchTerm: searchValue })
     }, SEARCH_DEBOUNCE_MS)
 
     return () => {
@@ -300,6 +334,40 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
       return todos.find((todo) => todo.id === currentViewingTodo.id) ?? null
     })
   }, [todos])
+
+  const handleTodoListScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreTodos || isLoadingTodos || isLoadingMoreTodos || isLoadingMoreTodosRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreTodosRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadTodos({
+            append: true,
+            page: currentPage + 1,
+            searchTerm: searchValue,
+          })
+        } finally {
+          isLoadingMoreTodosRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const handleOpenCreateModal = () => {
     setEditingTodoId(null)
@@ -368,7 +436,7 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
         }
 
         closeTodoModal()
-        await loadTodos(searchValue)
+        await loadTodos({ page: 0, searchTerm: searchValue })
       } catch (error) {
         showToast(getErrorMessage(error), { variant: 'error' })
       } finally {
@@ -662,7 +730,7 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
           </div>
 
           <div className={styles.listPanel}>
-            <div className={styles.list}>
+            <div className={styles.list} onScroll={handleTodoListScroll}>
               {isLoadingTodos ? (
                 skeletonCardIndexes.map((cardIndex) => (
                   <article key={`todo-skeleton-${cardIndex}`} className={`${styles.todoItem} ${styles.skeletonItem}`} aria-hidden="true">
@@ -910,7 +978,9 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
 
             <form className={styles.modalForm} onSubmit={handleTodoSubmit} noValidate>
               <label className={styles.fieldLabel}>
-                <span>Task Text</span>
+                <span>
+                  Task Text <span className={styles.requiredMark}>*</span>
+                </span>
                 <input
                   type="text"
                   value={todoForm.text}
@@ -942,7 +1012,9 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
 
               <div className={styles.dateFieldRow}>
                 <label className={styles.fieldLabel}>
-                  <span>Start Date</span>
+                  <span>
+                    Start Date <span className={styles.requiredMark}>*</span>
+                  </span>
                   <input
                     type="date"
                     value={todoForm.startDate}
@@ -955,7 +1027,9 @@ function ToDoListPage({ onLogout, session }: ToDoListPageProps) {
                 </label>
 
                 <label className={styles.fieldLabel}>
-                  <span>End Date</span>
+                  <span>
+                    End Date <span className={styles.requiredMark}>*</span>
+                  </span>
                   <input
                     type="date"
                     value={todoForm.endDate}

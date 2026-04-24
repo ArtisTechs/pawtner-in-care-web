@@ -632,6 +632,7 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
                     onNotify={(message, variant) => {
                       showToast(message, { variant })
                     }}
+                    required
                     title="Payment QR"
                     subtitle="Upload a QR image from your device or camera. Required."
                     previewAlt={addPaymentModeForm.name ? `${addPaymentModeForm.name} QR` : 'Payment QR preview'}

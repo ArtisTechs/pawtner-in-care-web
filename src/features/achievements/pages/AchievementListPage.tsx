@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type UIEvent } from 'react'
 import { FaAward, FaEdit, FaPlus, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import { APP_ROUTES } from '@/app/routes/route-paths'
@@ -35,6 +35,7 @@ const REQUIRED_FIELDS_ERROR_MESSAGE = 'Please complete all required fields.'
 const PNG_IMAGE_PATTERN = /\.png(?:$|[?#])/i
 const BLACK_BACKGROUND_THRESHOLD = 22
 const LOW_SATURATION_THRESHOLD = 16
+const ACHIEVEMENT_LIST_PAGE_SIZE = 20
 const sanitizedPngIconCache = new Map<string, string>()
 
 type CreateAchievementForm = {
@@ -279,6 +280,9 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isLoadingAchievements, setIsLoadingAchievements] = useState(false)
   const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreAchievements, setHasMoreAchievements] = useState(false)
+  const [isLoadingMoreAchievements, setIsLoadingMoreAchievements] = useState(false)
   const [viewingAchievement, setViewingAchievement] = useState<Achievement | null>(null)
   const [editingAchievementId, setEditingAchievementId] = useState<string | null>(null)
   const [achievementIdBeingDeleted, setAchievementIdBeingDeleted] = useState<string | null>(null)
@@ -320,27 +324,57 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
     }
   }, [searchValue])
 
-  const loadAchievements = useCallback(async () => {
+  const isLoadingMoreAchievementsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadAchievements = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setAchievements([])
+      setCurrentPage(0)
+      setHasMoreAchievements(false)
       return
     }
 
-    setIsLoadingAchievements(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreAchievements(true)
+    } else {
+      setIsLoadingAchievements(true)
+    }
 
     try {
       const result = await achievementService.list(accessToken, {
-        ignorePagination: true,
+        page: targetPage,
         search: debouncedSearch || undefined,
+        size: ACHIEVEMENT_LIST_PAGE_SIZE,
         sortBy: 'createdAt',
         sortDir: 'desc',
       })
 
-      setAchievements(result.items)
+      setAchievements((currentAchievements) => {
+        if (!shouldAppend) {
+          return result.items
+        }
+
+        const achievementMap = new Map(currentAchievements.map((achievement) => [achievement.id, achievement]))
+        result.items.forEach((achievement) => {
+          achievementMap.set(achievement.id, achievement)
+        })
+
+        return Array.from(achievementMap.values())
+      })
+      setCurrentPage(result.page)
+      setHasMoreAchievements(!result.isLast && result.page + 1 < result.totalPages)
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingAchievements(false)
+      if (shouldAppend) {
+        setIsLoadingMoreAchievements(false)
+      } else {
+        setIsLoadingAchievements(false)
+      }
     }
   }, [accessToken, debouncedSearch, showToast])
 
@@ -607,6 +641,40 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
   }
 
   const skeletonCardIndexes = useMemo(() => Array.from({ length: 6 }, (_, index) => index), [])
+  const handleAchievementScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (
+      !hasMoreAchievements ||
+      isLoadingAchievements ||
+      isLoadingMoreAchievements ||
+      isLoadingMoreAchievementsRef.current
+    ) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreAchievementsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadAchievements({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreAchievementsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   return (
     <MainLayout
@@ -653,7 +721,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleAchievementScroll}>
               {isLoadingAchievements ? (
                 <div className={styles.cardGrid}>
                   {skeletonCardIndexes.map((skeletonIndex) => (

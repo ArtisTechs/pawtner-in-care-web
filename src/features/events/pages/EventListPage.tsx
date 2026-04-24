@@ -787,6 +787,7 @@ function EventListPage({ onLogout, session }: EventListPageProps) {
                       setAddEventForm((currentForm) => ({ ...currentForm, photo: nextPhoto }))
                     }}
                     onNotify={(message, variant) => showToast(message, { variant })}
+                    required
                     title="Event Photo"
                     subtitle="Upload an event photo from your device or camera. Required."
                     previewAlt={addEventForm.title ? `${addEventForm.title} photo` : 'Event photo preview'}

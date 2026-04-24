@@ -46,6 +46,8 @@ const typeRouteMap: Record<string, string> = {
   SOS_LOG: APP_ROUTES.emergencySos,
   SYSTEM: APP_ROUTES.notifications,
   TODO: APP_ROUTES.toDoList,
+  USER: APP_ROUTES.userList,
+  SHELTER: APP_ROUTES.shelterList,
 }
 
 const referenceTypeAliasMap: Record<string, string> = {
@@ -54,15 +56,26 @@ const referenceTypeAliasMap: Record<string, string> = {
   GIFT_LOG: 'GIFT_ENTRY',
   SOS: 'EMERGENCY_SOS',
   TODO: 'TODO_ITEM',
+  USER_ACCOUNT: 'USER',
+  ADMIN_ACCOUNT: 'USER',
+  SHELTER_ACCOUNT: 'SHELTER',
+  SHELTER_REGISTRATION: 'SHELTER',
+  SHELTER_REQUEST: 'SHELTER',
 }
 
 const typeAliasMap: Record<string, string> = {
   EMERGENCY_SOS: 'SOS_LOG',
   SOS: 'SOS_LOG',
   TO_DO: 'TODO',
+  USER_ACCOUNT: 'USER',
+  ADMIN_ACCOUNT: 'USER',
+  SHELTER_ACCOUNT: 'SHELTER',
+  SHELTER_REGISTRATION: 'SHELTER',
 }
 
 const keywordRouteMap: ReadonlyArray<[keyword: string, route: string]> = [
+  ['NEW_SHELTER', APP_ROUTES.shelterList],
+  ['NEW_ADMIN', APP_ROUTES.userList],
   ['VOLUNTEER', APP_ROUTES.volunteerList],
   ['EMERGENCY_SOS', APP_ROUTES.emergencySos],
   ['SOS', APP_ROUTES.emergencySos],
@@ -75,6 +88,34 @@ const keywordRouteMap: ReadonlyArray<[keyword: string, route: string]> = [
   ['ACHIEVEMENT', APP_ROUTES.achievements],
   ['EVENT', APP_ROUTES.eventList],
 ]
+
+const includesAnyToken = (normalizedText: string, tokens: readonly string[]) =>
+  tokens.some((token) => normalizedText.includes(token))
+
+const resolveSystemAccountRoute = (normalizedText: string) => {
+  if (!normalizedText) {
+    return null
+  }
+
+  const shelterAccountTokens = ['SHELTER']
+  const accountActionTokens = ['NEW', 'PENDING', 'APPROVAL', 'REQUEST', 'REGISTER', 'REGISTRATION']
+  if (
+    includesAnyToken(normalizedText, shelterAccountTokens) &&
+    includesAnyToken(normalizedText, accountActionTokens)
+  ) {
+    return APP_ROUTES.shelterList
+  }
+
+  const adminAccountTokens = ['ADMIN']
+  if (
+    includesAnyToken(normalizedText, adminAccountTokens) &&
+    includesAnyToken(normalizedText, accountActionTokens)
+  ) {
+    return APP_ROUTES.userList
+  }
+
+  return null
+}
 
 const toCanonicalReferenceType = (value: string | null | undefined) => {
   const normalized = toNormalizedToken(value)
@@ -98,6 +139,11 @@ const resolveRouteByKeywords = (notification: NotificationItem) => {
   const normalizedText = toNormalizedToken(`${notification.title} ${notification.message}`)
   if (!normalizedText) {
     return null
+  }
+
+  const systemAccountRoute = resolveSystemAccountRoute(normalizedText)
+  if (systemAccountRoute) {
+    return systemAccountRoute
   }
 
   for (const [keyword, route] of keywordRouteMap) {

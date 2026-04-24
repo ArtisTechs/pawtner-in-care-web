@@ -19,6 +19,7 @@ const ITEM_LISTING_BASE_PATH = '/item-listings'
 const GIFT_LOG_BASE_PATH = '/gift-logs'
 const NOTIFICATION_BASE_PATH = '/notifications'
 const SUPPORT_BASE_PATH = '/support'
+const SHELTER_BASE_PATH = '/shelters'
 
 export const API_ENDPOINTS = {
   auth: {
@@ -41,9 +42,6 @@ export const API_ENDPOINTS = {
     base: USER_BASE_PATH,
     byIdActive: (id: string) => `${USER_BASE_PATH}/${id}/active`,
     byId: (id: string) => `${USER_BASE_PATH}/${id}`,
-    byIdStatus: (id: string) => `${USER_BASE_PATH}/${id}/status`,
-    disable: (id: string) => `${USER_BASE_PATH}/${id}/disable`,
-    enable: (id: string) => `${USER_BASE_PATH}/${id}/enable`,
   },
   adoptionRequests: {
     base: ADOPTION_REQUEST_BASE_PATH,
@@ -58,6 +56,7 @@ export const API_ENDPOINTS = {
   donationTransactions: {
     base: DONATION_TRANSACTION_BASE_PATH,
     byId: (id: string) => `${DONATION_TRANSACTION_BASE_PATH}/${id}`,
+    totalAmount: `${DONATION_TRANSACTION_BASE_PATH}/total-amount`,
   },
   events: {
     base: EVENT_BASE_PATH,
@@ -157,6 +156,7 @@ export const API_ENDPOINTS = {
     me: `${NOTIFICATION_BASE_PATH}/me`,
     my: `${NOTIFICATION_BASE_PATH}/my`,
     byId: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}`,
+    clearAll: `${NOTIFICATION_BASE_PATH}/my/clear-all`,
     markRead: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}/read`,
     markUnread: (notificationId: string) => `${NOTIFICATION_BASE_PATH}/my/${notificationId}/unread`,
     readAll: `${NOTIFICATION_BASE_PATH}/my/read-all`,
@@ -167,5 +167,14 @@ export const API_ENDPOINTS = {
     flow: `${SUPPORT_BASE_PATH}/flow`,
     adminFlow: `${SUPPORT_BASE_PATH}/admin/flow`,
     adminImportFlow: `${SUPPORT_BASE_PATH}/admin/flow/import`,
+  },
+  shelters: {
+    base: SHELTER_BASE_PATH,
+    public: `${SHELTER_BASE_PATH}/public`,
+    byId: (id: string) => `${SHELTER_BASE_PATH}/${id}`,
+    byIdUsers: (id: string) => `${SHELTER_BASE_PATH}/${id}/users`,
+    meAssociation: `${SHELTER_BASE_PATH}/me/association`,
+    associations: `${SHELTER_BASE_PATH}/associations`,
+    associationsByUserId: (userId: string) => `${SHELTER_BASE_PATH}/associations/${userId}`,
   },
 } as const

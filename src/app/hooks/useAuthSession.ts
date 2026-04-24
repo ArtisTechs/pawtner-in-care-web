@@ -3,7 +3,8 @@ import { APP_ROUTES } from '@/app/routes/route-paths'
 import { sessionPreloadService } from '@/app/services/session-preload.service'
 import { authStorage } from '@/features/auth/services/auth.storage'
 import type { AuthSession } from '@/features/auth/types/auth-api'
-import { getAuthSessionUserId, isAdminAuthSession } from '@/features/auth/utils/auth-utils'
+import { getAuthSessionUserId, isAdminAuthSession, resolveDashboardAccessRole } from '@/features/auth/utils/auth-utils'
+import { isInvalidBearerTokenError } from '@/shared/api/api-error'
 import { subscribeToAuthSessionInvalid } from '@/shared/api/auth-session-events'
 import { wait } from '@/shared/lib/async/wait'
 
@@ -25,15 +26,32 @@ export const useAuthSession = () => {
     const hydrateSession = async () => {
       try {
         const storedSession = await authStorage.getSession()
-        const isSessionAllowed = hasValidSession(storedSession)
+        let nextSession: AuthSession | null = null
+        let isSessionAllowed = hasValidSession(storedSession)
 
-        if (storedSession && !isSessionAllowed) {
-          const userId = getAuthSessionUserId(storedSession?.user)
+        if (storedSession && isSessionAllowed) {
+          try {
+            nextSession = await sessionPreloadService.preloadSessionData(storedSession, {
+              refetchCurrentUser: true,
+            })
+            isSessionAllowed = hasValidSession(nextSession)
+          } catch (error) {
+            if (isInvalidBearerTokenError(error)) {
+              const userId = getAuthSessionUserId(storedSession.user)
+              await sessionPreloadService.clearSessionCache(userId)
+              isSessionAllowed = false
+              nextSession = null
+            } else {
+              nextSession = storedSession
+            }
+          }
+        } else if (storedSession && !isSessionAllowed) {
+          const userId = getAuthSessionUserId(storedSession.user)
           await sessionPreloadService.clearSessionCache(userId)
         }
 
         if (isMounted) {
-          setSession(isSessionAllowed ? storedSession : null)
+          setSession(isSessionAllowed ? nextSession ?? storedSession : null)
         }
       } finally {
         if (isMounted) {
@@ -89,7 +107,12 @@ export const useAuthSession = () => {
   }, [handleLogout])
 
   const isAuthenticated = hasValidSession(session)
-  const defaultRoute = isAuthenticated ? APP_ROUTES.dashboard : APP_ROUTES.login
+  const resolvedRole = resolveDashboardAccessRole(session)
+  const defaultRoute = isAuthenticated
+    ? resolvedRole === 'SYSTEM_ADMIN'
+      ? APP_ROUTES.userList
+      : APP_ROUTES.dashboard
+    : APP_ROUTES.login
 
   return {
     defaultRoute,

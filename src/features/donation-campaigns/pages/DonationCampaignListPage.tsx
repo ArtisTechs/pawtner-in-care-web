@@ -23,7 +23,6 @@ import {
   formatDateLabel,
   isDeadlineBeforeStartDate,
   mapDonationCampaignToForm,
-  resolveStatusClassName,
 } from '@/features/donation-campaigns/utils/donation-campaign-form'
 import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems } from '@/layouts/config/navigation'
 import Header from '@/layouts/Header/Header'
@@ -33,6 +32,7 @@ import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
 import PhotoUploadField from '@/shared/components/media/PhotoUploadField/PhotoUploadField'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
+import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/StatusBadge/StatusBadge'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
@@ -70,6 +70,12 @@ const toTitleCase = (value: string) =>
       return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
     })
     .join('')
+
+const STATUS_TONE_BY_CAMPAIGN: Record<DonationCampaign['status'], StatusBadgeTone> = {
+  CANCELLED: 'danger',
+  COMPLETED: 'positive',
+  ONGOING: 'info',
+}
 
 const resolveCampaignImage = (campaign: DonationCampaign) => {
   if (campaign.photo) {
@@ -499,13 +505,10 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
                         <td>{formatCurrency(campaign.totalDonatedCost)}</td>
                         <td>{formatDateLabel(campaign.deadline)}</td>
                         <td>
-                          <span
-                            className={`${styles.statusBadge} ${
-                              styles[resolveStatusClassName(campaign.status)]
-                            }`}
-                          >
-                            {STATUS_LABELS[campaign.status] ?? campaign.status}
-                          </span>
+                          <StatusBadge
+                            label={STATUS_LABELS[campaign.status] ?? campaign.status}
+                            tone={STATUS_TONE_BY_CAMPAIGN[campaign.status]}
+                          />
                         </td>
                         <td>
                           <div className={styles.actionCell}>
@@ -903,6 +906,7 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
                     onNotify={(message, variant) => {
                       showToast(message, { variant })
                     }}
+                    required
                     title="Campaign Photo"
                     subtitle="Upload a campaign image from your device or camera."
                     previewAlt={addCampaignForm.title ? `${addCampaignForm.title} photo` : 'Campaign photo preview'}

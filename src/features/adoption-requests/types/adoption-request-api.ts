@@ -42,3 +42,13 @@ export interface UpdateAdoptionRequestStatusPayload {
   reviewNotes?: string
   status: AdoptionRequestReviewStatus
 }
+
+export interface AdoptionRequestListResult {
+  isFirst: boolean
+  isLast: boolean
+  items: AdoptionRequest[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}

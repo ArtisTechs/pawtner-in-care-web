@@ -90,6 +90,28 @@ const toBooleanValue = (value: unknown) => {
   return value
 }
 
+const resolveAttachmentFileNameFromUrl = (url: string) => {
+  const normalizedUrl = url.trim()
+  if (!normalizedUrl) {
+    return ''
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedUrl)
+    const urlPath = parsedUrl.pathname.replace(/\/+$/, '')
+    const pathSegment = urlPath.split('/').filter(Boolean).pop() || ''
+
+    try {
+      return decodeURIComponent(pathSegment)
+    } catch {
+      return pathSegment
+    }
+  } catch {
+    const cleanedPath = normalizedUrl.split('?')[0]?.split('#')[0] || normalizedUrl
+    return cleanedPath.split('/').filter(Boolean).pop() || ''
+  }
+}
+
 const toArray = <T>(value: MaybePaginatedResponse<T>) => {
   if (Array.isArray(value)) {
     return value
@@ -301,15 +323,26 @@ const normalizeMessage = (value: unknown, options?: MessageNormalizationOptions)
     (direction === 'OUTGOING' ? 'You' : 'User')
 
   const attachmentValue = isRecord(value.attachment) ? value.attachment : null
-  const attachmentName = toStringValue(attachmentValue?.name ?? value.attachmentName)
+  const attachmentUrl =
+    toStringValue(
+      attachmentValue?.url ??
+        value.attachmentUrl ??
+        value.fileUrl ??
+        value.mediaUrl ??
+        value.imageUrl,
+    ) || null
+  const attachmentName =
+    toStringValue(attachmentValue?.name ?? value.attachmentName ?? value.fileName ?? value.mediaName) ||
+    (attachmentUrl ? resolveAttachmentFileNameFromUrl(attachmentUrl) : '')
+  const resolvedAttachmentName = attachmentName || (attachmentUrl ? 'Attachment' : '')
 
   return {
-    attachment: attachmentName
+    attachment: resolvedAttachmentName || attachmentUrl
       ? {
           mimeType: toStringValue(attachmentValue?.mimeType ?? value.attachmentMimeType) || null,
-          name: attachmentName,
+          name: resolvedAttachmentName,
           size: toNumberValue(attachmentValue?.size ?? value.attachmentSize),
-          url: toStringValue(attachmentValue?.url ?? value.attachmentUrl) || null,
+          url: attachmentUrl,
         }
       : null,
     body: toStringValue(

@@ -35,11 +35,18 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
   border-bottom: 1px solid #d6e2f2;
   background: #ffffff;
+}
+
+.toolbarTabs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .filterTab {
@@ -80,6 +87,26 @@
   padding: 0 7px;
   font-size: 12px;
   font-weight: 800;
+}
+
+.clearAllButton {
+  min-height: 34px;
+  border-radius: 11px;
+  border: 1px solid #e6bfc2;
+  background: #fff4f5;
+  color: #9b2c34;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clearAllButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .listWrap {
@@ -157,6 +184,34 @@
   display: grid;
   justify-items: end;
   gap: 9px;
+}
+
+.itemActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionButton {
+  border: 1px solid #b7cce6;
+  background: #ffffff;
+  color: #1d5fae;
+  border-radius: 8px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionButton:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  border-color: #e3b9b9;
+  color: #a53e3e;
 }
 
 .itemTime {
@@ -253,6 +308,10 @@
     align-items: center;
     justify-content: space-between;
   }
+
+  .itemActions {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 860px) {
@@ -268,7 +327,16 @@
     gap: 8px;
   }
 
+  .toolbarTabs {
+    gap: 8px;
+  }
+
   .filterTab {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
+  .clearAllButton {
     min-height: 32px;
     font-size: 12px;
   }

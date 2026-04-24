@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { FaCheck, FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes, FaTrash } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { giftLogService } from '@/features/gift-logs/services/gift-log.service'
@@ -12,6 +12,7 @@ import Toast from '@/shared/components/feedback/Toast'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import DateMultiSelectPicker from '@/shared/components/ui/DateMultiSelectPicker/DateMultiSelectPicker'
 import PillMultiSelectDropdown from '@/shared/components/ui/PillMultiSelectDropdown/PillMultiSelectDropdown'
+import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/StatusBadge/StatusBadge'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
@@ -21,6 +22,7 @@ import styles from './GiftLogListPage.module.css'
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'gift-logs'
 const DEFAULT_DELIVERY_TYPE_OPTIONS: ReadonlyArray<GiftLogDeliveryType> = ['PERSONAL', 'SHIPPING']
 const DEFAULT_STATUS_OPTIONS: ReadonlyArray<GiftLogStatus> = ['PENDING', 'DELIVERED']
+const LIST_PAGE_SIZE = 20
 
 type GiftLogRow = {
   createdAt?: string | null
@@ -63,24 +65,24 @@ const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => 
 const STATUS_UI: Record<
   string,
   {
-    badgeClassName: string
+    tone: StatusBadgeTone
     label: string
   }
 > = {
   CANCELLED: {
-    badgeClassName: 'statusCancelled',
+    tone: 'warning',
     label: 'Cancelled',
   },
   DELIVERED: {
-    badgeClassName: 'statusCompleted',
+    tone: 'positive',
     label: 'Delivered',
   },
   PENDING: {
-    badgeClassName: 'statusProcessing',
+    tone: 'info',
     label: 'Pending',
   },
   REJECTED: {
-    badgeClassName: 'statusCancelled',
+    tone: 'danger',
     label: 'Rejected',
   },
 }
@@ -195,7 +197,7 @@ const toPreviewPhoto = (giftLog: GiftLog) => {
 
 const resolveStatusUi = (status: GiftLogStatus) => {
   const normalizedStatus = normalizeEnumValue(status)
-  return STATUS_UI[normalizedStatus] ?? { badgeClassName: 'statusOnHold', label: toReadableLabel(normalizedStatus) }
+  return STATUS_UI[normalizedStatus] ?? { tone: 'neutral', label: toReadableLabel(normalizedStatus) }
 }
 
 const toItemLabel = (giftLog: GiftLog) => {
@@ -269,6 +271,9 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([])
   const [selectedDeliveryTypeValues, setSelectedDeliveryTypeValues] = useState<GiftLogDeliveryType[]>([])
   const [selectedStatusValues, setSelectedStatusValues] = useState<GiftLogStatus[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreRows, setHasMoreRows] = useState(false)
+  const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false)
   const [selectedGiftForAction, setSelectedGiftForAction] = useState<GiftLogRow | null>(null)
   const [pendingConfirmationAction, setPendingConfirmationAction] = useState<PendingConfirmationAction | null>(null)
   const [deliveryTypeOptions, setDeliveryTypeOptions] = useState<GiftLogDeliveryType[]>([
@@ -283,25 +288,51 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
   })
   const accessToken = session?.accessToken?.trim() ?? ''
 
-  const loadGiftLogs = useCallback(async () => {
+  const isLoadingMoreRowsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadGiftLogs = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setRows([])
       setDeliveryTypeOptions([...DEFAULT_DELIVERY_TYPE_OPTIONS])
       setStatusOptions([...DEFAULT_STATUS_OPTIONS])
+      setCurrentPage(0)
+      setHasMoreRows(false)
       return
     }
 
-    setIsLoadingLogs(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreRows(true)
+    } else {
+      setIsLoadingLogs(true)
+    }
 
     try {
-      const giftLogs = await giftLogService.list(accessToken, {
-        ignorePagination: true,
+      const result = await giftLogService.list(accessToken, {
+        page: targetPage,
+        size: LIST_PAGE_SIZE,
         sortBy: 'createdDate',
         sortDir: 'desc',
       })
-      const mappedRows = giftLogs.map(mapGiftLogRow)
+      const mappedRows = result.items.map(mapGiftLogRow)
       const sortedRows = [...mappedRows].sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
-      setRows(sortedRows)
+      setRows((currentRows) => {
+        if (!shouldAppend) {
+          return sortedRows
+        }
+
+        const rowMap = new Map(currentRows.map((row) => [row.giftId, row]))
+        sortedRows.forEach((row) => {
+          rowMap.set(row.giftId, row)
+        })
+
+        return Array.from(rowMap.values()).sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
+      })
+      setCurrentPage(result.page)
+      setHasMoreRows(!result.isLast && result.page + 1 < result.totalPages)
 
       const nextDeliveryTypeOptions = Array.from(
         new Set([...DEFAULT_DELIVERY_TYPE_OPTIONS, ...sortedRows.map((row) => row.deliveryType)]),
@@ -315,7 +346,11 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingLogs(false)
+      if (shouldAppend) {
+        setIsLoadingMoreRows(false)
+      } else {
+        setIsLoadingLogs(false)
+      }
     }
   }, [accessToken, showToast])
 
@@ -399,6 +434,35 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
       )
     })
   }, [rows, searchValue, selectedDateKeys, selectedDeliveryTypeValues, selectedStatusValues])
+  const handleTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreRows || isLoadingLogs || isLoadingMoreRows || isLoadingMoreRowsRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreRowsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadGiftLogs({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreRowsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const primarySelectedDateKey = selectedDateKeys[0] || ''
 
@@ -656,7 +720,7 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleTableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -701,9 +765,7 @@ function GiftLogListPage({ onLogout, session }: GiftLogListPageProps) {
                           <td>{row.createdAtLabel}</td>
                           <td>{row.deliveryType === 'SHIPPING' ? row.shippingCompanyName || row.shippingCode || 'N/A' : 'Personal Delivery'}</td>
                           <td>
-                            <span className={`${styles.statusBadge} ${styles[statusUi.badgeClassName]}`}>
-                              {statusUi.label}
-                            </span>
+                            <StatusBadge label={statusUi.label} tone={statusUi.tone} />
                           </td>
                         </tr>
                       )

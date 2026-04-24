@@ -2,25 +2,70 @@ import type {
   CreateGiftLogPayload,
   GiftLog,
   GiftLogListQuery,
+  GiftLogListResult,
   UpdateGiftLogPayload,
 } from '@/features/gift-logs/types/gift-log-api'
 import { apiClient } from '@/shared/api/api-client'
 import { API_ENDPOINTS } from '@/shared/api/api-endpoints'
 
-type GiftLogListResponse = GiftLog[] | { content?: GiftLog[] | null }
+type GiftLogListResponse =
+  | GiftLog[]
+  | {
+      content?: GiftLog[] | null
+      first?: boolean | null
+      last?: boolean | null
+      number?: number | null
+      page?: number | null
+      size?: number | null
+      totalElements?: number | null
+      totalPages?: number | null
+    }
 
-const inFlightGiftLogListRequests = new Map<string, Promise<GiftLog[]>>()
+const inFlightGiftLogListRequests = new Map<string, Promise<GiftLogListResult>>()
 
-const normalizeGiftLogListResponse = (value: GiftLogListResponse): GiftLog[] => {
-  if (Array.isArray(value)) {
+const normalizeNumeric = (value: number | null | undefined, fallbackValue: number) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value
   }
 
-  if (value && Array.isArray(value.content)) {
-    return value.content
+  return fallbackValue
+}
+
+const normalizeGiftLogListResponse = (
+  value: GiftLogListResponse,
+  fallbackPage: number,
+  fallbackSize: number,
+): GiftLogListResult => {
+  if (Array.isArray(value)) {
+    return {
+      isFirst: true,
+      isLast: true,
+      items: value,
+      page: 0,
+      size: value.length,
+      totalElements: value.length,
+      totalPages: value.length ? 1 : 0,
+    }
   }
 
-  return []
+  const items = value && Array.isArray(value.content) ? value.content : []
+  const page = normalizeNumeric(value?.number ?? value?.page, fallbackPage)
+  const size = normalizeNumeric(value?.size, fallbackSize)
+  const totalElements = normalizeNumeric(value?.totalElements, items.length)
+  const totalPages = normalizeNumeric(
+    value?.totalPages,
+    size > 0 ? Math.max(1, Math.ceil(totalElements / size)) : items.length ? 1 : 0,
+  )
+
+  return {
+    isFirst: Boolean(value?.first ?? page <= 0),
+    isLast: Boolean(value?.last ?? page >= totalPages - 1),
+    items,
+    page,
+    size,
+    totalElements,
+    totalPages,
+  }
 }
 
 const appendIfPresent = (params: URLSearchParams, key: string, value?: string | number | boolean) => {
@@ -60,7 +105,7 @@ const listGiftLogs = (token: string, query?: GiftLogListQuery) => {
 
   const request = apiClient
     .get<GiftLogListResponse>(`${API_ENDPOINTS.giftLogs.base}${queryString}`, { token })
-    .then(normalizeGiftLogListResponse)
+    .then((response) => normalizeGiftLogListResponse(response, query?.page ?? 0, query?.size ?? 20))
 
   inFlightGiftLogListRequests.set(requestKey, request)
   void request.finally(() => {

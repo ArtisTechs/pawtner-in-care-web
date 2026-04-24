@@ -5,6 +5,24 @@ type UnknownRecord = Record<string, unknown>
 const isRecord = (value: unknown): value is UnknownRecord =>
   Boolean(value) && typeof value === 'object'
 
+const resolveHeaderRoleLabel = (value: string) => {
+  const normalizedRole = value.trim().toUpperCase()
+
+  if (normalizedRole === 'SYSTEM_ADMIN') {
+    return 'System Admin'
+  }
+
+  if (normalizedRole === 'ADMIN') {
+    return 'Admin'
+  }
+
+  if (normalizedRole === 'USER') {
+    return 'User'
+  }
+
+  return value.trim()
+}
+
 export const getStringField = (value: unknown, keys: string[]) => {
   if (!isRecord(value)) {
     return ''
@@ -40,6 +58,9 @@ export const resolveProfilePatch = (value: unknown): Partial<HeaderProfile> => {
   const avatarSrc = getStringField(value, [
     'avatarSrc',
     'avatar',
+    'avatarUrl',
+    'profilePicture',
+    'profileImageUrl',
     'photoUrl',
     'photoURL',
     'profileImage',
@@ -53,7 +74,7 @@ export const resolveProfilePatch = (value: unknown): Partial<HeaderProfile> => {
   }
 
   if (role) {
-    patch.role = role
+    patch.role = resolveHeaderRoleLabel(role)
   }
 
   if (avatarSrc) {

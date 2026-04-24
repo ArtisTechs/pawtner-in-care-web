@@ -19,6 +19,11 @@
   color: #27405f;
 }
 
+.requiredAsterisk {
+  color: #d94c4c;
+  margin-left: 4px;
+}
+
 .subtitle {
   margin: 0;
   font-size: 12px;

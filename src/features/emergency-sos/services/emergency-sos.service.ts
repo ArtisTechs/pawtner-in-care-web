@@ -3,25 +3,70 @@ import type {
   EmergencySos,
   EmergencySosCountResponse,
   EmergencySosListQuery,
+  EmergencySosListResult,
   UpdateEmergencySosPayload,
 } from '@/features/emergency-sos/types/emergency-sos-api'
 import { apiClient } from '@/shared/api/api-client'
 import { API_ENDPOINTS } from '@/shared/api/api-endpoints'
 
-type EmergencySosListResponse = EmergencySos[] | { content?: EmergencySos[] | null }
+type EmergencySosListResponse =
+  | EmergencySos[]
+  | {
+      content?: EmergencySos[] | null
+      first?: boolean | null
+      last?: boolean | null
+      number?: number | null
+      page?: number | null
+      size?: number | null
+      totalElements?: number | null
+      totalPages?: number | null
+    }
 
-const inFlightListRequests = new Map<string, Promise<EmergencySos[]>>()
+const inFlightListRequests = new Map<string, Promise<EmergencySosListResult>>()
 
-const normalizeEmergencySosListResponse = (value: EmergencySosListResponse): EmergencySos[] => {
-  if (Array.isArray(value)) {
+const normalizeNumeric = (value: number | null | undefined, fallbackValue: number) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value
   }
 
-  if (value && Array.isArray(value.content)) {
-    return value.content
+  return fallbackValue
+}
+
+const normalizeEmergencySosListResponse = (
+  value: EmergencySosListResponse,
+  fallbackPage: number,
+  fallbackSize: number,
+): EmergencySosListResult => {
+  if (Array.isArray(value)) {
+    return {
+      isFirst: true,
+      isLast: true,
+      items: value,
+      page: 0,
+      size: value.length,
+      totalElements: value.length,
+      totalPages: value.length ? 1 : 0,
+    }
   }
 
-  return []
+  const items = value && Array.isArray(value.content) ? value.content : []
+  const page = normalizeNumeric(value?.number ?? value?.page, fallbackPage)
+  const size = normalizeNumeric(value?.size, fallbackSize)
+  const totalElements = normalizeNumeric(value?.totalElements, items.length)
+  const totalPages = normalizeNumeric(
+    value?.totalPages,
+    size > 0 ? Math.max(1, Math.ceil(totalElements / size)) : items.length ? 1 : 0,
+  )
+
+  return {
+    isFirst: Boolean(value?.first ?? page <= 0),
+    isLast: Boolean(value?.last ?? page >= totalPages - 1),
+    items,
+    page,
+    size,
+    totalElements,
+    totalPages,
+  }
 }
 
 const buildListCacheKey = (token: string, queryString: string) => `${token}::${queryString}`
@@ -64,7 +109,9 @@ const list = (token: string, query?: EmergencySosListQuery) => {
 
   const request = apiClient
     .get<EmergencySosListResponse>(`${API_ENDPOINTS.emergencySos.base}${queryString}`, { token })
-    .then(normalizeEmergencySosListResponse)
+    .then((response) =>
+      normalizeEmergencySosListResponse(response, query?.page ?? 0, query?.size ?? 20),
+    )
 
   inFlightListRequests.set(cacheKey, request)
 

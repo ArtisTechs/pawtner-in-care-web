@@ -2,14 +2,6 @@
   border-top: 1px solid #dce5f1;
   padding: 8px 12px;
   background: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.inputColumn {
-  flex: 1;
-  min-width: 0;
   display: grid;
   gap: 8px;
 }
@@ -26,6 +18,13 @@
   padding: 2px 8px;
 }
 
+.composerRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .attachmentLabel {
   font-size: 12px;
   font-weight: 700;
@@ -34,6 +33,24 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.attachmentUploading {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7696;
+}
+
+.uploadSpinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid #abc2dd;
+  border-top-color: #4b93f4;
+  animation: uploadSpin 0.8s linear infinite;
 }
 
 .attachmentClearButton {
@@ -54,8 +71,14 @@
   height: 10px;
 }
 
+.attachmentClearButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 38px;
   border: 1px solid #d4deeb;
   border-radius: 10px;
@@ -100,9 +123,24 @@
   cursor: not-allowed;
 }
 
+@keyframes uploadSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 760px) {
-  .root {
+  .composerRow {
     flex-wrap: wrap;
+  }
+
+  .input {
+    width: 100%;
+    flex: 1 0 100%;
   }
 
   .sendButton {

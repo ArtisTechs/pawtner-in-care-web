@@ -5,6 +5,7 @@ import styles from './ChatComposer.module.css'
 
 interface ChatComposerProps {
   attachedFile: File | null
+  attachmentUploading?: boolean
   disabled?: boolean
   isSending?: boolean
   onAttach: (file: File) => void
@@ -16,6 +17,7 @@ interface ChatComposerProps {
 
 function ChatComposer({
   attachedFile,
+  attachmentUploading = false,
   disabled = false,
   isSending = false,
   onAttach,
@@ -25,7 +27,7 @@ function ChatComposer({
   text,
 }: ChatComposerProps) {
   const messageLength = text.length
-  const isSendDisabled = disabled || isSending || (!text.trim() && !attachedFile)
+  const isSendDisabled = disabled || isSending || attachmentUploading || (!text.trim() && !attachedFile)
 
   return (
     <form
@@ -39,21 +41,28 @@ function ChatComposer({
         onSend()
       }}
     >
-      <div className={styles.inputColumn}>
-        {attachedFile ? (
-          <div className={styles.attachmentRow}>
-            <span className={styles.attachmentLabel}>{attachedFile.name}</span>
-            <button
-              type="button"
-              className={styles.attachmentClearButton}
-              onClick={onClearAttachment}
-              aria-label="Remove attachment"
-            >
-              <FaTimes aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
+      {attachedFile ? (
+        <div className={styles.attachmentRow}>
+          <span className={styles.attachmentLabel}>{attachedFile.name}</span>
+          {attachmentUploading ? (
+            <span className={styles.attachmentUploading}>
+              <span className={styles.uploadSpinner} aria-hidden="true" />
+              Uploading...
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className={styles.attachmentClearButton}
+            onClick={onClearAttachment}
+            aria-label="Remove attachment"
+            disabled={attachmentUploading}
+          >
+            <FaTimes aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
 
+      <div className={styles.composerRow}>
         <input
           type="text"
           value={text}
@@ -66,16 +75,15 @@ function ChatComposer({
           maxLength={CHAT_MESSAGE_MAX_LENGTH}
           disabled={disabled || isSending}
         />
-        <div className={styles.messageLengthIndicator} aria-live="polite">
-          {messageLength}/{CHAT_MESSAGE_MAX_LENGTH}
-        </div>
+        <AttachmentButton disabled={disabled || isSending} onPickFile={onAttach} />
+        <button type="submit" className={styles.sendButton} disabled={isSendDisabled} aria-label="Send message">
+          <span>Send</span>
+        </button>
       </div>
 
-      <AttachmentButton disabled={disabled || isSending} onPickFile={onAttach} />
-
-      <button type="submit" className={styles.sendButton} disabled={isSendDisabled} aria-label="Send message">
-        <span>Send</span>
-      </button>
+      <div className={styles.messageLengthIndicator} aria-live="polite">
+        {messageLength}/{CHAT_MESSAGE_MAX_LENGTH}
+      </div>
     </form>
   )
 }

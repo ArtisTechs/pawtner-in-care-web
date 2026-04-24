@@ -5,6 +5,8 @@ import redPinIcon from '@/assets/red-pin-icon.png'
 import type { LeafletEvent } from 'leaflet'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { startFullScreenLoaderRequest } from '@/shared/api/full-screen-loader-store'
+import { wasRecentlyTriggeredByUserAction } from '@/shared/api/user-action-tracker'
 import styles from './LocationPickerMap.module.css'
 
 const DEFAULT_LATITUDE = 14.5995
@@ -102,6 +104,8 @@ function LocationPickerMap({
   const [resolveError, setResolveError] = useState('')
   const [isLocating, setIsLocating] = useState(false)
   const hasAttemptedAutoLocateRef = useRef(false)
+  const blurTimeoutRef = useRef<number | null>(null)
+  const isSelectingSuggestionRef = useRef(false)
 
   const parsedLatitude = useMemo(() => parseCoordinate(value.latitude), [value.latitude])
   const parsedLongitude = useMemo(() => parseCoordinate(value.longitude), [value.longitude])
@@ -122,13 +126,19 @@ function LocationPickerMap({
       lat: String(latitude),
       lon: String(longitude),
     })
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${searchParams}`)
-    if (!response.ok) {
-      throw new Error('Unable to resolve address.')
-    }
 
-    const payload = (await response.json()) as NominatimReverseResult
-    return payload.display_name?.trim() ?? ''
+    const stopLoaderRequest = wasRecentlyTriggeredByUserAction() ? startFullScreenLoaderRequest() : null
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${searchParams}`)
+      if (!response.ok) {
+        throw new Error('Unable to resolve address.')
+      }
+
+      const payload = (await response.json()) as NominatimReverseResult
+      return payload.display_name?.trim() ?? ''
+    } finally {
+      stopLoaderRequest?.()
+    }
   }, [])
 
   const applyCoordinates = useCallback(async (latitude: number, longitude: number, resolveAddress: boolean) => {
@@ -195,6 +205,14 @@ function LocationPickerMap({
   }, [detectCurrentLocation, hasValidCoordinates])
 
   useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current !== null) {
+        window.clearTimeout(blurTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     const trimmedQuery = searchQuery.trim()
     if (!isSearchFocused || trimmedQuery.length < SEARCH_MIN_LENGTH) {
       setSuggestions([])
@@ -211,30 +229,36 @@ function LocationPickerMap({
         setSearchError('')
 
         try {
+          const stopLoaderRequest = wasRecentlyTriggeredByUserAction() ? startFullScreenLoaderRequest() : null
           const searchParams = new URLSearchParams({
             format: 'jsonv2',
             limit: '6',
             addressdetails: '1',
             q: trimmedQuery,
           })
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?${searchParams}`, {
-            signal: controller.signal,
-          })
 
-          if (!response.ok) {
-            throw new Error('Unable to fetch location suggestions.')
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?${searchParams}`, {
+              signal: controller.signal,
+            })
+
+            if (!response.ok) {
+              throw new Error('Unable to fetch location suggestions.')
+            }
+
+            const payload = (await response.json()) as NominatimSearchResult[]
+            const mappedSuggestions = payload
+              .map((item) => ({
+                address: item.display_name?.trim() ?? '',
+                latitude: item.lat?.trim() ?? '',
+                longitude: item.lon?.trim() ?? '',
+              }))
+              .filter((item) => item.address && item.latitude && item.longitude)
+
+            setSuggestions(mappedSuggestions)
+          } finally {
+            stopLoaderRequest?.()
           }
-
-          const payload = (await response.json()) as NominatimSearchResult[]
-          const mappedSuggestions = payload
-            .map((item) => ({
-              address: item.display_name?.trim() ?? '',
-              latitude: item.lat?.trim() ?? '',
-              longitude: item.lon?.trim() ?? '',
-            }))
-            .filter((item) => item.address && item.latitude && item.longitude)
-
-          setSuggestions(mappedSuggestions)
         } catch (error) {
           if (isAbortError(error)) {
             return
@@ -286,10 +310,21 @@ function LocationPickerMap({
             })
           }}
           onFocus={() => {
+            if (blurTimeoutRef.current !== null) {
+              window.clearTimeout(blurTimeoutRef.current)
+              blurTimeoutRef.current = null
+            }
             setIsSearchFocused(true)
           }}
           onBlur={() => {
-            setIsSearchFocused(false)
+            if (isSelectingSuggestionRef.current) {
+              return
+            }
+
+            blurTimeoutRef.current = window.setTimeout(() => {
+              setIsSearchFocused(false)
+              blurTimeoutRef.current = null
+            }, 120)
           }}
           className={styles.searchInput}
           placeholder="Search for city, street, or landmark"
@@ -308,11 +343,21 @@ function LocationPickerMap({
                     <button
                       type="button"
                       className={styles.suggestionButton}
+                      onPointerDown={() => {
+                        isSelectingSuggestionRef.current = true
+                      }}
+                      onPointerUp={() => {
+                        isSelectingSuggestionRef.current = false
+                      }}
+                      onPointerCancel={() => {
+                        isSelectingSuggestionRef.current = false
+                      }}
                       onMouseDown={(event) => {
                         event.preventDefault()
                       }}
                       onClick={() => {
                         handleSuggestionSelect(suggestion)
+                        isSelectingSuggestionRef.current = false
                       }}
                     >
                       {suggestion.address}

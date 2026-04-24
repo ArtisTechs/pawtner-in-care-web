@@ -6,7 +6,8 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--loader-background, #efefef);
+  background: var(--loader-background, rgba(9, 20, 37, 0.36));
+  backdrop-filter: blur(1.5px);
 }
 
 .content {

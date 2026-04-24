@@ -19,6 +19,7 @@ import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
 import Sidebar from '@/layouts/Sidebar/Sidebar'
 import { ApiError, getErrorMessage } from '@/shared/api/api-error'
+import { cloudinaryService } from '@/shared/api/cloudinary.service'
 import Toast from '@/shared/components/feedback/Toast'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
@@ -44,6 +45,11 @@ interface DraftConversationRouteState {
       id?: string | null
     }
   }
+}
+
+interface UploadedAttachment {
+  file: File
+  url: string
 }
 
 const EMPTY_MESSAGES_PAGE: PaginatedMessagesResponse = {
@@ -169,8 +175,9 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false)
   const [messageDraft, setMessageDraft] = useState('')
-  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [attachedAttachment, setAttachedAttachment] = useState<UploadedAttachment | null>(null)
   const [forceScrollToBottomSignal, setForceScrollToBottomSignal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const latestSeenRequestRef = useRef<string>('')
@@ -539,15 +546,13 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
       return
     }
 
-    const text = messageDraft.trim()
-    if (!text && !attachedFile) {
+    if (isUploadingAttachment) {
+      showToast('Please wait for attachment upload to finish.', { variant: 'info' })
       return
     }
 
-    if (!text) {
-      showToast('Message content is required. Attachments-only messages are not supported.', {
-        variant: 'info',
-      })
+    const text = messageDraft.trim()
+    if (!text && !attachedAttachment) {
       return
     }
 
@@ -558,7 +563,8 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
       return
     }
 
-    const nextAttachedFile = attachedFile
+    const nextAttachedAttachment = attachedAttachment
+    const nextAttachedFile = nextAttachedAttachment?.file ?? null
 
     optimisticMessageCounterRef.current += 1
     const optimisticMessageId = `${OPTIMISTIC_MESSAGE_ID_PREFIX}${Date.now()}-${optimisticMessageCounterRef.current}`
@@ -591,30 +597,35 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
     forceScrollToBottom()
     setMessageDraft('')
-    setAttachedFile(null)
-
-    const sentRealtime = sendRealtimeMessage({
-      content: text,
-      conversationId,
-    })
-
-    if (sentRealtime) {
-      scheduleMessagesRefresh()
-      return
-    }
-
-    setIsSending(true)
-
-    const payload: SendMessagePayload = {
-      attachmentMimeType: nextAttachedFile?.type,
-      attachmentName: nextAttachedFile?.name,
-      attachmentSize: nextAttachedFile?.size,
-      content: text,
-      text,
-    }
+    setAttachedAttachment(null)
 
     const send = async () => {
       try {
+        const attachmentUrl = nextAttachedAttachment?.url ?? null
+
+        const payload: SendMessagePayload = {
+          attachmentMimeType: nextAttachedFile?.type,
+          attachmentName: nextAttachedFile?.name,
+          attachmentSize: nextAttachedFile?.size,
+          attachmentUrl,
+          content: text,
+          text,
+        }
+
+        if (!nextAttachedAttachment) {
+          const sentRealtime = sendRealtimeMessage({
+            content: text,
+            conversationId,
+          })
+
+          if (sentRealtime) {
+            scheduleMessagesRefresh()
+            return
+          }
+        }
+
+        setIsSending(true)
+
         const response = await chatService.sendMessage(conversationId, payload, accessToken, {
           currentUserId,
         })
@@ -654,6 +665,38 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
     void send()
   }
+
+  const handleAttachFile = useCallback(
+    (file: File) => {
+      const uploadAttachment = async () => {
+        setAttachedAttachment({
+          file,
+          url: '',
+        })
+        setIsUploadingAttachment(true)
+
+        try {
+          const uploadedUrl = await cloudinaryService.uploadFile(file, {
+            folder: 'chat/attachments',
+          })
+
+          setAttachedAttachment({
+            file,
+            url: uploadedUrl,
+          })
+          showToast('Attachment uploaded.', { variant: 'success' })
+        } catch (error) {
+          setAttachedAttachment(null)
+          showToast(getErrorMessage(error), { variant: 'error' })
+        } finally {
+          setIsUploadingAttachment(false)
+        }
+      }
+
+      void uploadAttachment()
+    },
+    [showToast],
+  )
 
   const handleMessageDraftChange = useCallback((value: string) => {
     setMessageDraft(value.slice(0, CHAT_MESSAGE_MAX_LENGTH))
@@ -774,12 +817,13 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
             <ChatComposer
               text={messageDraft}
-              attachedFile={attachedFile}
+              attachedFile={attachedAttachment?.file ?? null}
+              attachmentUploading={isUploadingAttachment}
               isSending={isSending}
               onTextChange={handleMessageDraftChange}
-              onAttach={setAttachedFile}
+              onAttach={handleAttachFile}
               onClearAttachment={() => {
-                setAttachedFile(null)
+                setAttachedAttachment(null)
               }}
               onSend={handleSendMessage}
             />

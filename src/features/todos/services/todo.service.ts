@@ -1,26 +1,72 @@
-import type { TodoItem, TodoListQuery, TodoPayload } from '@/features/todos/types/todo-api'
+import type { TodoItem, TodoListQuery, TodoListResult, TodoPayload } from '@/features/todos/types/todo-api'
 import { apiClient } from '@/shared/api/api-client'
 import { API_ENDPOINTS } from '@/shared/api/api-endpoints'
 
-type TodoListResponse = TodoItem[] | { content?: TodoItem[] | null; data?: TodoItem[] | null }
+type TodoListResponse =
+  | TodoItem[]
+  | {
+      content?: TodoItem[] | null
+      data?: TodoItem[] | null
+      first?: boolean | null
+      last?: boolean | null
+      number?: number | null
+      page?: number | null
+      size?: number | null
+      totalElements?: number | null
+      totalPages?: number | null
+    }
 type TodoPatchResponse = TodoItem | null
 
-const inFlightTodoListRequests = new Map<string, Promise<TodoItem[]>>()
+const inFlightTodoListRequests = new Map<string, Promise<TodoListResult>>()
 
-const normalizeTodoListResponse = (value: TodoListResponse): TodoItem[] => {
-  if (Array.isArray(value)) {
+const normalizeNumeric = (value: number | null | undefined, fallbackValue: number) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value
   }
 
-  if (value && Array.isArray(value.content)) {
-    return value.content
+  return fallbackValue
+}
+
+const normalizeTodoListResponse = (
+  value: TodoListResponse,
+  fallbackPage: number,
+  fallbackSize: number,
+): TodoListResult => {
+  if (Array.isArray(value)) {
+    return {
+      isFirst: true,
+      isLast: true,
+      items: value,
+      page: 0,
+      size: value.length,
+      totalElements: value.length,
+      totalPages: value.length ? 1 : 0,
+    }
   }
 
-  if (value && Array.isArray(value.data)) {
-    return value.data
-  }
+  const items =
+    value && Array.isArray(value.content)
+      ? value.content
+      : value && Array.isArray(value.data)
+        ? value.data
+        : []
+  const page = normalizeNumeric(value?.number ?? value?.page, fallbackPage)
+  const size = normalizeNumeric(value?.size, fallbackSize)
+  const totalElements = normalizeNumeric(value?.totalElements, items.length)
+  const totalPages = normalizeNumeric(
+    value?.totalPages,
+    size > 0 ? Math.max(1, Math.ceil(totalElements / size)) : items.length ? 1 : 0,
+  )
 
-  return []
+  return {
+    isFirst: Boolean(value?.first ?? page <= 0),
+    isLast: Boolean(value?.last ?? page >= totalPages - 1),
+    items,
+    page,
+    size,
+    totalElements,
+    totalPages,
+  }
 }
 
 const buildTodoListPath = (query?: TodoListQuery) => {
@@ -63,7 +109,10 @@ const listTodos = (token: string, query?: TodoListQuery) => {
     return cachedRequest
   }
 
-  const request = apiClient.get<TodoListResponse>(path, { token }).then(normalizeTodoListResponse)
+  const request = apiClient
+    .get<TodoListResponse>(path, { token })
+    .then((response) => normalizeTodoListResponse(response, query?.page ?? 0, query?.size ?? 20))
+
 
   inFlightTodoListRequests.set(requestKey, request)
 

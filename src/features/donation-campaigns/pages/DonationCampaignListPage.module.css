@@ -153,38 +153,6 @@
   padding: 5px 8px;
 }
 
-.statusBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  max-width: 100%;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: capitalize;
-}
-
-.statusOngoing {
-  color: #1d6fbe;
-  background: #e6f2ff;
-}
-
-.statusCompleted {
-  color: #22833f;
-  background: #e9f9ef;
-}
-
-.statusCancelled {
-  color: #b63d3d;
-  background: #ffe8e8;
-}
 
 .actionCell {
   display: flex;
@@ -666,12 +634,6 @@
   .tableFooter {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .statusBadge {
-    min-height: 24px;
-    padding: 0 9px;
-    font-size: 11px;
   }
 
   .floatingAddButton {

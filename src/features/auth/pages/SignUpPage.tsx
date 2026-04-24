@@ -7,12 +7,13 @@ import AuthTextField from '@/features/auth/components/AuthTextField'
 import OtpCodeField from '@/features/auth/components/OtpCodeField'
 import { authService } from '@/features/auth/services/auth.service'
 import type { SignUpPayload } from '@/features/auth/types/auth-api'
+import { shelterService } from '@/features/shelters/services/shelter.service'
 import { formatCountdownTime, getOtpResendCooldownSeconds } from '@/features/auth/utils/auth-utils'
 import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
-import FullScreenLoader from '@/shared/components/ui/FullScreenLoader/FullScreenLoader'
 import { useToast } from '@/shared/hooks/useToast'
 import { isValidEmail } from '@/shared/lib/validation/contact'
+import { getPasswordValidationError } from '@/shared/lib/validation/password'
 import styles from './SignUpPage.module.css'
 
 type SignUpStep = 'details' | 'verify-otp' | 'completed'
@@ -23,8 +24,15 @@ type SignUpFieldName =
   | 'email'
   | 'password'
   | 'confirmPassword'
+  | 'shelterId'
+  | 'shelterName'
   | 'otp'
-type SignUpTextFieldName = Exclude<SignUpFieldName, 'otp'>
+type SignUpTextFieldName = Exclude<SignUpFieldName, 'otp' | 'shelterId'>
+type ShelterInputMode = 'existing' | 'new'
+type PublicShelterOption = {
+  id: string
+  name: string
+}
 
 interface SignUpFormState {
   firstName: string
@@ -33,6 +41,8 @@ interface SignUpFormState {
   email: string
   password: string
   confirmPassword: string
+  shelterId: string
+  shelterName: string
   otp: string
 }
 
@@ -55,6 +65,8 @@ const INITIAL_SIGN_UP_FORM: SignUpFormState = {
   email: '',
   password: '',
   confirmPassword: '',
+  shelterId: '',
+  shelterName: '',
   otp: '',
 }
 
@@ -151,6 +163,7 @@ const normalizeSignUpForm = (formState: SignUpFormState) => ({
   middleName: toTitleCase(formState.middleName.trim()),
   lastName: toTitleCase(formState.lastName.trim()),
   email: formState.email.trim(),
+  shelterName: formState.shelterName.trim(),
 })
 
 function SignUpPage() {
@@ -160,8 +173,53 @@ function SignUpPage() {
   const [signUpStep, setSignUpStep] = useState<SignUpStep>('details')
   const [formState, setFormState] = useState<SignUpFormState>(INITIAL_SIGN_UP_FORM)
   const [fieldErrors, setFieldErrors] = useState<SignUpFieldErrors>({})
+  const [shelterInputMode, setShelterInputMode] = useState<ShelterInputMode>('existing')
+  const [shelterOptions, setShelterOptions] = useState<PublicShelterOption[]>([])
+  const [isLoadingShelterOptions, setIsLoadingShelterOptions] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [otpResendRemainingSeconds, setOtpResendRemainingSeconds] = useState(0)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadPublicShelters = async () => {
+      setIsLoadingShelterOptions(true)
+
+      try {
+        const response = await shelterService.listPublic()
+
+        if (!isMounted) {
+          return
+        }
+
+        const options = response
+          .map((shelter) => ({
+            id: shelter.id,
+            name: shelter.name?.trim() ?? '',
+          }))
+          .filter((shelter) => Boolean(shelter.id) && Boolean(shelter.name))
+          .sort((leftShelter, rightShelter) => leftShelter.name.localeCompare(rightShelter.name))
+
+        setShelterOptions(options)
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        showToast(getErrorMessage(error), { variant: 'error' })
+      } finally {
+        if (isMounted) {
+          setIsLoadingShelterOptions(false)
+        }
+      }
+    }
+
+    void loadPublicShelters()
+
+    return () => {
+      isMounted = false
+    }
+  }, [showToast])
 
   useEffect(() => {
     if (otpResendRemainingSeconds <= 0) {
@@ -219,6 +277,36 @@ function SignUpPage() {
     })
   }
 
+  const handleShelterModeToggle = () => {
+    setShelterInputMode((currentMode) => (currentMode === 'existing' ? 'new' : 'existing'))
+    setFieldErrors((currentState) => {
+      if (!currentState.shelterId && !currentState.shelterName) {
+        return currentState
+      }
+
+      const nextState = { ...currentState }
+      delete nextState.shelterId
+      delete nextState.shelterName
+      return nextState
+    })
+  }
+
+  const handleShelterIdChange = (value: string) => {
+    setFormState((currentState) => ({
+      ...currentState,
+      shelterId: value,
+    }))
+    setFieldErrors((currentState) => {
+      if (!currentState.shelterId) {
+        return currentState
+      }
+
+      const nextState = { ...currentState }
+      delete nextState.shelterId
+      return nextState
+    })
+  }
+
   const goToSignIn = () => {
     navigate(APP_ROUTES.login, { replace: true })
   }
@@ -255,6 +343,11 @@ function SignUpPage() {
 
     if (!formState.password) {
       nextFieldErrors.password = 'Password is required.'
+    } else {
+      const passwordValidationError = getPasswordValidationError(formState.password)
+      if (passwordValidationError) {
+        nextFieldErrors.password = passwordValidationError
+      }
     }
 
     if (!formState.confirmPassword) {
@@ -292,6 +385,14 @@ function SignUpPage() {
       nextFieldErrors.otp = 'Please enter the 6-digit OTP code.'
     }
 
+    if (shelterInputMode === 'existing') {
+      if (!formState.shelterId.trim()) {
+        nextFieldErrors.shelterId = 'Please select a shelter or choose create new shelter.'
+      }
+    } else if (!normalizedForm.shelterName) {
+      nextFieldErrors.shelterName = 'Shelter name is required when creating a new shelter.'
+    }
+
     if (Object.keys(nextFieldErrors).length > 0) {
       setFieldErrors(nextFieldErrors)
       return
@@ -311,6 +412,13 @@ function SignUpPage() {
       email: normalizedForm.email,
       password: formState.password,
       role: 'ADMIN',
+      ...(shelterInputMode === 'existing'
+        ? {
+            shelterId: formState.shelterId.trim(),
+          }
+        : {
+            shelterName: normalizedForm.shelterName,
+          }),
     }
 
     const response = await authService.signUp(payload)
@@ -393,17 +501,10 @@ function SignUpPage() {
     otpResendRemainingSeconds > 0
       ? `Resend OTP in ${formatCountdownTime(otpResendRemainingSeconds)}`
       : 'Resend OTP'
-  const loadingSubtitle =
-    signUpStep === 'details' ? 'Sending OTP...' : 'Verifying OTP and creating account...'
 
   return (
     <main className={styles.page}>
       <Toast toast={toast} onClose={clearToast} />
-      <FullScreenLoader
-        visible={isSubmitting}
-        subtitle={loadingSubtitle}
-        backgroundColor="rgba(0, 0, 0, 0.28)"
-      />
 
       <section className={styles.card} aria-label="Create admin account">
         <img src={titleLogo} alt="Pawtner In Care" className={styles.logo} />
@@ -431,6 +532,68 @@ function SignUpPage() {
                   />
                 ))
               : null}
+
+            {signUpStep === 'details' ? (
+              <div className={styles.shelterFieldGroup}>
+                <div className={styles.shelterFieldLabelRow}>
+                  <label htmlFor="signup-shelter-selection" className={styles.shelterFieldLabel}>
+                    Shelter:
+                    <span className={styles.requiredMark}>*</span>
+                  </label>
+                  <button
+                    type="button"
+                    className={styles.shelterInlineAction}
+                    onClick={handleShelterModeToggle}
+                    disabled={isSubmitting}
+                  >
+                    {shelterInputMode === 'existing'
+                      ? 'Create new shelter'
+                      : 'Choose existing shelter'}
+                  </button>
+                </div>
+
+                {shelterInputMode === 'existing' ? (
+                  <div className={styles.shelterInputWrapper}>
+                    <select
+                      id="signup-shelter-selection"
+                      name="shelterId"
+                      value={formState.shelterId}
+                      className={`${styles.shelterInput} ${fieldErrors.shelterId ? styles.shelterInputError : ''}`}
+                      onChange={(event) => handleShelterIdChange(event.currentTarget.value)}
+                      disabled={isSubmitting || isLoadingShelterOptions}
+                      aria-required
+                      aria-invalid={Boolean(fieldErrors.shelterId)}
+                    >
+                      <option value="">
+                        {isLoadingShelterOptions ? 'Loading shelters...' : 'Select a shelter'}
+                      </option>
+                      {shelterOptions.map((shelter) => (
+                        <option key={shelter.id} value={shelter.id}>
+                          {shelter.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <AuthTextField
+                    id="signup-new-shelter-name"
+                    name="shelterName"
+                    label="New shelter name:"
+                    type="text"
+                    placeholder="Enter shelter name"
+                    value={formState.shelterName}
+                    disabled={isSubmitting}
+                    required
+                    errorMessage={fieldErrors.shelterName}
+                    onValueChange={handleTextFieldChange}
+                  />
+                )}
+
+                {shelterInputMode === 'existing' && fieldErrors.shelterId ? (
+                  <p className={styles.shelterErrorText}>{fieldErrors.shelterId}</p>
+                ) : null}
+              </div>
+            ) : null}
 
             {signUpStep === 'verify-otp' ? (
               <>

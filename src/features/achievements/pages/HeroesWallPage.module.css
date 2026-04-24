@@ -467,6 +467,10 @@
   margin-top: 12px;
   display: grid;
   gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .row,

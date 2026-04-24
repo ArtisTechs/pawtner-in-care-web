@@ -138,8 +138,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0;
+  padding: 6px 8px;
+  border-radius: 10px;
   cursor: pointer;
+}
+
+.profileButtonActive {
+  background: #e8f2ff;
+  border: 1px solid #bad5f6;
 }
 
 .avatar {

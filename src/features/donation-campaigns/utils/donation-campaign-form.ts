@@ -2,7 +2,6 @@ import type { AddDonationCampaignForm } from '@/features/donation-campaigns/cons
 import type {
   DonationCampaign,
   DonationCampaignPayload,
-  DonationCampaignStatus,
 } from '@/features/donation-campaigns/types/donation-campaign-api'
 
 const normalizeDateInput = (value?: string | null) => {
@@ -97,16 +96,4 @@ export const isDeadlineBeforeStartDate = (startDate: string, deadline: string) =
   }
 
   return normalizedDeadline < normalizedStartDate
-}
-
-export const resolveStatusClassName = (status: DonationCampaignStatus) => {
-  switch (status) {
-    case 'COMPLETED':
-      return 'statusCompleted'
-    case 'CANCELLED':
-      return 'statusCancelled'
-    case 'ONGOING':
-    default:
-      return 'statusOngoing'
-  }
 }

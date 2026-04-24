@@ -33,10 +33,10 @@ import {
 } from '@/features/auth/utils/auth-utils'
 import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
-import FullScreenLoader from '@/shared/components/ui/FullScreenLoader/FullScreenLoader'
 import { useToast } from '@/shared/hooks/useToast'
 import { wait } from '@/shared/lib/async/wait'
 import { isValidEmail } from '@/shared/lib/validation/contact'
+import { getPasswordValidationError } from '@/shared/lib/validation/password'
 import styles from './SignInPage.module.css'
 
 interface SignInPageProps {
@@ -183,7 +183,7 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
       const loginSession = await authService.login(payload)
 
       if (!isAdminAuthSession(loginSession)) {
-        showToast('Only admin accounts can log in to the web dashboard.', { variant: 'error' })
+        showToast('Only ADMIN and SYSTEM_ADMIN accounts can log in to the web dashboard.', { variant: 'error' })
         return
       }
 
@@ -290,6 +290,11 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
 
       if (!forgotPasswordFormState.newPassword) {
         nextFieldErrors.newPassword = 'New password is required.'
+      } else {
+        const passwordValidationError = getPasswordValidationError(forgotPasswordFormState.newPassword)
+        if (passwordValidationError) {
+          nextFieldErrors.newPassword = passwordValidationError
+        }
       }
 
       if (!forgotPasswordFormState.confirmPassword) {
@@ -383,11 +388,6 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
   return (
     <main className={styles.page}>
       <Toast toast={toast} onClose={clearToast} />
-      <FullScreenLoader
-        visible={isSubmitting}
-        subtitle="Signing you in..."
-        backgroundColor="rgba(0, 0, 0, 0.28)"
-      />
 
       <section className={styles.card} aria-label="Sign in">
         <img src={titleLogo} alt="Pawtner In Care" className={styles.logo} />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { FaChevronLeft, FaChevronRight, FaFilter, FaSyncAlt, FaTimes } from 'react-icons/fa'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { donationTransactionService } from '@/features/donation-transactions/services/donation-transaction.service'
@@ -18,6 +18,7 @@ import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './DonationTransactionListPage.module.css'
 
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'donation-logs'
+const LIST_PAGE_SIZE = 20
 
 type DonationLogRow = {
   amountLabel: string
@@ -195,6 +196,9 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([])
   const [selectedPaymentModeValues, setSelectedPaymentModeValues] = useState<string[]>([])
   const [selectedCampaignValues, setSelectedCampaignValues] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreRows, setHasMoreRows] = useState(false)
+  const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<DonationLogRow | null>(null)
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const { isSidebarOpen, setIsSidebarOpen } = useResponsiveSidebar()
@@ -205,23 +209,57 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
   })
   const accessToken = session?.accessToken?.trim() ?? ''
 
-  const loadDonationLogs = useCallback(async () => {
+  const isLoadingMoreRowsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadDonationLogs = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setRows([])
+      setCurrentPage(0)
+      setHasMoreRows(false)
       return
     }
 
-    setIsLoadingLogs(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreRows(true)
+    } else {
+      setIsLoadingLogs(true)
+    }
 
     try {
-      const transactions = await donationTransactionService.list(accessToken)
-      const mappedRows = transactions.map(mapDonationTransactionToRow)
+      const result = await donationTransactionService.list(accessToken, {
+        page: targetPage,
+        size: LIST_PAGE_SIZE,
+        sortBy: 'createdDate',
+        sortDir: 'desc',
+      })
+      const mappedRows = result.items.map(mapDonationTransactionToRow)
       const sortedRows = [...mappedRows].sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
-      setRows(sortedRows)
+      setRows((currentRows) => {
+        if (!shouldAppend) {
+          return sortedRows
+        }
+
+        const rowMap = new Map(currentRows.map((row) => [row.transactionId, row]))
+        sortedRows.forEach((row) => {
+          rowMap.set(row.transactionId, row)
+        })
+
+        return Array.from(rowMap.values()).sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
+      })
+      setCurrentPage(result.page)
+      setHasMoreRows(!result.isLast && result.page + 1 < result.totalPages)
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingLogs(false)
+      if (shouldAppend) {
+        setIsLoadingMoreRows(false)
+      } else {
+        setIsLoadingLogs(false)
+      }
     }
   }, [accessToken, showToast])
 
@@ -312,6 +350,35 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
       )
     })
   }, [rows, searchValue, selectedDateKeys, selectedPaymentModeValues, selectedCampaignValues])
+  const handleTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreRows || isLoadingLogs || isLoadingMoreRows || isLoadingMoreRowsRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreRowsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadDonationLogs({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreRowsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const primarySelectedDateKey = selectedDateKeys[0] || ''
 
@@ -470,7 +537,7 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleTableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>

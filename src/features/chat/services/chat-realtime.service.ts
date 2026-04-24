@@ -96,6 +96,28 @@ const toStringValue = (value: unknown) => {
   return value.trim()
 }
 
+const resolveAttachmentFileNameFromUrl = (url: string) => {
+  const normalizedUrl = url.trim()
+  if (!normalizedUrl) {
+    return ''
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedUrl)
+    const urlPath = parsedUrl.pathname.replace(/\/+$/, '')
+    const pathSegment = urlPath.split('/').filter(Boolean).pop() || ''
+
+    try {
+      return decodeURIComponent(pathSegment)
+    } catch {
+      return pathSegment
+    }
+  } catch {
+    const cleanedPath = normalizedUrl.split('?')[0]?.split('#')[0] || normalizedUrl
+    return cleanedPath.split('/').filter(Boolean).pop() || ''
+  }
+}
+
 const shouldSubscribeLegacyQueues = () => {
   const rawFlag = toStringValue(import.meta.env.VITE_CHAT_WS_ENABLE_LEGACY_QUEUES).toLowerCase()
   return rawFlag === '1' || rawFlag === 'true'
@@ -250,6 +272,7 @@ type NotificationServerEventType =
   | 'NOTIFICATION_UPDATED'
   | 'NOTIFICATION_DELETED'
   | 'NOTIFICATION_READ_ALL'
+  | 'NOTIFICATION_CLEARED_ALL'
 
 const resolveNotificationEventType = (value: unknown): NotificationServerEventType | null => {
   const rawType = toStringValue(value).toUpperCase()
@@ -258,7 +281,8 @@ const resolveNotificationEventType = (value: unknown): NotificationServerEventTy
     rawType === 'NOTIFICATION_CREATED' ||
     rawType === 'NOTIFICATION_UPDATED' ||
     rawType === 'NOTIFICATION_DELETED' ||
-    rawType === 'NOTIFICATION_READ_ALL'
+    rawType === 'NOTIFICATION_READ_ALL' ||
+    rawType === 'NOTIFICATION_CLEARED_ALL'
   ) {
     return rawType
   }
@@ -500,9 +524,31 @@ const asChatMessage = (
   const firstName = toStringValue(senderValue?.firstName)
   const lastName = toStringValue(senderValue?.lastName)
   const senderFullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const attachmentValue = isRecord(value.attachment) ? value.attachment : null
+  const attachmentUrl =
+    toStringValue(
+      attachmentValue?.url ??
+        value.attachmentUrl ??
+        value.fileUrl ??
+        value.mediaUrl ??
+        value.imageUrl,
+    ) || null
+  const attachmentName =
+    toStringValue(attachmentValue?.name ?? value.attachmentName ?? value.fileName ?? value.mediaName) ||
+    (attachmentUrl ? resolveAttachmentFileNameFromUrl(attachmentUrl) : '')
+  const resolvedAttachmentName = attachmentName || (attachmentUrl ? 'Attachment' : '')
+  const attachment =
+    resolvedAttachmentName || attachmentUrl
+      ? {
+          mimeType: toStringValue(attachmentValue?.mimeType ?? value.attachmentMimeType) || null,
+          name: resolvedAttachmentName,
+          size: toNumber(attachmentValue?.size ?? value.attachmentSize),
+          url: attachmentUrl,
+        }
+      : null
 
   return {
-    attachment: null,
+    attachment,
     body: body || null,
     conversationId,
     createdAt,

@@ -49,6 +49,16 @@ export interface GiftLogListQuery {
   status?: GiftLogStatus
 }
 
+export interface GiftLogListResult {
+  isFirst: boolean
+  isLast: boolean
+  items: GiftLog[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 interface GiftLogWritePayloadBase {
   deliveryType: GiftLogDeliveryType
   message?: string

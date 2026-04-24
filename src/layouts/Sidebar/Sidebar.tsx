@@ -1,6 +1,9 @@
 import { useContext, useLayoutEffect, useRef, useState } from 'react'
+import type { AuthSession } from '@/features/auth/types/auth-api'
+import { resolveDashboardAccessRole } from '@/features/auth/utils/auth-utils'
 import { ChatRealtimeContext } from '@/features/chat/providers/chat-realtime-context'
 import { NotificationContext } from '@/features/notifications/providers/notification-context'
+import { resolveSidebarBottomItemsByRole, resolveSidebarMenuItemsByRole } from '@/layouts/config/navigation'
 import type { SidebarIconName, SidebarItemKey, SidebarMenuItem } from '@/shared/types/layout'
 import ConfirmModal from '@/shared/components/ui/ConfirmModal/ConfirmModal'
 import type { IconType } from 'react-icons'
@@ -91,11 +94,12 @@ const SIDEBAR_SECTION_CONFIG: Array<{ keys: SidebarItemKey[]; title: string }> =
   },
   {
     title: 'Admin',
-    keys: ['user-list'],
+    keys: ['user-list', 'shelter-list', 'shelter-association'],
   },
 ]
 
 const SIDEBAR_SCROLL_STORAGE_KEY = 'pawtner-sidebar-scroll-top'
+const AUTH_SESSION_STORAGE_KEY = '@pawtner/auth/session'
 
 const SIDEBAR_ICON_MAP: Record<SidebarIconName, IconType> = {
   dashboard: FaTachometerAlt,
@@ -104,6 +108,8 @@ const SIDEBAR_ICON_MAP: Record<SidebarIconName, IconType> = {
   'pet-list': FaPaw,
   'veterinary-clinic-list': FaClinicMedical,
   'user-list': FaUsers,
+  'shelter-list': FaClinicMedical,
+  'shelter-association': FaUsers,
   'adoption-logs': FaClipboardList,
   'emergency-sos': FaClipboardList,
   'donation-campaign-list': FaDonate,
@@ -305,6 +311,25 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false)
   const [menuSearchValue, setMenuSearchValue] = useState('')
   const navRef = useRef<HTMLElement | null>(null)
+  const [sessionRoleFromStorage] = useState(() => {
+    if (typeof window === 'undefined') {
+      return ''
+    }
+
+    try {
+      const rawSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
+      if (!rawSession) {
+        return ''
+      }
+
+      const parsedSession = JSON.parse(rawSession) as AuthSession
+      return resolveDashboardAccessRole(parsedSession)
+    } catch {
+      return ''
+    }
+  })
+  const roleBasedMenuItems = resolveSidebarMenuItemsByRole(sessionRoleFromStorage, menuItems)
+  const roleBasedBottomItems = resolveSidebarBottomItemsByRole(sessionRoleFromStorage, bottomItems)
 
   const persistNavScrollTop = () => {
     const navElement = navRef.current
@@ -385,7 +410,7 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
             activeItem={activeItem}
             inboxUnreadCount={totalUnreadCount}
             notificationUnreadCount={notificationUnreadCount}
-            items={menuItems}
+            items={roleBasedMenuItems}
             searchQuery={menuSearchValue}
             onLogout={handleLogoutRequest}
             onNavigate={persistNavScrollTop}
@@ -393,7 +418,7 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
         </nav>
 
         <div className={styles.bottomNav} aria-label="Secondary navigation">
-          <SidebarList activeItem={activeItem} items={bottomItems} onLogout={handleLogoutRequest} />
+          <SidebarList activeItem={activeItem} items={roleBasedBottomItems} onLogout={handleLogoutRequest} />
         </div>
       </div>
 

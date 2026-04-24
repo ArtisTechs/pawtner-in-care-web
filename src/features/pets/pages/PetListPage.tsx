@@ -934,6 +934,7 @@ function PetListPage({ onLogout, session }: PetListPageProps) {
                     onNotify={(message, variant) => {
                       showToast(message, { variant })
                     }}
+                    required
                     title="Pet Photo"
                     subtitle="Upload a clear photo from your device or camera."
                     previewAlt={addPetForm.name ? `${addPetForm.name} photo` : 'Pet photo preview'}

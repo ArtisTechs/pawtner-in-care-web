@@ -37,6 +37,8 @@ export interface SignUpPayload {
   password: string
   profilePicture?: string
   role?: 'ADMIN' | 'USER'
+  shelterId?: string
+  shelterName?: string
 }
 
 export type ApiMessageResponse = {

@@ -47,3 +47,33 @@ export interface DonationTransactionPayload {
   photoProof: string
   userId: string
 }
+
+export type DonationTransactionSortDir = 'asc' | 'desc'
+
+export interface DonationTransactionListQuery {
+  ignorePagination?: boolean
+  page?: number
+  search?: string
+  size?: number
+  sortBy?: 'createdDate' | 'createdAt' | 'updatedDate' | 'updatedAt' | (string & {})
+  sortDir?: DonationTransactionSortDir
+}
+
+export interface DonationTransactionListResult {
+  isFirst: boolean
+  isLast: boolean
+  items: DonationTransaction[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface DonationTransactionTotalAmountQuery {
+  donationCampaignId?: string
+  minDonatedAmount?: number
+}
+
+export interface DonationTransactionTotalAmountResponse {
+  totalAmount: number
+}

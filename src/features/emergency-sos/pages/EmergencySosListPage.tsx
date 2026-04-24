@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import {
   FaCheck,
   FaChevronLeft,
@@ -38,6 +38,7 @@ import styles from './EmergencySosListPage.module.css'
 const ACTIVE_MENU_ITEM: SidebarItemKey = 'emergency-sos'
 const DEFAULT_TYPE_OPTIONS: ReadonlyArray<EmergencySosType> = ['INJURED', 'ACCIDENTS', 'RANDOM_STRAY']
 const DEFAULT_STATUS_OPTIONS: ReadonlyArray<EmergencySosStatus> = ['REQUESTED', 'REJECTED', 'ONGOING', 'RESCUED']
+const LIST_PAGE_SIZE = 20
 
 type EmergencySosRow = {
   addressLocation: string
@@ -260,6 +261,9 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([])
   const [selectedTypeValues, setSelectedTypeValues] = useState<EmergencySosType[]>([])
   const [selectedStatusValues, setSelectedStatusValues] = useState<EmergencySosStatus[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreRows, setHasMoreRows] = useState(false)
+  const [isLoadingMoreRows, setIsLoadingMoreRows] = useState(false)
   const [selectedSosForAction, setSelectedSosForAction] = useState<EmergencySosRow | null>(null)
   const [pendingConfirmationAction, setPendingConfirmationAction] = useState<PendingConfirmationAction | null>(null)
   const [typeOptions, setTypeOptions] = useState<EmergencySosType[]>([...DEFAULT_TYPE_OPTIONS])
@@ -276,20 +280,33 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
   })
   const accessToken = session?.accessToken?.trim() ?? ''
 
-  const loadEmergencySos = useCallback(async () => {
+  const isLoadingMoreRowsRef = useRef(false)
+  const canTriggerLoadMoreRef = useRef(true)
+
+  const loadEmergencySos = useCallback(async (options?: { append?: boolean; page?: number }) => {
     if (!accessToken) {
       setRows([])
       setTypeOptions([...DEFAULT_TYPE_OPTIONS])
       setStatusOptions([...DEFAULT_STATUS_OPTIONS])
+      setCurrentPage(0)
+      setHasMoreRows(false)
       return
     }
 
-    setIsLoadingLogs(true)
+    const shouldAppend = Boolean(options?.append)
+    const targetPage = Math.max(0, options?.page ?? 0)
+
+    if (shouldAppend) {
+      setIsLoadingMoreRows(true)
+    } else {
+      setIsLoadingLogs(true)
+    }
 
     try {
-      const [requests, fetchedTypes, fetchedStatuses] = await Promise.all([
+      const [result, fetchedTypes, fetchedStatuses] = await Promise.all([
         emergencySosService.list(accessToken, {
-          ignorePagination: true,
+          page: targetPage,
+          size: LIST_PAGE_SIZE,
           sortBy: 'createdAt',
           sortDir: 'desc',
         }),
@@ -297,9 +314,22 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
         emergencySosService.listStatuses(accessToken).catch(() => []),
       ])
 
-      const nextRows = requests.map(mapSosRow)
+      const nextRows = result.items.map(mapSosRow)
       const sortedRows = [...nextRows].sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
-      setRows(sortedRows)
+      setRows((currentRows) => {
+        if (!shouldAppend) {
+          return sortedRows
+        }
+
+        const rowMap = new Map(currentRows.map((row) => [row.reportId, row]))
+        sortedRows.forEach((row) => {
+          rowMap.set(row.reportId, row)
+        })
+
+        return Array.from(rowMap.values()).sort((leftRow, rightRow) => rightRow.sortTime - leftRow.sortTime)
+      })
+      setCurrentPage(result.page)
+      setHasMoreRows(!result.isLast && result.page + 1 < result.totalPages)
 
       setTypeOptions(
         fetchedTypes.length
@@ -314,7 +344,11 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     } catch (error) {
       showToast(getErrorMessage(error), { variant: 'error' })
     } finally {
-      setIsLoadingLogs(false)
+      if (shouldAppend) {
+        setIsLoadingMoreRows(false)
+      } else {
+        setIsLoadingLogs(false)
+      }
     }
   }, [accessToken, showToast])
 
@@ -443,6 +477,35 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
       )
     })
   }, [rows, searchValue, selectedDateKeys, selectedTypeValues, selectedStatusValues])
+  const handleTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreRows || isLoadingLogs || isLoadingMoreRows || isLoadingMoreRowsRef.current) {
+      return
+    }
+
+    const scrollElement = event.currentTarget
+    const distanceFromBottom =
+      scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight
+
+    if (distanceFromBottom > 180) {
+      canTriggerLoadMoreRef.current = true
+      return
+    }
+
+    if (distanceFromBottom <= 120 && canTriggerLoadMoreRef.current) {
+      canTriggerLoadMoreRef.current = false
+      isLoadingMoreRowsRef.current = true
+
+      const loadMore = async () => {
+        try {
+          await loadEmergencySos({ append: true, page: currentPage + 1 })
+        } finally {
+          isLoadingMoreRowsRef.current = false
+        }
+      }
+
+      void loadMore()
+    }
+  }
 
   const primarySelectedDateKey = selectedDateKeys[0] || ''
 
@@ -639,18 +702,18 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
     }
 
     if (isLoadingCompanyAddresses) {
-      showToast('Loading company addresses. Please try again.', { variant: 'error' })
+      showToast('Loading shelter addresses. Please try again.', { variant: 'error' })
       return
     }
 
     if (companyAddressOptions.length === 0) {
-      showToast('No company address found. Please update Company Settings first.', { variant: 'error' })
+      showToast('No shelter address found. Please update Shelter Settings first.', { variant: 'error' })
       return
     }
 
     const preferredAddress = selectedOngoingAddress ?? companyAddressOptions[0]
     if (!preferredAddress) {
-      showToast('No company address found. Please update Company Settings first.', { variant: 'error' })
+      showToast('No shelter address found. Please update Shelter Settings first.', { variant: 'error' })
       return
     }
 
@@ -813,7 +876,7 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
           </div>
 
           <div className={styles.tablePanel}>
-            <div className={styles.tableScroll}>
+            <div className={styles.tableScroll} onScroll={handleTableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -1005,7 +1068,7 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                   <>
                     {!isLoadingCompanyAddresses && !hasCompanyAddressOptions ? (
                       <p className={styles.modalAddressHint}>
-                        Add at least one company address in Company Settings to set an SOS to ongoing.
+                        Add at least one shelter address in Shelter Settings to set an SOS to ongoing.
                       </p>
                     ) : null}
 
@@ -1148,7 +1211,7 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                       <div className={styles.addressOptionContent}>
                         <div className={styles.addressOptionName}>
                           <FaMapMarkerAlt aria-hidden="true" />
-                          <span>{addressOption.name?.trim() || 'Company Address'}</span>
+                          <span>{addressOption.name?.trim() || 'Shelter Address'}</span>
                         </div>
                         <p className={styles.addressOptionValue}>{addressOption.address}</p>
                       </div>
