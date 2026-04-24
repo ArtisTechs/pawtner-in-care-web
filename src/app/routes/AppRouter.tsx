@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactElement } from 'react'
 import { APP_ROUTES } from '@/app/routes/route-paths'
 import type { AuthSession } from '@/features/auth/types/auth-api'
 import { resolveDashboardAccessRole } from '@/features/auth/utils/auth-utils'
@@ -51,7 +52,7 @@ function AppRouter({
   const resolvedRole = resolveDashboardAccessRole(session)
   const isSystemAdmin = resolvedRole === 'SYSTEM_ADMIN'
 
-  const renderProtectedRoute = (element: JSX.Element, allowSystemAdmin = false) => {
+  const renderProtectedRoute = (element: ReactElement, allowSystemAdmin = false) => {
     if (!isAuthenticated) {
       return <Navigate to={APP_ROUTES.login} replace />
     }
@@ -63,7 +64,7 @@ function AppRouter({
     return element
   }
 
-  const renderSystemAdminRoute = (element: JSX.Element) => {
+  const renderSystemAdminRoute = (element: ReactElement) => {
     if (!isAuthenticated) {
       return <Navigate to={APP_ROUTES.login} replace />
     }

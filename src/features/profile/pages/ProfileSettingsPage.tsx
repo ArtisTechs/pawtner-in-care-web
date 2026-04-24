@@ -9,7 +9,7 @@ import { defaultHeaderProfile, sidebarBottomItems, sidebarLogo, sidebarMenuItems
 import Header from '@/layouts/Header/Header'
 import MainLayout from '@/layouts/MainLayout/MainLayout'
 import Sidebar from '@/layouts/Sidebar/Sidebar'
-import { ApiError, getErrorMessage } from '@/shared/api/api-error'
+import { getErrorMessage } from '@/shared/api/api-error'
 import Toast from '@/shared/components/feedback/Toast'
 import PhotoUploadField from '@/shared/components/media/PhotoUploadField/PhotoUploadField'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
