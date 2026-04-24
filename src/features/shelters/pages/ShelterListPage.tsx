@@ -323,7 +323,6 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
   }
 
   const resolveShelterActiveValue = (shelter: Shelter) => shelter.active === true
-  const resolveShelterHiddenValue = (shelter: Shelter) => shelter.hidden === true
 
   const handleToggleShelterActive = (shelterId: string, nextActive: boolean) => {
     if (!accessToken) {
