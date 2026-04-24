@@ -48,6 +48,7 @@ async function request<TResponse, TBody = undefined>(
   options: RequestOptions<TBody> = {},
 ) {
   const headers = new Headers(options.headers)
+  const method = options.method ?? 'GET'
 
   if (options.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
@@ -60,7 +61,8 @@ async function request<TResponse, TBody = undefined>(
   const hasBearerAuth = hasBearerAuthHeader(headers)
   const loaderMode = options.loader ?? 'auto'
   const shouldShowFullScreenLoader =
-    loaderMode === 'always' || (loaderMode === 'auto' && wasRecentlyTriggeredByUserAction())
+    loaderMode === 'always' ||
+    (loaderMode === 'auto' && method !== 'GET' && wasRecentlyTriggeredByUserAction())
   const stopLoaderRequest = shouldShowFullScreenLoader ? startFullScreenLoaderRequest() : null
 
   try {
@@ -68,7 +70,7 @@ async function request<TResponse, TBody = undefined>(
 
     try {
       response = await fetch(buildUrl(path), {
-        method: options.method ?? 'GET',
+        method,
         headers,
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
       })
