@@ -51,6 +51,18 @@ const resolveShelterStatusUi = (value: boolean | null | undefined): { label: str
   return { label: 'N/A', tone: 'neutral' }
 }
 
+const resolveShelterVisibilityUi = (value: boolean | null | undefined): { label: string; tone: StatusBadgeTone } => {
+  if (value === true) {
+    return { label: 'Hidden', tone: 'danger' }
+  }
+
+  if (value === false) {
+    return { label: 'Public', tone: 'positive' }
+  }
+
+  return { label: 'N/A', tone: 'neutral' }
+}
+
 interface ShelterListPageProps {
   onLogout?: () => void
   session?: AuthSession | null
@@ -75,6 +87,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
   const [editShelterNameError, setEditShelterNameError] = useState('')
   const [editShelterApproved, setEditShelterApproved] = useState(false)
   const [editShelterActive, setEditShelterActive] = useState(false)
+  const [editShelterHidden, setEditShelterHidden] = useState(false)
   const [isSavingShelter, setIsSavingShelter] = useState(false)
   const [isUpdatingShelter, setIsUpdatingShelter] = useState(false)
   const [viewingShelter, setViewingShelter] = useState<Shelter | null>(null)
@@ -144,6 +157,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
     setEditShelterNameError('')
     setEditShelterApproved(false)
     setEditShelterActive(false)
+    setEditShelterHidden(false)
   }, [])
 
   const closeViewModal = useCallback(() => {
@@ -235,6 +249,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
     setEditShelterNameError('')
     setEditShelterApproved(shelter.approved === true)
     setEditShelterActive(shelter.active === true)
+    setEditShelterHidden(shelter.hidden === true)
     setIsEditModalOpen(true)
   }
 
@@ -267,6 +282,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
         const payload = {
           active: editShelterActive,
           approved: editShelterApproved,
+          hidden: editShelterHidden,
           name: trimmedName,
         }
 
@@ -277,6 +293,8 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
             typeof updatedShelter.active === 'boolean' ? updatedShelter.active : payload.active,
           approved:
             typeof updatedShelter.approved === 'boolean' ? updatedShelter.approved : payload.approved,
+          hidden:
+            typeof updatedShelter.hidden === 'boolean' ? updatedShelter.hidden : payload.hidden,
           name: updatedShelter.name?.trim() ? updatedShelter.name : payload.name,
         }
 
@@ -305,6 +323,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
   }
 
   const resolveShelterActiveValue = (shelter: Shelter) => shelter.active === true
+  const resolveShelterHiddenValue = (shelter: Shelter) => shelter.hidden === true
 
   const handleToggleShelterActive = (shelterId: string, nextActive: boolean) => {
     if (!accessToken) {
@@ -313,7 +332,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
       return
     }
 
-    const toggleShelterActive = async () => {
+    const toggleShelterActiveRequest = async () => {
       setShelterIdBeingToggled(shelterId)
 
       try {
@@ -354,10 +373,10 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
       }
     }
 
-    void toggleShelterActive()
+    void toggleShelterActiveRequest()
   }
 
-  const handleToggleShelterRequest = (shelter: Shelter) => {
+  const handleToggleShelterActiveRequest = (shelter: Shelter) => {
     const currentActiveValue = resolveShelterActiveValue(shelter)
     setPendingToggleShelter({
       id: shelter.id,
@@ -425,6 +444,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   <tr>
                     <th scope="col">Shelter Name</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Visibility</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -440,13 +460,16 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                           <div className={`${styles.skeletonBlock} ${styles.skeletonBadge}`} />
                         </td>
                         <td>
+                          <div className={`${styles.skeletonBlock} ${styles.skeletonBadge}`} />
+                        </td>
+                        <td>
                           <div className={`${styles.skeletonBlock} ${styles.skeletonAction}`} />
                         </td>
                       </tr>
                     ))
                   ) : filteredShelters.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className={styles.tableStateCell}>
+                      <td colSpan={4} className={styles.tableStateCell}>
                         No shelters found.
                       </td>
                     </tr>
@@ -455,6 +478,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                       const isActive = resolveShelterActiveValue(shelter)
                       const isToggleDisabled = shelterIdBeingToggled === shelter.id
                       const shelterStatus = resolveShelterStatusUi(shelter.active)
+                      const shelterVisibility = resolveShelterVisibilityUi(shelter.hidden)
 
                       return (
                         <tr
@@ -467,6 +491,9 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                         <td>{shelter.name?.trim() || 'Unnamed Shelter'}</td>
                         <td>
                           <StatusBadge label={shelterStatus.label} tone={shelterStatus.tone} />
+                        </td>
+                        <td>
+                          <StatusBadge label={shelterVisibility.label} tone={shelterVisibility.tone} />
                         </td>
                         <td>
                           <div className={styles.actionCell}>
@@ -488,7 +515,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                               }`}
                               onClick={(event) => {
                                 event.stopPropagation()
-                                handleToggleShelterRequest(shelter)
+                                handleToggleShelterActiveRequest(shelter)
                               }}
                               disabled={isToggleDisabled}
                             >
@@ -565,6 +592,15 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   </span>
                 </div>
                 <div className={styles.viewDetailItem}>
+                  <span className={styles.viewDetailLabel}>Visibility</span>
+                  <span className={styles.viewDetailValue}>
+                    <StatusBadge
+                      label={resolveShelterVisibilityUi(viewingShelter.hidden).label}
+                      tone={resolveShelterVisibilityUi(viewingShelter.hidden).tone}
+                    />
+                  </span>
+                </div>
+                <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Created Date</span>
                   <span className={styles.viewDetailValue}>
                     {formatDateLabel(viewingShelter.createdDate ?? viewingShelter.createdAt)}
@@ -586,7 +622,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   resolveShelterActiveValue(viewingShelter) ? styles.viewDisableButton : styles.viewEnableButton
                 }`}
                 onClick={() => {
-                  handleToggleShelterRequest(viewingShelter)
+                  handleToggleShelterActiveRequest(viewingShelter)
                 }}
                 disabled={shelterIdBeingToggled === viewingShelter.id}
               >
@@ -714,6 +750,42 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   placeholder="e.g. Paw Haven Shelter"
                 />
                 {editShelterNameError ? <span className={styles.fieldErrorText}>{editShelterNameError}</span> : null}
+              </label>
+
+              <label className={styles.toggleCard}>
+                <span className={styles.toggleCopy}>
+                  <span className={styles.toggleLabel}>Active</span>
+                  <span className={styles.toggleHint}>Allow shelter admins and users to access this shelter.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={editShelterActive}
+                  onChange={(event) => {
+                    setEditShelterActive(event.target.checked)
+                  }}
+                  className={styles.toggleInput}
+                />
+                <span className={styles.toggleTrack} aria-hidden="true">
+                  <span className={styles.toggleThumb} />
+                </span>
+              </label>
+
+              <label className={styles.toggleCard}>
+                <span className={styles.toggleCopy}>
+                  <span className={styles.toggleLabel}>Visible In Public List</span>
+                  <span className={styles.toggleHint}>Show this shelter in signup shelter selection.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={!editShelterHidden}
+                  onChange={(event) => {
+                    setEditShelterHidden(!event.target.checked)
+                  }}
+                  className={styles.toggleInput}
+                />
+                <span className={styles.toggleTrack} aria-hidden="true">
+                  <span className={styles.toggleThumb} />
+                </span>
               </label>
 
               <div className={styles.modalActions}>
