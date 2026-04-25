@@ -253,6 +253,11 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
     setIsEditModalOpen(true)
   }
 
+  const handleEditViewedShelter = (shelter: Shelter) => {
+    closeViewModal()
+    handleOpenEditModal(shelter)
+  }
+
   const handleUpdateShelterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -411,6 +416,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -617,6 +623,15 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
             <div className={styles.modalActions}>
               <button
                 type="button"
+                className={styles.modalSubmitButton}
+                onClick={() => {
+                  handleEditViewedShelter(viewingShelter)
+                }}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
                 className={`${styles.modalSubmitButton} ${styles.viewToggleButton} ${
                   resolveShelterActiveValue(viewingShelter) ? styles.viewDisableButton : styles.viewEnableButton
                 }`}
@@ -804,3 +819,6 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
 }
 
 export default ShelterListPage
+
+
+

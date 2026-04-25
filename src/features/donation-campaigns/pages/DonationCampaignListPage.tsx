@@ -412,6 +412,7 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -971,3 +972,6 @@ function DonationCampaignListPage({ onLogout, session }: DonationCampaignListPag
 }
 
 export default DonationCampaignListPage
+
+
+

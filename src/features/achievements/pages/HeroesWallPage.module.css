@@ -1,5 +1,5 @@
 .page {
-  min-height: calc(100vh - 74px);
+  min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
     radial-gradient(circle at 8% 12%, rgba(152, 205, 255, 0.34) 0%, rgba(152, 205, 255, 0) 36%),
@@ -1137,3 +1137,4 @@
     height: 52px;
   }
 }
+

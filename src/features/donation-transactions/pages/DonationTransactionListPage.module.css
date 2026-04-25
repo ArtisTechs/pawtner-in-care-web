@@ -1,5 +1,5 @@
 .page {
-  min-height: calc(100vh - 74px);
+  min-height: calc(100dvh - 74px);
   padding: 22px 18px 20px;
   background:
     radial-gradient(circle at 7% 18%, rgba(126, 193, 255, 0.24) 0%, rgba(126, 193, 255, 0) 35%),
@@ -123,7 +123,7 @@
 
 .table {
   width: 100%;
-  min-width: 860px;
+  min-width: max(620px, 100%);
   border-collapse: collapse;
 }
 
@@ -518,7 +518,7 @@
   }
 
   .table {
-    min-width: 860px;
+    min-width: max(620px, 100%);
   }
 
   .modalButtonRow {
@@ -532,3 +532,5 @@
     flex: 1;
   }
 }
+
+

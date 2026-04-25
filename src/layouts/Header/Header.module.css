@@ -7,6 +7,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
 }
 
 .leftSection {
@@ -80,6 +81,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .iconButton {
@@ -227,5 +230,64 @@
 
   .profileText {
     display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .header {
+    padding-inline: 10px;
+    gap: 8px;
+    height: 64px;
+  }
+
+  .leftSection {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .searchField {
+    min-width: 0;
+    height: 36px;
+    padding-inline: 10px;
+  }
+
+  .searchInput {
+    margin-left: 6px;
+    font-size: 13px;
+  }
+
+  .actions {
+    gap: 6px;
+  }
+
+  .iconButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .profileButton {
+    padding: 0;
+  }
+
+  .avatar,
+  .avatarFallback {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 420px) {
+  .searchField {
+    padding-inline: 8px;
+  }
+
+  .searchIcon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .searchInput::placeholder {
+    font-size: 12px;
   }
 }

@@ -827,6 +827,7 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -1331,3 +1332,6 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
 }
 
 export default CommunityListingPage
+
+
+

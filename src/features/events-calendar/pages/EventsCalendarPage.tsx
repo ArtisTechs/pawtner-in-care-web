@@ -447,6 +447,7 @@ function EventsCalendarPage({ onLogout, session }: EventsCalendarPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -685,3 +686,6 @@ function EventsCalendarPage({ onLogout, session }: EventsCalendarPageProps) {
 }
 
 export default EventsCalendarPage
+
+
+

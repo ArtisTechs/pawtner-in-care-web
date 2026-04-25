@@ -1,5 +1,5 @@
 .page {
-  height: calc(100vh - 74px);
+  height: calc(100dvh - 74px);
   padding: 20px 16px 28px;
   overflow: hidden;
   background:
@@ -681,3 +681,4 @@
     grid-template-columns: 1fr;
   }
 }
+

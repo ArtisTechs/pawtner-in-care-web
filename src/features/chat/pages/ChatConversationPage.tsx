@@ -779,6 +779,7 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -836,3 +837,6 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 }
 
 export default ChatConversationPage
+
+
+

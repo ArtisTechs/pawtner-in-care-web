@@ -1,5 +1,5 @@
 .page {
-  min-height: calc(100vh - 74px);
+  min-height: calc(100dvh - 74px);
   padding: 22px 18px 20px;
   background:
     radial-gradient(circle at 8% 14%, rgba(136, 201, 255, 0.28) 0%, rgba(136, 201, 255, 0) 33%),
@@ -15,7 +15,7 @@
   margin: 0;
   color: #ffffff;
   font-family: var(--font-family-heading-2);
-  font-size: 42px;
+  font-size: clamp(28px, 7.8vw, 42px);
   font-weight: 700;
   line-height: 1.1;
   text-shadow: 0 3px 8px rgba(12, 53, 104, 0.25);
@@ -47,6 +47,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .filterTab {
@@ -62,6 +63,8 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .filterTab svg {
@@ -102,6 +105,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .clearAllButton:disabled {
@@ -114,7 +118,7 @@
   background: #f2f2f2;
   display: grid;
   gap: 12px;
-  height: clamp(430px, calc(100vh - 320px), 700px);
+  height: clamp(430px, calc(100dvh - 320px), 700px);
   overflow-y: auto;
   overflow-x: hidden;
   align-content: start;
@@ -363,8 +367,90 @@
 }
 
 @media (max-width: 560px) {
+  .toolbar {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .toolbarTabs {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .filterTab {
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .clearAllButton {
+    width: 100%;
+  }
+
+  .listWrap {
+    height: clamp(360px, calc(100dvh - 300px), 640px);
+    padding: 10px;
+  }
+
+  .itemCard {
+    gap: 10px;
+    padding: 11px 12px;
+  }
+
+  .itemActions {
+    gap: 6px;
+  }
+
+  .actionButton {
+    min-height: 28px;
+    padding-inline: 8px;
+  }
+
   .footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .page {
+    padding: 12px 8px 10px;
+  }
+
+  .toolbar {
+    padding: 8px 9px;
+  }
+
+  .filterTab {
+    min-height: 30px;
+    border-radius: 9px;
+    font-size: 11px;
+    gap: 5px;
+    padding-inline: 7px;
+  }
+
+  .filterCount {
+    min-width: 20px;
+    height: 18px;
+    padding-inline: 5px;
+    font-size: 11px;
+  }
+
+  .clearAllButton {
+    min-height: 30px;
+    border-radius: 9px;
+    font-size: 11px;
+    padding-inline: 9px;
+  }
+
+  .itemMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .itemTime {
+    white-space: normal;
   }
 }

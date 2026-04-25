@@ -949,6 +949,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -1477,3 +1478,6 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
 }
 
 export default CompanySettingsPage
+
+
+

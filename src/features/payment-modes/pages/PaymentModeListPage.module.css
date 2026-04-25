@@ -1,5 +1,5 @@
 .page {
-  min-height: calc(100vh - 74px);
+  min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
     radial-gradient(circle at 6% 18%, rgba(120, 176, 247, 0.24) 0%, rgba(120, 176, 247, 0) 34%),
@@ -24,7 +24,7 @@
 .tablePanel {
   margin-top: 16px;
   position: relative;
-  height: clamp(420px, calc(100vh - 200px), 860px);
+  height: clamp(420px, calc(100dvh - 200px), 860px);
   display: flex;
   flex-direction: column;
   border-radius: 10px;
@@ -44,7 +44,7 @@
 
 .table {
   width: 100%;
-  min-width: 920px;
+  min-width: max(640px, 100%);
   border-collapse: collapse;
   color: #202a35;
   background: #f9fbfe;
@@ -611,3 +611,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+

@@ -412,6 +412,7 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -576,3 +577,6 @@ function DashboardPage({ onLogout, session }: DashboardPageProps) {
 }
 
 export default DashboardPage
+
+
+

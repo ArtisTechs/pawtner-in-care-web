@@ -695,6 +695,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -1284,3 +1285,6 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
 }
 
 export default AchievementListPage
+
+
+

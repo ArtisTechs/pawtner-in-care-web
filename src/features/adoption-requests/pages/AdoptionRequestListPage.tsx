@@ -666,6 +666,7 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -1009,3 +1010,6 @@ function AdoptionRequestListPage({ onLogout, session }: AdoptionRequestListPageP
 }
 
 export default AdoptionRequestListPage
+
+
+

@@ -573,6 +573,7 @@ function InboxPage({ onLogout, session }: InboxPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -756,3 +757,6 @@ function InboxPage({ onLogout, session }: InboxPageProps) {
 }
 
 export default InboxPage
+
+
+

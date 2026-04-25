@@ -96,6 +96,11 @@ const resolveFilterRoleLabel = (roleFilter: UserRoleFilter) => {
   return resolveUserRoleLabel(roleFilter)
 }
 
+const isAdminRole = (role: User['role']) => {
+  const resolvedRole = resolveUserRoleValue(role)
+  return resolvedRole === 'ADMIN' || resolvedRole === 'SYSTEM_ADMIN'
+}
+
 interface UserAvatarProps {
   className: string
   fallbackClassName: string
@@ -559,6 +564,7 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -959,25 +965,51 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
                   </label>
                 ) : null}
 
-                <label className={styles.fieldLabel}>
-                  <span>Role</span>
-                  <select
-                    value={resolveUserRoleValue(addUserForm.role)}
-                    onChange={(event) => {
-                      setAddUserForm((currentForm) => ({
-                        ...currentForm,
-                        role: event.target.value as UserRole,
-                      }))
-                    }}
-                    className={styles.fieldInput}
-                  >
-                    {USER_ROLE_OPTIONS.map((roleOption) => (
-                      <option key={roleOption} value={roleOption}>
-                        {resolveUserRoleLabel(roleOption)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {editingUserId ? (
+                  <div className={styles.fieldLabelWide}>
+                    <label className={styles.toggleCard}>
+                      <span className={styles.toggleCopy}>
+                        <span className={styles.toggleLabel}>Admin Access</span>
+                        <span className={styles.toggleHint}>Turn on to grant admin permissions.</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        className={styles.toggleInput}
+                        checked={isAdminRole(addUserForm.role)}
+                        onChange={(event) => {
+                          setAddUserForm((currentForm) => ({
+                            ...currentForm,
+                            role: event.target.checked ? 'ADMIN' : 'USER',
+                          }))
+                        }}
+                        aria-label="Toggle admin access"
+                      />
+                      <span className={styles.toggleTrack} aria-hidden="true">
+                        <span className={styles.toggleThumb} />
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <label className={styles.fieldLabel}>
+                    <span>Role</span>
+                    <select
+                      value={resolveUserRoleValue(addUserForm.role)}
+                      onChange={(event) => {
+                        setAddUserForm((currentForm) => ({
+                          ...currentForm,
+                          role: event.target.value as UserRole,
+                        }))
+                      }}
+                      className={styles.fieldInput}
+                    >
+                      {USER_ROLE_OPTIONS.map((roleOption) => (
+                        <option key={roleOption} value={roleOption}>
+                          {resolveUserRoleLabel(roleOption)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
                 {!editingUserId ? (
                   <label className={`${styles.fieldLabel} ${styles.fieldLabelWide}`}>
@@ -1038,3 +1070,6 @@ function UserListPage({ onLogout, session }: UserListPageProps) {
 }
 
 export default UserListPage
+
+
+

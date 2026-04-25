@@ -471,6 +471,7 @@ function ProfileSettingsPage({ onLogout, session }: ProfileSettingsPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -776,3 +777,6 @@ function ProfileSettingsPage({ onLogout, session }: ProfileSettingsPageProps) {
 }
 
 export default ProfileSettingsPage
+
+
+

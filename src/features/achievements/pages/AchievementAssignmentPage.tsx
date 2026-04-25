@@ -690,6 +690,7 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -967,3 +968,6 @@ function AchievementAssignmentPage({ onLogout, session }: AchievementAssignmentP
 }
 
 export default AchievementAssignmentPage
+
+
+

@@ -467,6 +467,7 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -714,3 +715,6 @@ function DonationTransactionListPage({ onLogout, session }: DonationTransactionL
 }
 
 export default DonationTransactionListPage
+
+
+

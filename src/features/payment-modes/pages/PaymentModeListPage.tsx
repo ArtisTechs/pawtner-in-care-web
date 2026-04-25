@@ -326,6 +326,7 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -678,3 +679,6 @@ function PaymentModeListPage({ onLogout, session }: PaymentModeListPageProps) {
 }
 
 export default PaymentModeListPage
+
+
+

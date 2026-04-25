@@ -32,6 +32,7 @@ import { NavLink } from 'react-router-dom'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
+  session?: AuthSession | null
   activeItem: SidebarItemKey
   bottomItems: SidebarMenuItem[]
   logoSrc: string
@@ -100,6 +101,24 @@ const SIDEBAR_SECTION_CONFIG: Array<{ keys: SidebarItemKey[]; title: string }> =
 
 const SIDEBAR_SCROLL_STORAGE_KEY = 'pawtner-sidebar-scroll-top'
 const AUTH_SESSION_STORAGE_KEY = '@pawtner/auth/session'
+
+const resolveStoredSessionRole = () => {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  try {
+    const rawSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
+    if (!rawSession) {
+      return ''
+    }
+
+    const parsedSession = JSON.parse(rawSession) as AuthSession
+    return resolveDashboardAccessRole(parsedSession)
+  } catch {
+    return ''
+  }
+}
 
 const SIDEBAR_ICON_MAP: Record<SidebarIconName, IconType> = {
   dashboard: FaTachometerAlt,
@@ -305,31 +324,16 @@ function SidebarSections({
   )
 }
 
-function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: SidebarProps) {
+function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout, session }: SidebarProps) {
   const { totalUnreadCount } = useContext(ChatRealtimeContext)
   const { unreadCount: notificationUnreadCount } = useContext(NotificationContext)
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false)
   const [menuSearchValue, setMenuSearchValue] = useState('')
   const navRef = useRef<HTMLElement | null>(null)
-  const [sessionRoleFromStorage] = useState(() => {
-    if (typeof window === 'undefined') {
-      return ''
-    }
-
-    try {
-      const rawSession = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)
-      if (!rawSession) {
-        return ''
-      }
-
-      const parsedSession = JSON.parse(rawSession) as AuthSession
-      return resolveDashboardAccessRole(parsedSession)
-    } catch {
-      return ''
-    }
-  })
-  const roleBasedMenuItems = resolveSidebarMenuItemsByRole(sessionRoleFromStorage, menuItems)
-  const roleBasedBottomItems = resolveSidebarBottomItemsByRole(sessionRoleFromStorage, bottomItems)
+  const resolvedRole = resolveDashboardAccessRole(session)
+  const sessionRole = resolvedRole || resolveStoredSessionRole()
+  const roleBasedMenuItems = resolveSidebarMenuItemsByRole(sessionRole, menuItems)
+  const roleBasedBottomItems = resolveSidebarBottomItemsByRole(sessionRole, bottomItems)
 
   const persistNavScrollTop = () => {
     const navElement = navRef.current
@@ -439,3 +443,4 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout }: Side
 }
 
 export default Sidebar
+

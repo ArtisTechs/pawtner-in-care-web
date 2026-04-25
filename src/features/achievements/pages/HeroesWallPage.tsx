@@ -309,6 +309,7 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -547,3 +548,6 @@ function HeroesWallPage({ onLogout, session }: HeroesWallPageProps) {
 }
 
 export default HeroesWallPage
+
+
+

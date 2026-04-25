@@ -501,6 +501,7 @@ function VolunteerListPage({ onLogout, session }: VolunteerListPageProps) {
       }
       sidebar={
         <Sidebar
+          session={session}
           activeItem={ACTIVE_MENU_ITEM}
           logoSrc={sidebarLogo}
           menuItems={sidebarMenuItems}
@@ -955,3 +956,6 @@ function VolunteerListPage({ onLogout, session }: VolunteerListPageProps) {
 }
 
 export default VolunteerListPage
+
+
+
