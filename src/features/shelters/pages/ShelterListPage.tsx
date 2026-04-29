@@ -16,6 +16,7 @@ import StatusBadge, { type StatusBadgeTone } from '@/shared/components/ui/Status
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
+import { toTitleCase } from '@/shared/lib/text/title-case'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './ShelterListPage.module.css'
 
@@ -73,6 +74,11 @@ const resolveShelterVisibilityUi = (value: boolean | null | undefined): { label:
   }
 
   return { label: 'N/A', tone: 'neutral' }
+}
+
+const formatShelterName = (value?: string | null) => {
+  const normalizedValue = value?.trim() ?? ''
+  return normalizedValue ? toTitleCase(normalizedValue) : 'Unnamed Shelter'
 }
 
 interface ShelterListPageProps {
@@ -193,7 +199,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
     }
 
     const persistShelter = async () => {
-      const trimmedName = shelterName.trim()
+      const trimmedName = toTitleCase(shelterName.trim())
       setShelterNameError('')
 
       if (!trimmedName) {
@@ -257,7 +263,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
 
   const handleOpenEditModal = (shelter: Shelter) => {
     setEditingShelterId(shelter.id)
-    setEditShelterName(shelter.name?.trim() ?? '')
+    setEditShelterName(toTitleCase(shelter.name?.trim() ?? ''))
     setEditShelterNameError('')
     setEditShelterApproved(shelter.approved === true)
     setEditShelterActive(shelter.active === true)
@@ -284,7 +290,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
     }
 
     const updateShelter = async () => {
-      const trimmedName = editShelterName.trim()
+      const trimmedName = toTitleCase(editShelterName.trim())
       setEditShelterNameError('')
 
       if (!trimmedName) {
@@ -505,7 +511,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                             handleViewShelter(shelter)
                           }}
                         >
-                        <td>{shelter.name?.trim() || 'Unnamed Shelter'}</td>
+                        <td>{formatShelterName(shelter.name)}</td>
                         <td>
                           <StatusBadge label={shelterStatus.label} tone={shelterStatus.tone} />
                         </td>
@@ -517,7 +523,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                             <button
                               type="button"
                               className={styles.actionButton}
-                              aria-label={`Edit ${shelter.name?.trim() || 'shelter'}`}
+                              aria-label={`Edit ${formatShelterName(shelter.name)}`}
                               onClick={(event) => {
                                 event.stopPropagation()
                                 handleOpenEditModal(shelter)
@@ -597,7 +603,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
               <div className={styles.viewDetailsGrid}>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Name</span>
-                  <span className={styles.viewDetailValue}>{viewingShelter.name?.trim() || 'N/A'}</span>
+                  <span className={styles.viewDetailValue}>{formatShelterName(viewingShelter.name)}</span>
                 </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Status</span>
@@ -714,7 +720,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   value={shelterName}
                   onChange={(event) => {
                     setShelterNameError('')
-                    setShelterName(event.target.value)
+                    setShelterName(toTitleCase(event.target.value))
                   }}
                   className={`${styles.fieldInput}${shelterNameError ? ` ${styles.fieldInputError}` : ''}`}
                   placeholder="e.g. Paw Haven Shelter"
@@ -770,7 +776,7 @@ function ShelterListPage({ onLogout, session }: ShelterListPageProps) {
                   value={editShelterName}
                   onChange={(event) => {
                     setEditShelterNameError('')
-                    setEditShelterName(event.target.value)
+                    setEditShelterName(toTitleCase(event.target.value))
                   }}
                   className={`${styles.fieldInput}${editShelterNameError ? ` ${styles.fieldInputError}` : ''}`}
                   placeholder="e.g. Paw Haven Shelter"

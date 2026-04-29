@@ -163,7 +163,7 @@ const normalizeSignUpForm = (formState: SignUpFormState) => ({
   middleName: toTitleCase(formState.middleName.trim()),
   lastName: toTitleCase(formState.lastName.trim()),
   email: formState.email.trim(),
-  shelterName: formState.shelterName.trim(),
+  shelterName: toTitleCase(formState.shelterName.trim()),
 })
 
 function SignUpPage() {
@@ -195,7 +195,7 @@ function SignUpPage() {
         const options = response
           .map((shelter) => ({
             id: shelter.id,
-            name: shelter.name?.trim() ?? '',
+            name: toTitleCase(shelter.name?.trim() ?? ''),
           }))
           .filter((shelter) => Boolean(shelter.id) && Boolean(shelter.name))
           .sort((leftShelter, rightShelter) => leftShelter.name.localeCompare(rightShelter.name))
@@ -244,7 +244,7 @@ function SignUpPage() {
   }, [signUpStep])
 
   const handleTextFieldChange = (name: SignUpTextFieldName, value: string) => {
-    const normalizedValue = NAME_FIELD_NAMES.has(name) ? toTitleCase(value) : value
+    const normalizedValue = NAME_FIELD_NAMES.has(name) || name === 'shelterName' ? toTitleCase(value) : value
 
     setFormState((currentState) => ({
       ...currentState,
