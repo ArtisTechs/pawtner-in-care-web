@@ -330,7 +330,7 @@ function Sidebar({ activeItem, bottomItems, logoSrc, menuItems, onLogout, sessio
   const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false)
   const [menuSearchValue, setMenuSearchValue] = useState('')
   const navRef = useRef<HTMLElement | null>(null)
-  const resolvedRole = resolveDashboardAccessRole(session)
+  const resolvedRole = resolveDashboardAccessRole(session ?? null)
   const sessionRole = resolvedRole || resolveStoredSessionRole()
   const roleBasedMenuItems = resolveSidebarMenuItemsByRole(sessionRole, menuItems)
   const roleBasedBottomItems = resolveSidebarBottomItemsByRole(sessionRole, bottomItems)
