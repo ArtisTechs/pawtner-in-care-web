@@ -92,6 +92,9 @@ const DELIVERY_TYPE_LABELS: Record<string, string> = {
   SHIPPING: 'Shipping',
 }
 
+const isDateOnlyValue = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isTimeOnlyValue = (value: string) => /^\d{1,2}:\d{2}(:\d{2})?$/.test(value)
+
 const formatDateLabel = (value?: string | null) => {
   if (!value) {
     return 'N/A'
@@ -100,6 +103,18 @@ const formatDateLabel = (value?: string | null) => {
   const parsedDate = new Date(value)
   if (Number.isNaN(parsedDate.getTime())) {
     return 'N/A'
+  }
+
+  const hasExplicitTime = /[T\s]\d{1,2}:\d{2}/.test(value)
+  if (hasExplicitTime) {
+    return parsedDate.toLocaleString('en-PH', {
+      day: '2-digit',
+      hour: 'numeric',
+      hour12: true,
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
   }
 
   return parsedDate.toLocaleDateString('en-PH', {
@@ -135,6 +150,17 @@ const toSortTime = (value?: string | null) => {
 }
 
 const toNormalizedText = (value?: string | null) => value?.trim() || ''
+
+const resolveDateTimeValue = (dateValue?: string | null, dateTimeOrTimeValue?: string | null) => {
+  const normalizedDate = toNormalizedText(dateValue)
+  const normalizedDateTimeOrTime = toNormalizedText(dateTimeOrTimeValue)
+
+  if (normalizedDate && normalizedDateTimeOrTime && isDateOnlyValue(normalizedDate) && isTimeOnlyValue(normalizedDateTimeOrTime)) {
+    return `${normalizedDate}T${normalizedDateTimeOrTime}`
+  }
+
+  return normalizedDateTimeOrTime || normalizedDate || null
+}
 
 const toBoolean = (value?: boolean | string | null) => {
   if (typeof value === 'boolean') {
@@ -231,7 +257,9 @@ const toItemLabel = (giftLog: GiftLog) => {
 }
 
 const mapGiftLogRow = (giftLog: GiftLog): GiftLogRow => {
-  const createdAt = giftLog.createdDate ?? giftLog.createdAt ?? giftLog.updatedDate ?? giftLog.updatedAt
+  const createdAt =
+    resolveDateTimeValue(giftLog.createdDate, giftLog.createdAt) ??
+    resolveDateTimeValue(giftLog.updatedDate, giftLog.updatedAt)
   const deliveryType = normalizeEnumValue(giftLog.deliveryType, 'PERSONAL') as GiftLogDeliveryType
   const status = normalizeEnumValue(giftLog.status, 'PENDING') as GiftLogStatus
 

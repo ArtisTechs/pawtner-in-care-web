@@ -102,8 +102,13 @@ export const mapVeterinaryClinicToForm = (
 ): AddVeterinaryClinicForm => {
   const parsedRating = parseRatingNumber(clinic.ratings)
   const normalizedContactNumbers = normalizeListValues(clinic.contactNumbers ?? [])
+  const normalizedOpeningTime = normalizeTimeInput(clinic.openingTime)
+  const normalizedClosingTime = normalizeTimeInput(clinic.closingTime)
+  const isAlwaysOpen =
+    clinic.alwaysOpen ?? (!normalizedOpeningTime && !normalizedClosingTime)
 
   return {
+    alwaysOpen: isAlwaysOpen,
     contactNumbers: normalizedContactNumbers.length > 0 ? normalizedContactNumbers : [''],
     description: clinic.description ?? '',
     latitude: Number.isFinite(clinic.latitude) ? String(clinic.latitude) : '',
@@ -113,8 +118,8 @@ export const mapVeterinaryClinicToForm = (
     name: clinic.name ?? '',
     openDays: mapListToTextarea(clinic.openDays),
     photo: clinic.photos?.[0] ?? '',
-    closingTime: normalizeTimeInput(clinic.closingTime),
-    openingTime: normalizeTimeInput(clinic.openingTime),
+    closingTime: normalizedClosingTime,
+    openingTime: normalizedOpeningTime,
     ratings: parsedRating === undefined ? '' : parsedRating.toFixed(1),
     video: clinic.videos?.[0] ?? '',
   }
@@ -139,8 +144,10 @@ export const buildVeterinaryClinicPayload = (
   const openingTime = normalizeTimeInput(form.openingTime)
   const closingTime = normalizeTimeInput(form.closingTime)
   const openDays = parseOpenDays(form.openDays)
+  const isAlwaysOpen = form.alwaysOpen
 
   return {
+    alwaysOpen: isAlwaysOpen,
     contactNumbers: contactNumbers.length > 0 ? contactNumbers : undefined,
     description: parseOptionalText(form.description),
     latitude: parsedLatitude,
@@ -149,8 +156,8 @@ export const buildVeterinaryClinicPayload = (
     long: parsedLongitude,
     name: form.name.trim(),
     openDays: openDays.length > 0 ? openDays : undefined,
-    closingTime: closingTime || undefined,
-    openingTime: openingTime || undefined,
+    closingTime: isAlwaysOpen ? undefined : closingTime || undefined,
+    openingTime: isAlwaysOpen ? undefined : openingTime || undefined,
     photos: photos.length > 0 ? photos : undefined,
     ratings: parsedRating === undefined ? undefined : `${parsedRating.toFixed(1)}/5`,
     videos: videos.length > 0 ? videos : undefined,

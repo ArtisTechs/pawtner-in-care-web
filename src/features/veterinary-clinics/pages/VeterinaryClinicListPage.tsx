@@ -149,6 +149,18 @@ const formatDateLabel = (value?: string | null) => {
     return 'N/A'
   }
 
+  const hasExplicitTime = /[T\s]\d{1,2}:\d{2}/.test(value)
+  if (hasExplicitTime) {
+    return parsedDate.toLocaleString('en-PH', {
+      day: '2-digit',
+      hour: 'numeric',
+      hour12: true,
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
   return parsedDate.toLocaleDateString('en-PH', {
     day: '2-digit',
     month: 'short',
@@ -208,6 +220,8 @@ const resolvePrimaryVideo = (clinic?: VeterinaryClinic | null) => {
 
   return clinic.videos.find((video) => video.trim()) ?? ''
 }
+
+const isAlwaysOpenClinic = (clinic?: VeterinaryClinic | null) => Boolean(clinic?.alwaysOpen)
 
 const resolveRatingSliderValue = (value: string) => {
   const parsedValue = Number.parseFloat(value)
@@ -335,6 +349,7 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
       const normalizedClosingTime = clinic.closingTime?.toLowerCase() ?? ''
       const normalizedOpenDays = clinic.openDays?.join(' ').toLowerCase() ?? ''
       const normalizedContacts = clinic.contactNumbers?.join(' ').toLowerCase() ?? ''
+      const normalizedAlwaysOpen = isAlwaysOpenClinic(clinic) ? 'always open' : ''
 
       return (
         normalizedName.includes(normalizedSearch) ||
@@ -344,7 +359,8 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
         normalizedOpeningTime.includes(normalizedSearch) ||
         normalizedClosingTime.includes(normalizedSearch) ||
         normalizedOpenDays.includes(normalizedSearch) ||
-        normalizedContacts.includes(normalizedSearch)
+        normalizedContacts.includes(normalizedSearch) ||
+        normalizedAlwaysOpen.includes(normalizedSearch)
       )
     })
   }, [clinics, searchValue])
@@ -420,8 +436,6 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
     const persistClinic = async () => {
       const trimmedName = addClinicForm.name.trim()
       const trimmedLocationAddress = addClinicForm.locationAddress.trim()
-      const trimmedOpeningTime = addClinicForm.openingTime.trim()
-      const trimmedClosingTime = addClinicForm.closingTime.trim()
       const normalizedOpenDays = parseOpenDayValues(addClinicForm.openDays)
 
       setContactNumberError('')
@@ -452,20 +466,6 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
       if (hasInvalidContactNumber) {
         const errorMessage = 'Contact numbers must be 7-15 digits and may start with +.'
         setContactNumberError(errorMessage)
-        showToast(errorMessage, { variant: 'error' })
-        return
-      }
-
-      if (!trimmedOpeningTime) {
-        const errorMessage = 'Opening time is required.'
-        setOpeningTimeError(errorMessage)
-        showToast(errorMessage, { variant: 'error' })
-        return
-      }
-
-      if (!trimmedClosingTime) {
-        const errorMessage = 'Closing time is required.'
-        setClosingTimeError(errorMessage)
         showToast(errorMessage, { variant: 'error' })
         return
       }
@@ -749,8 +749,8 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                             </td>
                             <td>{clinic.name || 'N/A'}</td>
                             <td>{clinic.locationAddress || 'N/A'}</td>
-                            <td>{formatOpeningTimeWithMeridiem(clinic.openingTime)}</td>
-                            <td>{formatOpeningTimeWithMeridiem(clinic.closingTime)}</td>
+                            <td>{isAlwaysOpenClinic(clinic) ? 'Always Open' : formatOpeningTimeWithMeridiem(clinic.openingTime)}</td>
+                            <td>{isAlwaysOpenClinic(clinic) ? 'N/A' : formatOpeningTimeWithMeridiem(clinic.closingTime)}</td>
                             <td>
                               {openDayLabels.length > 0 ? (
                                 <div className={styles.tableOpenDayList}>
@@ -888,13 +888,13 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Opening Time</span>
                   <span className={styles.viewDetailValue}>
-                    {formatOpeningTimeWithMeridiem(viewingClinic.openingTime)}
+                    {isAlwaysOpenClinic(viewingClinic) ? 'Always Open' : formatOpeningTimeWithMeridiem(viewingClinic.openingTime)}
                   </span>
                 </div>
                 <div className={styles.viewDetailItem}>
                   <span className={styles.viewDetailLabel}>Closing Time</span>
                   <span className={styles.viewDetailValue}>
-                    {formatOpeningTimeWithMeridiem(viewingClinic.closingTime)}
+                    {isAlwaysOpenClinic(viewingClinic) ? 'N/A' : formatOpeningTimeWithMeridiem(viewingClinic.closingTime)}
                   </span>
                 </div>
                 <div className={`${styles.viewDetailItem} ${styles.viewDetailItemWide}`}>
@@ -1040,9 +1040,7 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                 </div>
 
                 <label className={styles.fieldLabel}>
-                  <span>
-                    Opening Time <span className={styles.requiredAsterisk}>*</span>
-                  </span>
+                  <span>Opening Time</span>
                   <TimePicker
                     value={addClinicForm.openingTime}
                     onChange={(nextValue) => {
@@ -1051,14 +1049,13 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                     }}
                     placeholder="Select opening time"
                     ariaLabel="Select opening time"
+                    disabled={addClinicForm.alwaysOpen}
                   />
                   {openingTimeError ? <span className={styles.fieldErrorText}>{openingTimeError}</span> : null}
                 </label>
 
                 <label className={styles.fieldLabel}>
-                  <span>
-                    Closing Time <span className={styles.requiredAsterisk}>*</span>
-                  </span>
+                  <span>Closing Time</span>
                   <TimePicker
                     value={addClinicForm.closingTime}
                     onChange={(nextValue) => {
@@ -1067,14 +1064,42 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
                     }}
                     placeholder="Select closing time"
                     ariaLabel="Select closing time"
+                    disabled={addClinicForm.alwaysOpen}
                   />
                   {closingTimeError ? <span className={styles.fieldErrorText}>{closingTimeError}</span> : null}
                 </label>
 
                 <label className={`${styles.fieldLabel} ${styles.fieldLabelWide}`}>
-                  <span>
-                    Open Days <span className={styles.requiredAsterisk}>*</span>
-                  </span>
+                  <span>Open Days</span>
+                  <div className={styles.toggleRow}>
+                    <label className={styles.toggleCard}>
+                      <span className={styles.toggleCopy}>
+                        <span className={styles.toggleLabel}>Always Open</span>
+                        <span className={styles.toggleHint}>Open all day for selected open days; time fields are disabled.</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        className={styles.toggleInput}
+                        checked={addClinicForm.alwaysOpen}
+                        onChange={(event) => {
+                          const isAlwaysOpen = event.target.checked
+                          setAddClinicForm((current) => ({
+                            ...current,
+                            alwaysOpen: isAlwaysOpen,
+                            openingTime: isAlwaysOpen ? '' : current.openingTime,
+                            closingTime: isAlwaysOpen ? '' : current.closingTime,
+                            openDays: current.openDays,
+                          }))
+                          setOpeningTimeError('')
+                          setClosingTimeError('')
+                          setOpenDaysError('')
+                        }}
+                      />
+                      <span className={styles.toggleTrack} aria-hidden="true">
+                        <span className={styles.toggleThumb} />
+                      </span>
+                    </label>
+                  </div>
                   <div
                     className={`${styles.openDaysControl}${openDaysError ? ` ${styles.openDaysControlError}` : ''}`}
                   >

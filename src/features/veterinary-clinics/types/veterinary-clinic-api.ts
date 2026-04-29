@@ -1,4 +1,5 @@
 export interface VeterinaryClinicPayload {
+  alwaysOpen?: boolean | null
   closingTime?: string | null
   contactNumbers?: string[]
   description?: string | null

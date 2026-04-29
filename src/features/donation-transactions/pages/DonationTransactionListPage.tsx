@@ -47,6 +47,19 @@ const areDateSelectionsEqual = (leftValues: string[], rightValues: string[]) => 
 }
 
 const normalizeText = (value?: string | null) => value?.trim() || ''
+const isDateOnlyValue = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+const isTimeOnlyValue = (value: string) => /^\d{1,2}:\d{2}(:\d{2})?$/.test(value)
+
+const resolveDateTimeValue = (dateValue?: string | null, dateTimeOrTimeValue?: string | null) => {
+  const normalizedDate = normalizeText(dateValue)
+  const normalizedDateTimeOrTime = normalizeText(dateTimeOrTimeValue)
+
+  if (normalizedDate && normalizedDateTimeOrTime && isDateOnlyValue(normalizedDate) && isTimeOnlyValue(normalizedDateTimeOrTime)) {
+    return `${normalizedDate}T${normalizedDateTimeOrTime}`
+  }
+
+  return normalizedDateTimeOrTime || normalizedDate || null
+}
 
 const parseAmount = (value?: number | string | null) => {
   if (typeof value === 'number') {
@@ -77,6 +90,18 @@ const formatDateLabel = (value?: string | null) => {
   const parsedDate = new Date(value)
   if (Number.isNaN(parsedDate.getTime())) {
     return 'N/A'
+  }
+
+  const hasExplicitTime = /[T\s]\d{1,2}:\d{2}/.test(value)
+  if (hasExplicitTime) {
+    return parsedDate.toLocaleString('en-PH', {
+      day: '2-digit',
+      hour: 'numeric',
+      hour12: true,
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
   }
 
   return parsedDate.toLocaleDateString('en-PH', {
@@ -161,7 +186,8 @@ const mapDonationTransactionToRow = (transaction: DonationTransaction): Donation
   const campaignId =
     normalizeText(transaction.donationCampaignId) || normalizeText(transaction.donationCampaign?.id)
   const createdAt =
-    transaction.createdDate ?? transaction.createdAt ?? transaction.updatedDate ?? transaction.updatedAt
+    resolveDateTimeValue(transaction.createdDate, transaction.createdAt) ??
+    resolveDateTimeValue(transaction.updatedDate, transaction.updatedAt)
   const donatedAmount = parseAmount(transaction.donatedAmount)
 
   return {

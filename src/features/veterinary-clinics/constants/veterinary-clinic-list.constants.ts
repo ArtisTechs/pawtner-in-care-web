@@ -3,6 +3,7 @@ export const LIST_BATCH_SIZE = 12
 export const LIST_SKELETON_ROW_COUNT = 8
 
 export interface AddVeterinaryClinicForm {
+  alwaysOpen: boolean
   closingTime: string
   contactNumbers: string[]
   description: string
@@ -19,6 +20,7 @@ export interface AddVeterinaryClinicForm {
 }
 
 export const DEFAULT_ADD_VETERINARY_CLINIC_FORM: AddVeterinaryClinicForm = {
+  alwaysOpen: true,
   closingTime: '',
   contactNumbers: [''],
   description: '',

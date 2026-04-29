@@ -127,6 +127,18 @@ const formatDateLabel = (value?: string | null) => {
     return 'N/A'
   }
 
+  const hasExplicitTime = /[T\s]\d{1,2}:\d{2}/.test(value)
+  if (hasExplicitTime) {
+    return parsedDate.toLocaleString('en-PH', {
+      day: '2-digit',
+      hour: 'numeric',
+      hour12: true,
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
   return parsedDate.toLocaleDateString('en-PH', {
     day: '2-digit',
     month: 'short',
@@ -1020,6 +1032,11 @@ function EmergencySosListPage({ onLogout, session }: EmergencySosListPageProps) 
                 <div className={styles.modalMeta}>
                   <span className={styles.modalMetaLabel}>Type</span>
                   <span className={styles.modalMetaValue}>{selectedSosForAction.typeLabel}</span>
+                </div>
+
+                <div className={styles.modalMeta}>
+                  <span className={styles.modalMetaLabel}>Date</span>
+                  <span className={styles.modalMetaValue}>{selectedSosForAction.createdAtLabel}</span>
                 </div>
 
                 <div className={styles.fieldLabel}>

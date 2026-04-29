@@ -32,6 +32,18 @@ const formatDateLabel = (value?: string | null) => {
     return 'N/A'
   }
 
+  const hasExplicitTime = /[T\s]\d{1,2}:\d{2}/.test(value)
+  if (hasExplicitTime) {
+    return parsedDate.toLocaleString('en-PH', {
+      day: '2-digit',
+      hour: 'numeric',
+      hour12: true,
+      minute: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
   return parsedDate.toLocaleDateString('en-PH', {
     day: '2-digit',
     month: 'short',
