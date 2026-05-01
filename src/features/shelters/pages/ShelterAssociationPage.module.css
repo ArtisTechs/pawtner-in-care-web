@@ -1,13 +1,15 @@
 .page {
-  min-height: calc(100dvh - 74px);
+  height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
     radial-gradient(circle at 6% 18%, rgba(120, 176, 247, 0.24) 0%, rgba(120, 176, 247, 0) 34%),
     linear-gradient(105deg, #1f5fad 0%, #3393e7 55%, #2f80d7 100%);
+  overflow: hidden;
 }
 
 .container {
   width: min(1240px, 100%);
+  height: 100%;
   margin: 0 auto;
   display: grid;
   gap: 14px;
@@ -559,6 +561,16 @@
 }
 
 @media (max-width: 860px) {
+  .page {
+    height: auto;
+    min-height: calc(100dvh - 74px);
+    overflow: visible;
+  }
+
+  .container {
+    height: auto;
+  }
+
   .contentGrid {
     grid-template-columns: 1fr;
   }

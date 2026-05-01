@@ -24,6 +24,7 @@ export interface Achievement {
   iconUrl?: string | null
   id: string
   isActive?: boolean | null
+  isRepeatable?: boolean | null
   points?: number | string | null
   requiredValue?: number | string | null
   rarity?: AchievementRarity | null
@@ -64,6 +65,7 @@ export interface CreateAchievementPayload {
   description: string
   iconUrl: string | null
   isActive: boolean
+  isRepeatable: boolean
   points: number
   requiredValue?: number | null
   rarity: AchievementRarity

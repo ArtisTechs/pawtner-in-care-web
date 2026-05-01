@@ -45,6 +45,7 @@ type CreateAchievementForm = {
   description: string
   iconUrl: string
   isActive: string
+  isRepeatable: string
   points: string
   requiredValue: string
   rarity: string
@@ -68,6 +69,7 @@ const DEFAULT_CREATE_FORM: CreateAchievementForm = {
   description: '',
   iconUrl: '',
   isActive: 'true',
+  isRepeatable: 'false',
   points: '100',
   requiredValue: '5000',
   rarity: 'COMMON',
@@ -261,6 +263,7 @@ const mapAchievementToForm = (achievement: Achievement): CreateAchievementForm =
     description: normalizeText(achievement.description),
     iconUrl: normalizeText(achievement.iconUrl),
     isActive: achievement.isActive === false ? 'false' : 'true',
+    isRepeatable: achievement.isRepeatable === true ? 'true' : 'false',
     points: Number.isFinite(normalizedPoints) ? String(normalizedPoints) : DEFAULT_CREATE_FORM.points,
     requiredValue: normalizeText(String(achievement.requiredValue ?? '')),
     rarity: normalizeText(achievement.rarity).toUpperCase() || DEFAULT_CREATE_FORM.rarity,
@@ -609,6 +612,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
           description: trimmedDescription,
           iconUrl: trimmedIconUrl,
           isActive: createForm.isActive === 'true',
+          isRepeatable: createForm.isRepeatable === 'true',
           points,
           rarity: createForm.rarity,
           title: trimmedTitle,
@@ -1102,6 +1106,27 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                             setCreateForm((currentForm) => ({
                               ...currentForm,
                               isActive: event.target.checked ? 'true' : 'false',
+                            }))
+                          }}
+                          disabled={isSavingAchievement}
+                        />
+                        <span className={styles.toggleTrack} aria-hidden="true">
+                          <span className={styles.toggleThumb} />
+                        </span>
+                      </label>
+                      <label className={styles.toggleCard}>
+                        <span className={styles.toggleCopy}>
+                          <span className={styles.toggleLabel}>Is Repeatable</span>
+                          <span className={styles.toggleHint}>Allows the same achievement to be unlocked multiple times.</span>
+                        </span>
+                        <input
+                          className={styles.toggleInput}
+                          type="checkbox"
+                          checked={createForm.isRepeatable === 'true'}
+                          onChange={(event) => {
+                            setCreateForm((currentForm) => ({
+                              ...currentForm,
+                              isRepeatable: event.target.checked ? 'true' : 'false',
                             }))
                           }}
                           disabled={isSavingAchievement}
