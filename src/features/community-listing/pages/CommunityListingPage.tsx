@@ -459,11 +459,6 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
         setContentError('Content is required.')
       }
 
-      if (uploadedPhotos.length === 0) {
-        hasValidationError = true
-        setPhotoError('At least one post image is required.')
-      }
-
       if (uploadedPhotos.length > MAX_POST_IMAGES) {
         hasValidationError = true
         setPhotoError(`You can upload up to ${MAX_POST_IMAGES} images only.`)
@@ -1212,7 +1207,7 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
                 <div className={styles.fieldLabelWide}>
                   <div className={styles.mediaGroupHeader}>
                     <span className={styles.mediaGroupTitle}>
-                      Post Images <span className={styles.requiredAsterisk}>*</span>
+                      Post Images
                     </span>
                     <button
                       type="button"
@@ -1232,8 +1227,8 @@ function CommunityListingPage({ onLogout, session }: CommunityListingPageProps) 
                             handlePhotoChangeAt(photoIndex, nextPhoto)
                           }}
                           onNotify={(message, variant) => showToast(message, { variant })}
-                          title={`Post Image ${photoIndex + 1}${photoIndex === 0 ? ' *' : ''}`}
-                          subtitle="Upload a community post image from your device or camera."
+                          title={`Post Image ${photoIndex + 1}`}
+                          subtitle="Upload a community post image from your device or camera (optional)."
                           previewAlt={
                             addPostForm.content
                               ? `${addPostForm.content} image ${photoIndex + 1}`

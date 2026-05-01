@@ -29,7 +29,11 @@ import TimePicker from '@/shared/components/ui/TimePicker/TimePicker'
 import { useHeaderProfile } from '@/shared/hooks/useHeaderProfile'
 import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
-import { isValidContactNumber, normalizeContactNumber } from '@/shared/lib/validation/contact'
+import {
+  isValidContactNumber,
+  normalizeContactNumber,
+  sanitizeContactNumberInput,
+} from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './VeterinaryClinicListPage.module.css'
 
@@ -599,10 +603,11 @@ function VeterinaryClinicListPage({ onLogout, session }: VeterinaryClinicListPag
 
   const handleContactNumberChange = (index: number, nextValue: string) => {
     setContactNumberError('')
+    const sanitizedValue = sanitizeContactNumberInput(nextValue)
 
     setAddClinicForm((current) => {
       const nextContactNumbers = [...current.contactNumbers]
-      nextContactNumbers[index] = nextValue
+      nextContactNumbers[index] = sanitizedValue
 
       return {
         ...current,

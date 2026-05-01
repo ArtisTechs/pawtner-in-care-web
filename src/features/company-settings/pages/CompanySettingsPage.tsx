@@ -35,7 +35,12 @@ import { useResponsiveSidebar } from '@/shared/hooks/useResponsiveSidebar'
 import { useToast } from '@/shared/hooks/useToast'
 import { localStorageService } from '@/shared/lib/storage/local-storage'
 import { toTitleCase } from '@/shared/lib/text/title-case'
-import { isValidContactNumber, isValidEmail, normalizeContactNumber } from '@/shared/lib/validation/contact'
+import {
+  isValidContactNumber,
+  isValidEmail,
+  normalizeContactNumber,
+  sanitizeContactNumberInput,
+} from '@/shared/lib/validation/contact'
 import type { SidebarItemKey } from '@/shared/types/layout'
 import styles from './CompanySettingsPage.module.css'
 
@@ -989,7 +994,7 @@ function CompanySettingsPage({ onLogout, session }: CompanySettingsPageProps) {
                     className={`${styles.fieldInput} ${formErrors.contactNumber ? styles.fieldInputError : ''}`}
                     value={contactNumber}
                     onChange={(event) => {
-                      setContactNumber(event.target.value)
+                      setContactNumber(sanitizeContactNumberInput(event.target.value))
                       setFormErrors((currentErrors) => ({
                         ...currentErrors,
                         contactNumber: undefined,
