@@ -52,6 +52,17 @@ interface UploadedAttachment {
   url: string
 }
 
+const composeMessageContent = (text: string, attachmentUrl?: string | null) => {
+  const normalizedText = text.trim()
+  const normalizedAttachmentUrl = attachmentUrl?.trim() ?? ''
+
+  if (!normalizedAttachmentUrl) {
+    return normalizedText
+  }
+
+  return normalizedText ? `${normalizedText}\n${normalizedAttachmentUrl}` : normalizedAttachmentUrl
+}
+
 const EMPTY_MESSAGES_PAGE: PaginatedMessagesResponse = {
   content: [],
   page: 0,
@@ -565,6 +576,7 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
     const nextAttachedAttachment = attachedAttachment
     const nextAttachedFile = nextAttachedAttachment?.file ?? null
+    const content = composeMessageContent(text, nextAttachedAttachment?.url)
 
     optimisticMessageCounterRef.current += 1
     const optimisticMessageId = `${OPTIMISTIC_MESSAGE_ID_PREFIX}${Date.now()}-${optimisticMessageCounterRef.current}`
@@ -578,7 +590,7 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
             url: null,
           }
         : null,
-      body: text,
+      body: content,
       conversationId,
       createdAt,
       direction: 'OUTGOING',
@@ -601,20 +613,13 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
     const send = async () => {
       try {
-        const attachmentUrl = nextAttachedAttachment?.url ?? null
-
         const payload: SendMessagePayload = {
-          attachmentMimeType: nextAttachedFile?.type,
-          attachmentName: nextAttachedFile?.name,
-          attachmentSize: nextAttachedFile?.size,
-          attachmentUrl,
-          content: text,
-          text,
+          content,
         }
 
         if (!nextAttachedAttachment) {
           const sentRealtime = sendRealtimeMessage({
-            content: text,
+            content,
             conversationId,
           })
 
@@ -668,6 +673,11 @@ function ChatConversationPage({ onLogout, session }: ChatConversationPageProps) 
 
   const handleAttachFile = useCallback(
     (file: File) => {
+      if (!file.type.toLowerCase().startsWith('image/')) {
+        showToast('Only photo attachments are allowed.', { variant: 'info' })
+        return
+      }
+
       const uploadAttachment = async () => {
         setAttachedAttachment({
           file,

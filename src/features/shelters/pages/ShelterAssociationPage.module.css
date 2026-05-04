@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -460,7 +460,7 @@
 
 .statusInactive {
   background: #ffe8e8;
-  color: #b63d3d;
+  color: var(--color-feedback-error) !important;
 }
 
 .assignmentAssigned {
@@ -619,4 +619,6 @@
     width: 100%;
   }
 }
+
+
 

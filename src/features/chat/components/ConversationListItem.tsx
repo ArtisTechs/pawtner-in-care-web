@@ -13,6 +13,9 @@ interface ConversationListItemProps {
   onToggleStar: (conversationId: string) => void
 }
 
+const IMAGE_PATH_PATTERN = /\.(apng|avif|bmp|gif|jfif|jpe?g|png|svg|tiff?|webp)(\?.*)?$/i
+const CLOUDINARY_IMAGE_PATH_PATTERN = /\/image\/upload(?:\/|$)/i
+
 const formatTimestamp = (value?: string | null) => {
   if (!value) {
     return '--'
@@ -28,6 +31,29 @@ const formatTimestamp = (value?: string | null) => {
     hour12: true,
     minute: '2-digit',
   })
+}
+
+const isImageUrl = (value: string) => {
+  const normalized = value.trim()
+  if (!normalized) {
+    return false
+  }
+
+  try {
+    const parsedUrl = new URL(normalized)
+    return IMAGE_PATH_PATTERN.test(parsedUrl.pathname) || CLOUDINARY_IMAGE_PATH_PATTERN.test(parsedUrl.pathname)
+  } catch {
+    return IMAGE_PATH_PATTERN.test(normalized) || CLOUDINARY_IMAGE_PATH_PATTERN.test(normalized)
+  }
+}
+
+const formatLastMessagePreview = (value?: string | null) => {
+  const preview = value?.trim() ?? ''
+  if (!preview) {
+    return 'No messages yet.'
+  }
+
+  return isImageUrl(preview) ? 'Sent an image' : preview
 }
 
 function ConversationListItem({
@@ -94,7 +120,7 @@ function ConversationListItem({
           {conversation.participant.displayName}
         </span>
 
-        <span className={styles.preview}>{conversation.lastMessagePreview || 'No messages yet.'}</span>
+        <span className={styles.preview}>{formatLastMessagePreview(conversation.lastMessagePreview)}</span>
 
         <span className={styles.meta}>
           <span className={styles.timestamp}>{formatTimestamp(conversation.lastMessageAt)}</span>

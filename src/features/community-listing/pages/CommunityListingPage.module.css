@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -219,7 +219,7 @@
 }
 
 .deleteButton {
-  color: #f05656;
+  color: var(--color-feedback-error) !important;
 }
 
 .floatingAddButton {
@@ -614,7 +614,7 @@
 }
 
 .requiredAsterisk {
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
 }
 
 .checkboxField {
@@ -644,7 +644,7 @@
 }
 
 .fieldInputError {
-  border-color: #d94c4c;
+  border-color: var(--color-feedback-error) !important;
 }
 
 .fieldErrorText {
@@ -652,7 +652,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.25;
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
 }
 
 .mediaGroupHeader {
@@ -894,5 +894,7 @@
     width: 100%;
   }
 }
+
+
 
 

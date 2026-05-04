@@ -1,4 +1,4 @@
-const fallbackBaseUrl = 'http://192.168.0.229:8080/api'
+const fallbackBaseUrl = 'http://192.168.0.230:8080/api'
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || fallbackBaseUrl
 
 const configuredCloudinaryCloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME?.trim() ?? ''

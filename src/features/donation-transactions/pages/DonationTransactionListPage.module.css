@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 20px;
   background:
@@ -351,11 +351,11 @@
 }
 
 .fieldInputError {
-  border-color: #d45050;
+  border-color: var(--color-feedback-error) !important;
 }
 
 .fieldErrorText {
-  color: #d45050;
+  color: var(--color-feedback-error) !important;
   font-size: 12px;
   font-weight: 700;
 }
@@ -532,5 +532,7 @@
     flex: 1;
   }
 }
+
+
 
 

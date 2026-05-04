@@ -1,4 +1,4 @@
-.overlay {
+﻿.overlay {
   position: fixed;
   inset: 0;
   z-index: 140;
@@ -65,7 +65,7 @@
 
 .errorText {
   margin: 0;
-  color: #c53f3f;
+  color: var(--color-feedback-error) !important;
   font-family: var(--font-family-body);
   font-size: 12px;
   font-weight: 700;
@@ -141,3 +141,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+

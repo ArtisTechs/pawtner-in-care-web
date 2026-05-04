@@ -1,4 +1,4 @@
-.root {
+﻿.root {
   position: relative;
   display: grid;
   gap: 6px;
@@ -66,7 +66,7 @@
 }
 
 .dropdownError {
-  color: #bd3e3e;
+  color: var(--color-feedback-error) !important;
 }
 
 .optionList {
@@ -109,3 +109,5 @@
   font-size: 12px;
   font-weight: 600;
 }
+
+

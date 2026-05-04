@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 20px;
   background:
@@ -215,7 +215,7 @@
 
 .deleteButton {
   border-color: #e3b9b9;
-  color: #a53e3e;
+  color: var(--color-feedback-error) !important;
 }
 
 .itemTime {
@@ -454,3 +454,5 @@
     white-space: normal;
   }
 }
+
+

@@ -707,10 +707,7 @@ export const chatService = {
   ) => {
     const response = await apiClient.post<unknown, SendMessagePayload>(
       API_ENDPOINTS.chat.messages(conversationId),
-      {
-        ...payload,
-        content: payload.content ?? payload.text,
-      },
+      payload,
       { token },
     )
 

@@ -589,6 +589,13 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
     if (isAutoAssign && !isRegistrationCategory && !trimmedRequiredValue) {
       nextErrors.requiredValue = REQUIRED_FIELDS_ERROR_MESSAGE
     } else if (
+      isAutoAssign &&
+      !isRegistrationCategory &&
+      parsedRequiredValue !== null &&
+      (!Number.isFinite(parsedRequiredValue) || parsedRequiredValue <= 0)
+    ) {
+      nextErrors.requiredValue = 'Required value must be greater than zero.'
+    } else if (
       parsedRequiredValue !== null &&
       (!Number.isFinite(parsedRequiredValue) || parsedRequiredValue < 0)
     ) {
@@ -1231,7 +1238,7 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                             <input
                               className={`${styles.fieldInput} ${createFormErrors.requiredValue ? styles.fieldInputError : ''}`}
                               type="number"
-                              min={0}
+                              min={createForm.category === 'REGISTRATION' ? 0 : 1}
                               step="any"
                               value={createForm.requiredValue}
                               onChange={(event) => {
@@ -1249,7 +1256,9 @@ function AchievementListPage({ onLogout, session }: AchievementListPageProps) {
                               }
                             />
                             {createFormErrors.requiredValue ? (
-                              <span className={styles.fieldErrorText}>{createFormErrors.requiredValue}</span>
+                              <span className={`${styles.fieldErrorText} ${styles.requiredValueErrorText}`}>
+                                {createFormErrors.requiredValue}
+                              </span>
                             ) : null}
                           </label>
                         </div>

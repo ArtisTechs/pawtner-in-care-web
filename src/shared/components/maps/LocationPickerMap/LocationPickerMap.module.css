@@ -1,4 +1,4 @@
-.root {
+﻿.root {
   display: grid;
   gap: 10px;
 }
@@ -88,7 +88,7 @@
 }
 
 .suggestionError {
-  color: #c73f3f;
+  color: var(--color-feedback-error) !important;
 }
 
 .coordinateGrid {
@@ -101,7 +101,7 @@
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: #c73f3f;
+  color: var(--color-feedback-error) !important;
 }
 
 .mapFrameWrap {
@@ -174,3 +174,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+

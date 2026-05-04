@@ -1,4 +1,4 @@
-.viewport {
+﻿.viewport {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -70,8 +70,8 @@
 }
 
 .error {
-  color: var(--color-feedback-error);
-  border-color: color-mix(in srgb, var(--color-feedback-error) 28%, white);
+  color: var(--color-feedback-error) !important;
+  border-color: color-mix(in srgb, var(--color-feedback-error) !important 28%, white);
 }
 
 @keyframes slideIn {
@@ -92,3 +92,4 @@
     right: 14px;
   }
 }
+

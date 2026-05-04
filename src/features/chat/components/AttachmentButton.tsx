@@ -8,10 +8,10 @@ interface AttachmentButtonProps {
 
 function AttachmentButton({ disabled = false, onPickFile }: AttachmentButtonProps) {
   return (
-    <label className={`${styles.root} ${disabled ? styles.rootDisabled : ''}`} aria-label="Attach image or file">
+    <label className={`${styles.root} ${disabled ? styles.rootDisabled : ''}`} aria-label="Attach photo">
       <input
         type="file"
-        accept="image/*,.pdf,.doc,.docx,.txt"
+        accept="image/*"
         className={styles.hiddenInput}
         disabled={disabled}
         onChange={(event) => {

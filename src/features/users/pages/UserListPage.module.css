@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -269,7 +269,7 @@
 }
 
 .statusInactive {
-  color: #b63d3d;
+  color: var(--color-feedback-error) !important;
   background: #ffe8e8;
 }
 
@@ -343,7 +343,7 @@
 }
 
 .deleteButton {
-  color: #f05656;
+  color: var(--color-feedback-error) !important;
 }
 
 .floatingAddButton {
@@ -654,7 +654,7 @@
 }
 
 .fieldInputError {
-  border-color: #d94c4c;
+  border-color: var(--color-feedback-error) !important;
 }
 
 .fieldTextarea {
@@ -677,7 +677,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.25;
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
 }
 
 .modalActions {
@@ -870,5 +870,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+
 
 

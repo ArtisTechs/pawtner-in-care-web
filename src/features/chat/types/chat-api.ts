@@ -65,12 +65,7 @@ export interface ChatMessage {
 }
 
 export interface SendMessagePayload {
-  attachmentMimeType?: string | null
-  attachmentName?: string | null
-  attachmentSize?: number | null
-  attachmentUrl?: string | null
-  content?: string
-  text?: string
+  content: string
 }
 
 export interface CreateConversationPayload {

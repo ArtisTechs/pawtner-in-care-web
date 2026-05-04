@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -204,7 +204,7 @@
 }
 
 .deleteButton {
-  color: #f05656;
+  color: var(--color-feedback-error) !important;
 }
 
 .floatingAddButton {
@@ -611,5 +611,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+
 
 

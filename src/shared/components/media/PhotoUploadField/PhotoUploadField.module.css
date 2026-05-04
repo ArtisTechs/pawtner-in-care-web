@@ -1,4 +1,4 @@
-.root {
+﻿.root {
   border: 1px solid #d5deec;
   border-radius: 12px;
   background: linear-gradient(180deg, #f9fbff 0%, #f2f7ff 100%);
@@ -20,7 +20,7 @@
 }
 
 .requiredAsterisk {
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
   margin-left: 4px;
 }
 
@@ -137,7 +137,7 @@
   border-radius: 8px;
   border: 1px solid #e7c7d1;
   background: rgba(255, 248, 250, 0.94);
-  color: #9f435d;
+  color: var(--color-feedback-error) !important;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -229,7 +229,7 @@
   border-radius: 8px;
   border: 1px solid #efccd2;
   background: #fff7f9;
-  color: #a23d56;
+  color: var(--color-feedback-error) !important;
   font-size: 12px;
   font-weight: 700;
   padding: 8px 10px;
@@ -312,3 +312,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+

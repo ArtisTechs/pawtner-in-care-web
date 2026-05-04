@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -425,7 +425,7 @@
 }
 
 .requiredAsterisk {
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
 }
 
 .fieldInput {
@@ -441,7 +441,7 @@
 }
 
 .fieldInputError {
-  border-color: #d94c4c;
+  border-color: var(--color-feedback-error) !important;
 }
 
 .fieldErrorText {
@@ -449,7 +449,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.25;
-  color: #d94c4c;
+  color: var(--color-feedback-error) !important;
 }
 
 .toggleCard {
@@ -680,5 +680,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+
 
 

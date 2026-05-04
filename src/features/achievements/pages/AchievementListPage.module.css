@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: calc(100dvh - 74px);
   padding: 22px 18px 16px;
   background:
@@ -204,7 +204,7 @@
 
 .inactiveBadge {
   background: #ffe8e8;
-  color: #b63d3d;
+  color: var(--color-feedback-error) !important;
 }
 
 .cardDescription {
@@ -569,7 +569,7 @@
 }
 
 .requiredMark {
-  color: #d45050;
+  color: var(--color-feedback-error) !important;
 }
 
 .uploadFieldWrap {
@@ -617,13 +617,17 @@
 }
 
 .fieldInputError {
-  border-color: #d45050;
+  border-color: var(--color-feedback-error) !important;
 }
 
 .fieldErrorText {
-  color: #d45050;
+  color: var(--color-feedback-error) !important;
   font-size: 12px;
   font-weight: 700;
+}
+
+.requiredValueErrorText {
+  color: var(--color-feedback-error) !important;
 }
 
 .fullWidthField {
@@ -945,4 +949,6 @@
     min-height: 332px;
   }
 }
+
+
 
