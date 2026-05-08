@@ -1,0 +1,117 @@
+.page {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(152, 193, 238, 0.45), transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(102, 164, 231, 0.32), transparent 36%),
+    linear-gradient(150deg, #f4f9ff 0%, #edf4fc 50%, #e4eefb 100%);
+}
+
+.card {
+  width: min(100%, 940px);
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 16px 34px var(--color-shadow-soft);
+  overflow: hidden;
+}
+
+.header {
+  padding: 28px 28px 20px;
+  background: linear-gradient(135deg, #1f62b4 0%, #3e90e5 100%);
+  color: #ffffff;
+}
+
+.logo {
+  width: 168px;
+  height: auto;
+}
+
+.heading {
+  margin: 12px 0 4px;
+  font-family: var(--font-family-heading-3);
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.updatedAt {
+  margin: 0;
+  font-size: var(--font-size-body-2);
+  opacity: 0.9;
+}
+
+.intro {
+  margin: 14px 0 0;
+  max-width: 760px;
+  line-height: 1.55;
+}
+
+.content {
+  padding: 26px 28px;
+  color: var(--color-text-body);
+}
+
+.content h2 {
+  margin: 0 0 8px;
+  color: var(--color-text-heading);
+  font-size: 18px;
+}
+
+.content p,
+.content li {
+  line-height: 1.65;
+}
+
+.content p {
+  margin: 0 0 14px;
+}
+
+.content ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.contact {
+  color: var(--color-brand-blue-600);
+  font-weight: var(--font-weight-body-semibold);
+}
+
+.footer {
+  padding: 0 28px 24px;
+}
+
+.backLink {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  border: 1px solid var(--color-brand-blue-300);
+  color: var(--color-brand-blue-500);
+  font-weight: var(--font-weight-body-semibold);
+}
+
+.backLink:hover {
+  border-color: var(--color-brand-blue-400);
+  color: var(--color-brand-blue-600);
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 12px;
+  }
+
+  .header,
+  .content,
+  .footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .heading {
+    font-size: 24px;
+  }
+}

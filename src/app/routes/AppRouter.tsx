@@ -31,6 +31,7 @@ import UserListPage from '@/features/users/pages/UserListPage'
 import VeterinaryClinicListPage from '@/features/veterinary-clinics/pages/VeterinaryClinicListPage'
 import VolunteerListPage from '@/features/volunteers/pages/VolunteerListPage'
 import ToDoListPage from '@/features/todos/pages/ToDoListPage'
+import PrivacyPolicyPage from '@/features/legal/pages/PrivacyPolicyPage'
 
 type AppRouterProps = {
   defaultRoute: string
@@ -98,6 +99,7 @@ function AppRouter({
             isAuthenticated ? <Navigate to={defaultRoute} replace /> : <SignUpPage />
           }
         />
+        <Route path={APP_ROUTES.privacyPolicy} element={<PrivacyPolicyPage />} />
 
         <Route
           path={APP_ROUTES.inbox}

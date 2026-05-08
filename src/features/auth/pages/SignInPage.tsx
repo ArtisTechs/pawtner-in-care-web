@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import titleLogo from '@/assets/title-logo.png'
 import { APP_ROUTES } from '@/app/routes/route-paths'
 import { sessionPreloadService } from '@/app/services/session-preload.service'
@@ -433,6 +433,12 @@ function SignInPage({ onSignInSuccess }: SignInPageProps) {
                 >
                   Create Account
                 </button>
+              </div>
+
+              <div className={styles.legalRow}>
+                <Link to={APP_ROUTES.privacyPolicy} className={styles.legalLink}>
+                  Privacy Policy
+                </Link>
               </div>
             </form>
           </>
