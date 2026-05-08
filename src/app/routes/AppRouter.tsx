@@ -32,6 +32,7 @@ import VeterinaryClinicListPage from '@/features/veterinary-clinics/pages/Veteri
 import VolunteerListPage from '@/features/volunteers/pages/VolunteerListPage'
 import ToDoListPage from '@/features/todos/pages/ToDoListPage'
 import PrivacyPolicyPage from '@/features/legal/pages/PrivacyPolicyPage'
+import DeleteAccountPage from '@/features/legal/pages/DeleteAccountPage'
 
 type AppRouterProps = {
   defaultRoute: string
@@ -100,6 +101,7 @@ function AppRouter({
           }
         />
         <Route path={APP_ROUTES.privacyPolicy} element={<PrivacyPolicyPage />} />
+        <Route path={APP_ROUTES.deleteAccount} element={<DeleteAccountPage />} />
 
         <Route
           path={APP_ROUTES.inbox}

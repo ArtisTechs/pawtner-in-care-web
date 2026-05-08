@@ -1,0 +1,75 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(152, 193, 238, 0.45), transparent 42%),
+    linear-gradient(145deg, #eef5ff 0%, #e2eefb 100%);
+}
+
+.card {
+  width: min(100%, 620px);
+  border-radius: 16px;
+  border: 1px solid var(--color-border-subtle);
+  background: #fff;
+  box-shadow: 0 14px 30px var(--color-shadow-soft);
+  padding: 28px;
+  text-align: center;
+}
+
+.logo {
+  width: 170px;
+  height: auto;
+}
+
+.heading {
+  margin: 14px 0 8px;
+  font-family: var(--font-family-heading-3);
+  color: var(--color-text-heading);
+  font-size: 28px;
+}
+
+.message {
+  margin: 0;
+  color: var(--color-text-body);
+}
+
+.email {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--color-brand-blue-600);
+  font-size: 20px;
+  font-weight: var(--font-weight-body-semibold);
+  text-decoration: none;
+}
+
+.email:hover {
+  text-decoration: underline;
+}
+
+.note {
+  margin: 12px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-body-2);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-top: 18px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-brand-blue-300);
+  color: var(--color-brand-blue-500);
+  text-decoration: none;
+  font-weight: var(--font-weight-body-semibold);
+}
+
+.backLink:hover {
+  border-color: var(--color-brand-blue-400);
+  color: var(--color-brand-blue-600);
+}

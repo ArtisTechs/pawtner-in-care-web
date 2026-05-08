@@ -19,6 +19,7 @@ export const APP_ROUTES = {
   login: '/login',
   signUp: '/signup',
   privacyPolicy: '/privacy-policy',
+  deleteAccount: '/delete-account',
   paymentModeList: '/payment-mode-list',
   petList: '/pet-list',
   shelterList: '/shelter-list',
