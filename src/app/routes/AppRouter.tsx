@@ -33,6 +33,7 @@ import VolunteerListPage from '@/features/volunteers/pages/VolunteerListPage'
 import ToDoListPage from '@/features/todos/pages/ToDoListPage'
 import PrivacyPolicyPage from '@/features/legal/pages/PrivacyPolicyPage'
 import DeleteAccountPage from '@/features/legal/pages/DeleteAccountPage'
+import ChildSafetyStandardsPage from '@/features/legal/pages/ChildSafetyStandardsPage'
 
 type AppRouterProps = {
   defaultRoute: string
@@ -101,6 +102,7 @@ function AppRouter({
           }
         />
         <Route path={APP_ROUTES.privacyPolicy} element={<PrivacyPolicyPage />} />
+        <Route path={APP_ROUTES.childSafetyStandards} element={<ChildSafetyStandardsPage />} />
         <Route path={APP_ROUTES.deleteAccount} element={<DeleteAccountPage />} />
 
         <Route

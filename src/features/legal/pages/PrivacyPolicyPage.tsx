@@ -1,6 +1,4 @@
-import { Link } from 'react-router-dom'
 import titleLogo from '@/assets/title-logo.png'
-import { APP_ROUTES } from '@/app/routes/route-paths'
 import styles from './PrivacyPolicyPage.module.css'
 
 const LAST_UPDATED = 'May 8, 2026'
@@ -132,12 +130,6 @@ function PrivacyPolicyPage() {
             requirements.
           </p>
         </div>
-
-        <footer className={styles.footer}>
-          <Link to={APP_ROUTES.login} className={styles.backLink}>
-            Back to Login
-          </Link>
-        </footer>
       </section>
     </main>
   )
